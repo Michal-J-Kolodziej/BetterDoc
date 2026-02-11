@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BetterDoc Notifications &amp; Activity</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#11d473",
+                        "primary-hover": "#0eb562",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "surface-dark": "#162e22",
+                        "surface-darker": "#0d1b14",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102219;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a4034;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #11d473;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 font-display min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white">
+<!-- Navbar -->
+<nav class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-primary/10">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between h-16">
+<div class="flex items-center gap-8">
+<!-- Logo -->
+<div class="flex-shrink-0 flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-emerald-800 flex items-center justify-center text-white font-bold text-lg">
+                            B
+                        </div>
+<span class="font-bold text-xl tracking-tight text-gray-900 dark:text-white">BetterDoc</span>
+</div>
+<!-- Desktop Nav Links -->
+<div class="hidden md:flex space-x-1">
+<a class="px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="px-3 py-2 rounded-lg text-sm font-medium text-primary bg-primary/10 dark:bg-primary/10" href="#">Activity Feed</a>
+<a class="px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors" href="#">Library</a>
+</div>
+</div>
+<!-- Right Side Actions -->
+<div class="flex items-center gap-4">
+<!-- Search -->
+<div class="hidden md:block relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-icons text-gray-400 text-sm">search</span>
+</div>
+<input class="block w-64 pl-10 pr-3 py-1.5 border border-gray-200 dark:border-primary/20 rounded-lg leading-5 bg-gray-50 dark:bg-surface-darker text-gray-900 dark:text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition-all" placeholder="Search components, tips..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="text-xs text-gray-500 dark:text-gray-600 border border-gray-200 dark:border-primary/20 rounded px-1.5 py-0.5">⌘K</span>
+</div>
+</div>
+<!-- Notifications -->
+<button class="relative p-2 rounded-full text-gray-400 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-primary/10 transition-colors">
+<span class="material-icons text-[20px]">notifications</span>
+<span class="absolute top-2 right-2 block h-2 w-2 rounded-full bg-primary ring-2 ring-white dark:ring-background-dark"></span>
+</button>
+<!-- Profile -->
+<div class="flex items-center gap-3 pl-2 border-l border-gray-200 dark:border-primary/10">
+<div class="flex flex-col items-end hidden sm:flex">
+<span class="text-sm font-medium text-gray-700 dark:text-gray-200">Alex Chen</span>
+<span class="text-xs text-gray-500 dark:text-primary/70">Lead Engineer</span>
+</div>
+<img alt="Profile" class="h-8 w-8 rounded-full border border-gray-200 dark:border-primary/30" data-alt="Portrait of a male user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDrfltV-vdW70tURYW_I_rK4Qc-jFLOg8ExUEpk2Nde-Nlf-frD3re2EPr97Wms64k8thSnUQz5aTiDGc9NMDTv33G27KsIw0DsM3FUKGXxwMm9ExUOki8_aAK2bx76dEzqs0lMoelQRXHUcptRz_Vr9XZEwxN-qNBT9dTW1icePgKVtr89AzbtVFVrDKwO2kprjrOIdC8Ld9l9KYI1_zfZaZLlgFnFENfYD03M7VqT-Zi2qvGRyJuQzmP4aSdEPVY9drI-G21V_0"/>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Main Content: Feed -->
+<div class="lg:col-span-8 space-y-6">
+<header class="flex items-center justify-between mb-6">
+<div>
+<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Activity Feed</h1>
+<p class="text-sm text-gray-500 dark:text-slate-400 mt-1">Updates from your watched libraries and team contributions.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-surface-dark border border-gray-200 dark:border-primary/20 text-gray-700 dark:text-gray-300 hover:border-primary dark:hover:border-primary transition-colors shadow-sm">
+<span class="flex items-center gap-1"><span class="material-icons text-[16px]">filter_list</span> Filter</span>
+</button>
+<button class="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20">
+                            Mark all read
+                        </button>
+</div>
+</header>
+<!-- New Tip Item -->
+<div class="group relative bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-primary/10 p-5 hover:border-primary/40 dark:hover:border-primary/40 transition-all duration-200 shadow-sm dark:shadow-none">
+<div class="absolute top-5 right-5 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10" title="Bookmark">
+<span class="material-icons text-[18px]">bookmark_border</span>
+</button>
+<button class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-500/10" title="Hide">
+<span class="material-icons text-[18px]">visibility_off</span>
+</button>
+</div>
+<div class="flex gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+<span class="material-icons text-primary text-lg">lightbulb</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                                    New Tip
+                                </span>
+<span class="text-xs text-gray-500 dark:text-slate-500 flex items-center gap-1">
+<span class="material-icons text-[14px]">schedule</span> 2 hours ago
+                                </span>
+</div>
+<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                                Proper handling of JWT expiration in Auth Service
+                            </h3>
+<p class="text-sm text-gray-600 dark:text-slate-300 mb-3 leading-relaxed">
+                                We've identified a race condition when refreshing tokens. Use the new <code class="bg-gray-100 dark:bg-black/30 px-1.5 py-0.5 rounded text-xs font-mono text-primary">useAuthRefresh()</code> hook to ensure atomic updates during session renewal.
+                            </p>
+<div class="flex items-center gap-3 text-xs">
+<div class="flex items-center gap-2 text-gray-500 dark:text-slate-400">
+<img alt="User" class="h-5 w-5 rounded-full" data-alt="Portrait of female contributor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAyYWwObMecFYlbZNkrW4K4lQ8_4O83jrWBQ3mGYMxxxXpR1chB-h65-loDRorby4sNcpx9lJobN6qFtp2fXIgbhaSNprkR9jI4NnBbLQDrGgAUKzR9VzdQy9yhqligXhz47EQWp2klNmZGVXRl5-tICP9yIky2lSgSpmMt8G4Mfbeias388BBASt_6sfJ63ABtE3sEcT8HmBMoEDbFhgoWwXx-7Wwjg5QKIxApMmTGtScDREZyqe4EysdCSkWLoMnkMMlXiNTQKk"/>
+<span>Sarah Jenkins</span>
+</div>
+<span class="text-gray-300 dark:text-slate-600">•</span>
+<a class="text-gray-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-icons text-[14px]">folder</span> auth-service
+                                </a>
+</div>
+</div>
+</div>
+</div>
+<!-- Update Item -->
+<div class="group relative bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-primary/10 p-5 hover:border-primary/40 dark:hover:border-primary/40 transition-all duration-200 shadow-sm dark:shadow-none">
+<div class="absolute top-5 right-5 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10" title="Bookmark">
+<span class="material-icons text-[18px]">bookmark_border</span>
+</button>
+</div>
+<div class="flex gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center ring-1 ring-blue-500/20">
+<span class="material-icons text-blue-500 text-lg">edit_note</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                                    Updated
+                                </span>
+<span class="text-xs text-gray-500 dark:text-slate-500 flex items-center gap-1">
+<span class="material-icons text-[14px]">schedule</span> 5 hours ago
+                                </span>
+</div>
+<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                                React Query caching strategy refinement
+                            </h3>
+<p class="text-sm text-gray-600 dark:text-slate-300 mb-3 leading-relaxed">
+                                Updated the guidelines for <code class="bg-gray-100 dark:bg-black/30 px-1.5 py-0.5 rounded text-xs font-mono text-blue-400">staleTime</code> defaults. Global config now defaults to 5 minutes instead of 0 to reduce server load on dashboard widgets.
+                            </p>
+<div class="flex items-center gap-3 text-xs">
+<div class="flex items-center gap-2 text-gray-500 dark:text-slate-400">
+<img alt="User" class="h-5 w-5 rounded-full" data-alt="Portrait of male contributor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCijkmfs_w7JXCFb30E1z5oGrGCdVr-ZM6rBfiP_HTdK1avM9KHL0btnJs4pb20jm-ApGTNQddbWGaoDnA24dwPY_5KS0ZkA4rrxsGz4XTWUOk1R9YjVR3n_OCR_n2ZDC6dPg_FHHbykW5eNsvcn0UeCxVDuocyFYcSK4kx-etO1qmATvnlIHnHKYchJWZkCjaFgrDoxpEA-KSREaLlYM1jci2u_3oMqRI7TZuITsYmVVEJfGs3x_TRvKOWL-9QMkCiP6XKK4XZotI"/>
+<span>David Ross</span>
+</div>
+<span class="text-gray-300 dark:text-slate-600">•</span>
+<a class="text-gray-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-icons text-[14px]">folder</span> frontend-core
+                                </a>
+</div>
+</div>
+</div>
+</div>
+<!-- Deprecation Warning -->
+<div class="group relative bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-primary/10 p-5 hover:border-orange-500/40 transition-all duration-200 shadow-sm dark:shadow-none">
+<div class="flex gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center ring-1 ring-orange-500/20">
+<span class="material-icons text-orange-500 text-lg">warning_amber</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                                    Deprecated
+                                </span>
+<span class="text-xs text-gray-500 dark:text-slate-500 flex items-center gap-1">
+<span class="material-icons text-[14px]">schedule</span> Yesterday
+                                </span>
+</div>
+<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                                Legacy API V1 End-of-Life Notice
+                            </h3>
+<p class="text-sm text-gray-600 dark:text-slate-300 mb-3 leading-relaxed">
+                                All V1 endpoints will return 410 Gone starting next sprint. Please migrate to V2 immediately. See the migration guide linked below.
+                            </p>
+<div class="mt-3 flex gap-2">
+<button class="text-xs bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 px-3 py-1.5 rounded-lg transition-colors font-medium">View Migration Guide</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Permission Denied State (Inline Example) -->
+<div class="relative overflow-hidden bg-white dark:bg-surface-dark rounded-xl border border-red-200 dark:border-red-900/30 p-1 shadow-sm dark:shadow-none">
+<div class="absolute inset-0 bg-white/60 dark:bg-surface-dark/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center text-center p-6">
+<div class="bg-red-50 dark:bg-red-900/20 p-3 rounded-full mb-3">
+<span class="material-icons text-red-500 dark:text-red-400 text-2xl">lock</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Permission Denied</h3>
+<p class="text-sm text-gray-500 dark:text-slate-400 max-w-sm mb-4">
+                            You do not have permission to view sensitive admin logs or modify global watchlist rules.
+                        </p>
+<button class="text-sm font-medium text-primary hover:text-white bg-primary/10 hover:bg-primary px-4 py-2 rounded-lg transition-all duration-200">
+                            Contact Engineering Ops
+                        </button>
+</div>
+<!-- Blurred Content Background -->
+<div class="opacity-30 pointer-events-none p-4 filter blur-sm">
+<div class="flex gap-4 mb-4">
+<div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+<div class="flex-1 space-y-2">
+<div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+<div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+<div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+<div class="flex-1 space-y-2">
+<div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+<div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Standard Item -->
+<div class="group relative bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-primary/10 p-5 hover:border-primary/40 dark:hover:border-primary/40 transition-all duration-200 shadow-sm dark:shadow-none">
+<div class="flex gap-4">
+<div class="flex-shrink-0 mt-1">
+<div class="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center ring-1 ring-purple-500/20">
+<span class="material-icons text-purple-500 text-lg">code</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                                    New Example
+                                </span>
+<span class="text-xs text-gray-500 dark:text-slate-500 flex items-center gap-1">
+<span class="material-icons text-[14px]">schedule</span> 2 days ago
+                                </span>
+</div>
+<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                                Added Python typing examples for DataFrames
+                            </h3>
+<p class="text-sm text-gray-600 dark:text-slate-300 mb-3 leading-relaxed">
+                                To improve type safety in our ETL pipelines, we've added robust examples of typing pandas DataFrames using the new internal stubs library.
+                            </p>
+<div class="flex items-center gap-3 text-xs">
+<div class="flex items-center gap-2 text-gray-500 dark:text-slate-400">
+<img alt="User" class="h-5 w-5 rounded-full" data-alt="Portrait of male contributor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQWkFb4q666x0BGMs74yEp71mQCGFaUhbFcP88gmeTPuRUjxuqe8ktGOuaBFIKyy6itVkJ9qGfspfOwLyL_-bQddqkimUzlMZ-wAonFq1i8qe6IkScT74KX7BXGt3rWmo78Y5mJswBmnx7gqQwk8b63MEAz6zJuCWg4-d-RhsbcA5JzEtmZo7ZqS_vuRb9oXXLmTAQI4Pjk1HMMlxWezaz5cuPxI4Lhj17nOsdZ2FWBiWM_Cc20ziNPupAINHZfj8FqlP4e4hoNvU"/>
+<span>Marcus Lee</span>
+</div>
+<span class="text-gray-300 dark:text-slate-600">•</span>
+<a class="text-gray-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-icons text-[14px]">folder</span> data-pipelines
+                                </a>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar -->
+<aside class="lg:col-span-4 space-y-8">
+<!-- Watchlist Section -->
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-primary/10 p-5 shadow-sm dark:shadow-none">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400">Your Watchlist</h2>
+<button class="text-xs text-primary hover:text-white transition-colors">Manage</button>
+</div>
+<ul class="space-y-3">
+<li class="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-primary/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-green-500"></div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors">auth-service</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs bg-gray-100 dark:bg-background-dark text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded">v2.4.1</span>
+<span class="material-icons text-primary text-[16px] opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
+</div>
+</li>
+<li class="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-primary/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors">frontend-core</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs bg-gray-100 dark:bg-background-dark text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded">v1.1.0</span>
+<span class="material-icons text-primary text-[16px] opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
+</div>
+</li>
+<li class="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-primary/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-gray-400"></div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors">billing-api</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs bg-gray-100 dark:bg-background-dark text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded">v3.0.0-beta</span>
+<span class="material-icons text-primary text-[16px] opacity-0 group-hover:opacity-100 transition-opacity">check_circle</span>
+</div>
+</li>
+</ul>
+<button class="w-full mt-4 py-2 border border-dashed border-gray-300 dark:border-primary/20 rounded-lg text-sm text-gray-500 dark:text-slate-400 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2">
+<span class="material-icons text-[16px]">add</span> Add component
+                    </button>
+</div>
+<!-- Suggested Section -->
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-primary/10 p-5 shadow-sm dark:shadow-none">
+<h2 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-4">Suggested for You</h2>
+<div class="space-y-4">
+<div class="flex items-start gap-3">
+<div class="h-8 w-8 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-500 font-bold text-xs">
+                                TS
+                            </div>
+<div>
+<h4 class="text-sm font-semibold text-gray-900 dark:text-white">TypeScript Best Practices</h4>
+<p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Based on your recent commits to <span class="text-primary font-mono">/types</span>.</p>
+<button class="mt-2 text-xs font-medium text-primary hover:text-white transition-colors">Watch Topic</button>
+</div>
+</div>
+<div class="border-t border-gray-100 dark:border-primary/5 my-2"></div>
+<div class="flex items-start gap-3">
+<div class="h-8 w-8 rounded bg-pink-500/10 flex items-center justify-center text-pink-500 font-bold text-xs">
+                                GQL
+                            </div>
+<div>
+<h4 class="text-sm font-semibold text-gray-900 dark:text-white">GraphQL Schema V3</h4>
+<p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Trending in your team this week.</p>
+<button class="mt-2 text-xs font-medium text-primary hover:text-white transition-colors">Watch Topic</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="flex flex-wrap gap-x-4 gap-y-2 px-2 text-xs text-gray-400 dark:text-slate-600">
+<a class="hover:text-primary transition-colors" href="#">Docs</a>
+<a class="hover:text-primary transition-colors" href="#">Support</a>
+<a class="hover:text-primary transition-colors" href="#">API Status</a>
+<a class="hover:text-primary transition-colors" href="#">Privacy</a>
+<span>© 2023 BetterDoc Inc.</span>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

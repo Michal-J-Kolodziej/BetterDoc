@@ -1,0 +1,4 @@
+interface:
+  display_name: "App Planning Guide"
+  short_description: "Turn brief app ideas into concrete plans"
+  default_prompt: "Use $app-planning-guide to turn a short app idea into a practical product and build plan."

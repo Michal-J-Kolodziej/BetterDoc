@@ -1,0 +1,37 @@
+# BetterDoc Change Log
+
+## 2026-02-11
+- Code paths changed:
+  - `package.json`
+  - `bun.lock`
+  - `vite.config.ts`
+  - `vitest.config.ts`
+  - `eslint.config.js`
+  - `tsconfig.json`
+  - `.env.example`
+  - `.gitignore`
+  - `src/router.tsx`
+  - `src/routes/__root.tsx`
+  - `src/routes/index.tsx`
+  - `src/config/env.shared.ts`
+  - `src/config/env.client.ts`
+  - `src/config/env.server.ts`
+  - `src/config/platform.ts`
+  - `src/config/workos.server.ts`
+  - `src/config/env.shared.test.ts`
+  - `src/lib/convex-client.tsx`
+  - `src/styles.css`
+  - `scripts/validate-env.ts`
+  - `convex/schema.ts`
+  - `convex/health.ts`
+  - `convex/_generated/api.ts`
+  - `convex/_generated/server.ts`
+  - `convex/_generated/dataModel.ts`
+  - `convex.json`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Delivered BD-001 and BD-002 foundation: TanStack Start scaffold, Convex client wiring, validated `dev/staging/prod` env strategy, and operational scripts for lint/typecheck/test/build.

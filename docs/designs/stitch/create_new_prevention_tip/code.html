@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create New Prevention Tip - BetterDoc</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#11d473",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "surface-dark": "#162e22",
+                        "surface-darker": "#0d1b14",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for code editor */
+        .code-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .code-scroll::-webkit-scrollbar-track {
+            background: #1a1a1a; 
+        }
+        .code-scroll::-webkit-scrollbar-thumb {
+            background: #333; 
+            border-radius: 4px;
+        }
+        .code-scroll::-webkit-scrollbar-thumb:hover {
+            background: #444; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 font-display min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-primary/10">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<a class="text-slate-400 hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium" href="#">
+<span class="material-icons text-lg">arrow_back</span>
+                    Back to Knowledge Base
+                </a>
+<div class="h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide uppercase">Draft saved 2m ago</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-colors border border-transparent">
+                    Save Draft
+                </button>
+<button class="px-4 py-2 text-sm font-medium text-background-dark bg-primary hover:bg-primary/90 rounded-lg shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+<span class="material-icons text-sm">publish</span>
+                    Publish Tip
+                </button>
+</div>
+</div>
+</header>
+<main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Sidebar Navigation (Stepper) -->
+<aside class="hidden lg:block lg:col-span-3 xl:col-span-2">
+<nav class="sticky top-24 space-y-1">
+<h3 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4 pl-3">Structure</h3>
+<a class="group flex items-center px-3 py-2 text-sm font-medium bg-primary/10 text-primary rounded-lg border-l-2 border-primary" href="#context">
+<span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary text-background-dark text-xs font-bold mr-3">1</span>
+                    Context
+                </a>
+<a class="group flex items-center px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all border-l-2 border-transparent" href="#symptoms">
+<span class="w-6 h-6 flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-600 text-xs font-bold mr-3 group-hover:border-primary/50 group-hover:text-primary">2</span>
+                    The Problem
+                </a>
+<a class="group flex items-center px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all border-l-2 border-transparent" href="#solution">
+<span class="w-6 h-6 flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-600 text-xs font-bold mr-3 group-hover:border-primary/50 group-hover:text-primary">3</span>
+                    The Fix
+                </a>
+<div class="mt-8 px-4 py-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30">
+<div class="flex items-start gap-3">
+<span class="material-icons text-blue-500 text-sm mt-0.5">tips_and_updates</span>
+<div>
+<p class="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">Pro Tip</p>
+<p class="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                                Keep titles concise. Tips with clear symptoms are 3x more likely to prevent recurrence.
+                            </p>
+</div>
+</div>
+</div>
+</nav>
+</aside>
+<!-- Main Form Area -->
+<div class="lg:col-span-9 xl:col-span-10 space-y-8">
+<!-- Section 1: Context -->
+<section class="scroll-mt-28 bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-primary/5 shadow-sm p-6 sm:p-8" id="context">
+<div class="flex items-center gap-3 mb-6">
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-icons">sticky_note_2</span>
+</div>
+<div>
+<h2 class="text-xl font-bold text-slate-900 dark:text-white">Tip Context</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400">Define where and what the issue is.</p>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2" for="title">Tip Title</label>
+<input class="block w-full rounded-lg border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-surface-darker text-slate-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-lg py-3 px-4 placeholder-slate-400 dark:placeholder-slate-600" id="title" placeholder="e.g., Fix for Race Condition in User Authentication" type="text"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="relative">
+<label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2" for="component">Affected Component</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+<span class="material-icons text-lg">search</span>
+</span>
+<input class="block w-full pl-10 rounded-lg border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-surface-darker text-slate-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2.5" id="component" placeholder="Search services (e.g., auth-service)" type="text"/>
+<!-- Autocomplete Dropdown Simulator -->
+<div class="absolute z-10 mt-1 w-full bg-white dark:bg-surface-darker shadow-lg rounded-lg border border-slate-200 dark:border-white/10 hidden group-focus-within:block">
+<ul class="py-1 text-sm text-slate-700 dark:text-slate-300">
+<li class="px-4 py-2 hover:bg-primary/10 hover:text-primary cursor-pointer flex justify-between">
+<span>auth-service</span>
+<span class="text-xs opacity-50">Service</span>
+</li>
+<li class="px-4 py-2 hover:bg-primary/10 hover:text-primary cursor-pointer flex justify-between">
+<span>payment-gateway</span>
+<span class="text-xs opacity-50">Library</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="mt-2 flex flex-wrap gap-2">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                                    user-api
+                                    <button class="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-primary hover:bg-primary hover:text-background-dark focus:outline-none focus:bg-primary focus:text-white" type="button">
+<span class="sr-only">Remove large option</span>
+<svg class="h-2 w-2" fill="none" stroke="currentColor" viewbox="0 0 8 8">
+<path d="M1 1l6 6m0-6L1 7" stroke-linecap="round" stroke-width="1.5"></path>
+</svg>
+</button>
+</span>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Environment</label>
+<select class="block w-full rounded-lg border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-surface-darker text-slate-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2.5">
+<option>Production</option>
+<option>Staging</option>
+<option>Development</option>
+<option>All Environments</option>
+</select>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: The Problem -->
+<section class="scroll-mt-28 bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-primary/5 shadow-sm p-6 sm:p-8" id="symptoms">
+<div class="flex items-center gap-3 mb-6">
+<div class="p-2 bg-red-500/10 rounded-lg text-red-500">
+<span class="material-icons">warning_amber</span>
+</div>
+<div>
+<h2 class="text-xl font-bold text-slate-900 dark:text-white">The Problem</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400">Describe the symptoms and severity.</p>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Severity Level</label>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<!-- Low -->
+<label class="relative flex cursor-pointer rounded-lg border bg-white dark:bg-surface-darker p-4 shadow-sm focus:outline-none border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20">
+<input aria-describedby="severity-low-description-0" aria-labelledby="severity-low-label" class="sr-only" name="severity" type="radio" value="low"/>
+<span class="flex flex-1">
+<span class="flex flex-col">
+<span class="block text-sm font-medium text-slate-900 dark:text-white" id="severity-low-label">Minor</span>
+<span class="mt-1 flex items-center text-xs text-slate-500 dark:text-slate-400" id="severity-low-description-0">Non-blocking UI glitch</span>
+</span>
+</span>
+<span aria-hidden="true" class="material-icons text-slate-400 dark:text-slate-600">check_circle_outline</span>
+<span aria-hidden="true" class="pointer-events-none absolute -inset-px rounded-lg border-2 border-transparent peer-checked:border-primary"></span>
+</label>
+<!-- Medium -->
+<label class="relative flex cursor-pointer rounded-lg border bg-primary/5 p-4 shadow-sm focus:outline-none border-primary ring-1 ring-primary">
+<input checked="" class="sr-only" name="severity" type="radio" value="medium"/>
+<span class="flex flex-1">
+<span class="flex flex-col">
+<span class="block text-sm font-medium text-primary">Major</span>
+<span class="mt-1 flex items-center text-xs text-primary/80">Feature unavailable</span>
+</span>
+</span>
+<span aria-hidden="true" class="material-icons text-primary">check_circle</span>
+</label>
+<!-- Critical -->
+<label class="relative flex cursor-pointer rounded-lg border bg-white dark:bg-surface-darker p-4 shadow-sm focus:outline-none border-slate-200 dark:border-white/5 hover:border-red-500/30 group">
+<input class="sr-only" name="severity" type="radio" value="critical"/>
+<span class="flex flex-1">
+<span class="flex flex-col">
+<span class="block text-sm font-medium text-slate-900 dark:text-white group-hover:text-red-400 transition-colors">Critical</span>
+<span class="mt-1 flex items-center text-xs text-slate-500 dark:text-slate-400">Data loss or downtime</span>
+</span>
+</span>
+<span aria-hidden="true" class="material-icons text-slate-400 dark:text-slate-600 group-hover:text-red-500 transition-colors">error_outline</span>
+</label>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider" for="symptoms-text">Symptom Description</label>
+<div class="flex gap-2 text-xs text-slate-400">
+<button class="hover:text-primary">Markdown Supported</button>
+</div>
+</div>
+<div class="relative rounded-lg border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-surface-darker shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
+<!-- Toolbar -->
+<div class="flex items-center gap-1 p-2 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-surface-darker">
+<button class="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"><span class="material-icons text-sm">format_bold</span></button>
+<button class="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"><span class="material-icons text-sm">format_italic</span></button>
+<button class="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"><span class="material-icons text-sm">code</span></button>
+<div class="w-px h-4 bg-slate-300 dark:bg-white/10 mx-1"></div>
+<button class="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"><span class="material-icons text-sm">list</span></button>
+<button class="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"><span class="material-icons text-sm">link</span></button>
+</div>
+<textarea class="block w-full border-0 bg-transparent py-3 px-4 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-0 sm:text-sm" id="symptoms-text" placeholder="Describe what happens when the bug occurs..." rows="4"></textarea>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: The Solution -->
+<section class="scroll-mt-28 bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-primary/5 shadow-sm p-6 sm:p-8" id="solution">
+<div class="flex items-center gap-3 mb-6">
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-icons">construction</span>
+</div>
+<div>
+<h2 class="text-xl font-bold text-slate-900 dark:text-white">The Fix</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400">Document the root cause and the code solution.</p>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2" for="rca">Root Cause Analysis</label>
+<textarea class="block w-full rounded-lg border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-surface-darker text-slate-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-2.5 px-4" id="rca" placeholder="Briefly explain why this happened (e.g., Unsanitized input in the API layer)" rows="2"></textarea>
+</div>
+<div>
+<div class="flex justify-between items-end mb-2">
+<label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Code Snippet</label>
+<div class="flex gap-2">
+<select class="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 p-0 pr-6 cursor-pointer hover:text-primary">
+<option>TypeScript</option>
+<option>JavaScript</option>
+<option>Python</option>
+<option>Go</option>
+</select>
+</div>
+</div>
+<!-- IDE-like Code Editor Container -->
+<div class="group relative rounded-xl overflow-hidden border border-slate-300 dark:border-white/10 bg-[#0d1117] shadow-lg ring-1 ring-white/5">
+<!-- Editor Header -->
+<div class="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-white/5 select-none">
+<div class="flex gap-1.5">
+<div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+<div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+<div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+</div>
+<span class="text-xs text-slate-500 font-mono">patch_v1.ts</span>
+<button class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors">
+<span class="material-icons text-[14px]">content_copy</span> Copy
+                                </button>
+</div>
+<!-- Editor Body -->
+<div class="relative flex min-h-[300px] text-sm font-mono leading-relaxed">
+<!-- Line Numbers -->
+<div class="w-10 flex-shrink-0 bg-[#0d1117] text-slate-600 text-right pr-3 pt-4 select-none border-r border-white/5">
+                                    1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9
+                                </div>
+<!-- Code Area -->
+<textarea class="w-full h-full bg-[#0d1117] text-slate-300 resize-y border-none focus:ring-0 p-4 font-mono code-scroll" placeholder="// Paste your corrected code here..." spellcheck="false">// Fixed race condition in user authentication
+async function authenticateUser(credentials: Credentials) {
+  const user = await db.users.findOne({ email: credentials.email });
+  
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Use transaction to ensure atomicity
+  const session = await db.startSession();
+  // ... rest of the fix
+}</textarea>
+<!-- Fake Caret (Visual Candy) -->
+<div class="absolute top-[138px] left-[180px] w-[2px] h-5 bg-primary animate-pulse pointer-events-none hidden md:block"></div>
+</div>
+</div>
+<p class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+<span class="material-icons text-sm text-green-500">check_circle</span>
+                            Syntax valid
+                        </p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Optional: Footer with additional info (not main action) -->
+<footer class="mt-auto py-8 text-center text-xs text-slate-400 dark:text-slate-600">
+<p>© 2023 BetterDoc Enterprise. All rights reserved.</p>
+</footer>
+<!-- Toast Notification (Example) -->
+<div class="fixed bottom-6 right-6 z-50 transform transition-all duration-300 translate-y-0 opacity-100">
+<div class="bg-surface-dark border border-primary/20 shadow-lg shadow-black/50 rounded-lg p-4 flex items-start gap-3 max-w-sm">
+<span class="material-icons text-primary">cloud_done</span>
+<div>
+<h4 class="text-sm font-semibold text-white">Draft Saved</h4>
+<p class="text-xs text-slate-400 mt-1">Your changes have been automatically saved to the cloud.</p>
+</div>
+<button class="text-slate-500 hover:text-white ml-2">
+<span class="material-icons text-sm">close</span>
+</button>
+</div>
+</div>
+</body></html>

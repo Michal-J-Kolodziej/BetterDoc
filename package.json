@@ -1,0 +1,40 @@
+{
+  "name": "betterdoc",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run env:validate && vite dev",
+    "build": "bun run env:validate && vite build",
+    "lint": "eslint . --ext .ts,.tsx,.js --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "env:validate": "bun run scripts/validate-env.ts",
+    "convex:codegen": "convex codegen",
+    "convex:dev": "CONVEX_DEPLOYMENT=$VITE_CONVEX_DEPLOYMENT_DEV convex dev",
+    "convex:deploy:staging": "CONVEX_DEPLOYMENT=$VITE_CONVEX_DEPLOYMENT_STAGING convex deploy",
+    "convex:deploy:prod": "CONVEX_DEPLOYMENT=$VITE_CONVEX_DEPLOYMENT_PROD convex deploy"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "latest",
+    "@tanstack/react-start": "latest",
+    "convex": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "@vitejs/plugin-react": "latest",
+    "eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vite-tsconfig-paths": "latest",
+    "vitest": "latest"
+  }
+}

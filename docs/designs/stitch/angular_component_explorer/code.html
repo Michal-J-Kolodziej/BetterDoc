@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Angular Component Explorer</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#11d473",
+              "background-light": "#f6f8f7",
+              "background-dark": "#102219",
+              "surface-dark": "#162e22", // A slightly lighter shade for panels
+              "surface-darker": "#0d1a14", // A darker shade for sidebar
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"],
+              "mono": ["JetBrains Mono", "monospace"],
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            boxShadow: {
+                "glow": "0 0 15px rgba(17, 212, 115, 0.15)",
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar for technical look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102219; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a4035; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a5548; 
+        }
+        
+        .tree-line {
+            position: absolute;
+            left: 19px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+            z-index: 0;
+        }
+
+        /* Graph visualization styles mock */
+        .node-circle {
+            transition: all 0.3s ease;
+        }
+        .node-group:hover .node-circle {
+            stroke: #11d473;
+            stroke-width: 2px;
+            filter: drop-shadow(0 0 8px rgba(17, 212, 115, 0.4));
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 font-display h-screen flex flex-col overflow-hidden selection:bg-primary/30 selection:text-white">
+<!-- Top Navigation -->
+<nav class="h-16 bg-white dark:bg-surface-darker border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-6 z-20 shrink-0">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-background-dark font-bold text-lg">
+<span class="material-icons-round text-xl">hub</span>
+</div>
+<h1 class="font-semibold text-lg tracking-tight">BetterDoc <span class="text-slate-400 dark:text-slate-500 font-normal mx-2">/</span> Component Explorer</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative w-96 hidden md:block">
+<span class="material-icons-round absolute left-3 top-2.5 text-slate-400 text-sm">search</span>
+<input class="w-full bg-slate-100 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-slate-400 transition-all" placeholder="Search components, libs, or tags..." type="text"/>
+<div class="absolute right-3 top-2.5 flex gap-1">
+<span class="text-[10px] bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-500">⌘</span>
+<span class="text-[10px] bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-500">K</span>
+</div>
+</div>
+<div class="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-2"></div>
+<button class="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+<span class="material-icons-round text-slate-500 dark:text-slate-400">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-emerald-800 overflow-hidden ring-2 ring-primary/20">
+<img alt="User Avatar" class="w-full h-full object-cover opacity-90" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTrfb-O5rTSe3ceYPiVUkRMdV8BYps7lU8Nfsa5khVUNZT70uFa7s3X_8tgCD8kfuQ8u9Aj5dRoVgfE4bz-zAh5Ap4hW3TTI6j47sCuEDxZcyVABDBjtkTizwXv6nyn3wwoQtFDUMBvWVf44HROvw3AVWN5Opg6J0hDkSW7PyM0e0ghUWh50qty9YnWd5kmLuOMCFiW6e6MnvA2ZQx9pNZgw2ClUegWyltzFi5Iw1jz2qnRN7uGIJNzNJTEI5kUkXRjh3v_BLTlxc"/>
+</div>
+</div>
+</nav>
+<!-- Main Workspace -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Sidebar: File Explorer -->
+<aside class="w-80 bg-slate-50 dark:bg-surface-darker border-r border-slate-200 dark:border-white/5 flex flex-col shrink-0 relative group">
+<!-- Context Header -->
+<div class="p-4 border-b border-slate-200 dark:border-white/5 flex items-center justify-between">
+<div class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+<span class="material-icons-round text-base text-primary">folder_open</span>
+<span>angular-monorepo</span>
+</div>
+<div class="flex gap-1">
+<button class="p-1 rounded hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+<span class="material-icons-round text-slate-400 text-sm">filter_list</span>
+</button>
+<button class="p-1 rounded hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+<span class="material-icons-round text-slate-400 text-sm">unfold_less</span>
+</button>
+</div>
+</div>
+<!-- Tree View Content -->
+<div class="flex-1 overflow-y-auto p-2">
+<div class="text-sm font-display space-y-0.5 select-none">
+<!-- Root Folder: Apps -->
+<div class="group/item">
+<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-700 dark:text-slate-300">
+<span class="material-icons-round text-base text-slate-400 transform rotate-90 transition-transform">chevron_right</span>
+<span class="material-icons-round text-base text-yellow-500">folder</span>
+<span class="truncate">apps</span>
+</div>
+<!-- Nested: Client-Web -->
+<div class="pl-6 relative">
+<div class="tree-line"></div>
+<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-700 dark:text-slate-300 relative z-10">
+<span class="material-icons-round text-base text-slate-400">chevron_right</span>
+<span class="material-icons-round text-base text-blue-400">folder</span>
+<span class="truncate">client-web</span>
+</div>
+</div>
+</div>
+<!-- Root Folder: Libs -->
+<div class="group/item mt-1">
+<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-700 dark:text-slate-300">
+<span class="material-icons-round text-base text-slate-400 transform rotate-90">chevron_right</span>
+<span class="material-icons-round text-base text-yellow-500">folder</span>
+<span class="truncate">libs</span>
+</div>
+<!-- Nested: UI-Kit -->
+<div class="pl-6 relative">
+<div class="tree-line"></div>
+<!-- Folder: UI Kit -->
+<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-700 dark:text-slate-300 relative z-10">
+<span class="material-icons-round text-base text-slate-400 transform rotate-90">chevron_right</span>
+<span class="material-icons-round text-base text-blue-400">folder</span>
+<span class="truncate">ui-kit</span>
+</div>
+<!-- Nested Level 2 -->
+<div class="pl-6 relative border-l border-slate-200 dark:border-white/5 ml-2.5">
+<!-- Folder: Buttons -->
+<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-700 dark:text-slate-300">
+<span class="material-icons-round text-base text-slate-400">chevron_right</span>
+<span class="material-icons-round text-base text-blue-400">folder</span>
+<span class="truncate">buttons</span>
+</div>
+<!-- Folder: User Profile (Active) -->
+<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-700 dark:text-slate-300">
+<span class="material-icons-round text-base text-slate-400 transform rotate-90">chevron_right</span>
+<span class="material-icons-round text-base text-blue-400">folder</span>
+<span class="truncate">user-profile</span>
+</div>
+<!-- Nested Level 3: Components -->
+<div class="pl-6 relative border-l border-slate-200 dark:border-white/5 ml-2.5">
+<!-- Component File (Active) -->
+<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/20 cursor-pointer text-primary font-medium relative z-10 border-l-2 border-primary -ml-[1px]">
+<span class="material-icons-round text-base text-red-400">data_object</span>
+<span class="truncate">user-profile.component</span>
+<div class="ml-auto w-2 h-2 rounded-full bg-red-500 shadow-glow" title="Has known bugs"></div>
+</div>
+<!-- Other File -->
+<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-500 dark:text-slate-400 relative z-10">
+<span class="material-icons-round text-base text-blue-300">code</span>
+<span class="truncate">user-profile.module</span>
+</div>
+<!-- Other File -->
+<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-500 dark:text-slate-400 relative z-10">
+<span class="material-icons-round text-base text-purple-300">css</span>
+<span class="truncate">user-profile.theme</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Nested: Shared -->
+<div class="pl-6 relative mt-1">
+<div class="tree-line"></div>
+<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 cursor-pointer text-slate-700 dark:text-slate-300 relative z-10">
+<span class="material-icons-round text-base text-slate-400">chevron_right</span>
+<span class="material-icons-round text-base text-blue-400">folder</span>
+<span class="truncate">shared</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Resizer Handle -->
+<div class="absolute right-0 top-0 bottom-0 w-1 bg-transparent hover:bg-primary/50 cursor-col-resize z-50 transition-colors"></div>
+</aside>
+<!-- Main Content Pane -->
+<main class="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark">
+<!-- Component Header -->
+<header class="px-8 py-6 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-background-dark">
+<div class="flex items-start justify-between">
+<div>
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 text-xs font-mono text-slate-500 mb-2">
+<span>libs</span>
+<span class="text-slate-300">/</span>
+<span>ui-kit</span>
+<span class="text-slate-300">/</span>
+<span>user-profile</span>
+</nav>
+<!-- Title & Badges -->
+<div class="flex items-center gap-4 mb-2">
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+<span class="material-icons-round text-primary text-3xl">view_in_ar</span>
+                                UserProfileComponent
+                            </h2>
+<span class="px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">Bug Warning</span>
+<span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">v2.4.0</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm max-w-2xl">
+                            Displays user avatar, name, and quick stats. Used primarily in dashboard headers and sidebar navigation.
+                        </p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-medium transition-colors border border-transparent dark:border-white/5">
+<span class="material-icons-round text-base">code</span>
+                            Source
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-emerald-400 text-background-dark text-sm font-bold shadow-glow transition-all">
+<span class="material-icons-round text-base">edit</span>
+                            Edit Docs
+                        </button>
+</div>
+</div>
+<!-- Tabs -->
+<div class="flex gap-8 mt-8 border-b border-transparent dark:border-white/5 -mb-6">
+<button class="pb-3 text-sm font-medium text-primary border-b-2 border-primary">Overview</button>
+<button class="pb-3 text-sm font-medium text-slate-500 hover:text-slate-300 transition-colors">API Reference</button>
+<button class="pb-3 text-sm font-medium text-slate-500 hover:text-slate-300 transition-colors">Changelog</button>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-8">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+<!-- LEFT COLUMN: Dependency Graph -->
+<div class="xl:col-span-2 space-y-6">
+<!-- Graph Container -->
+<div class="bg-white dark:bg-surface-dark border border-slate-200 dark:border-white/5 rounded-xl p-1 shadow-sm overflow-hidden h-[500px] flex flex-col">
+<div class="p-3 flex justify-between items-center border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-surface-darker/50">
+<h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+<span class="material-icons-round text-slate-400 text-base">hub</span>
+                                    Dependency Graph
+                                </h3>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-round text-sm">add</span>
+</button>
+<button class="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-round text-sm">remove</span>
+</button>
+<button class="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-round text-sm">center_focus_strong</span>
+</button>
+</div>
+</div>
+<!-- Graph Visualization SVG -->
+<div class="flex-1 bg-slate-50 dark:bg-[#0d1a14] relative overflow-hidden flex items-center justify-center">
+<!-- Background grid -->
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#11d473 1px, transparent 1px); background-size: 20px 20px;"></div>
+<svg height="100%" viewbox="0 0 600 400" width="100%" xmlns="http://www.w3.org/2000/svg">
+<!-- Definitions for arrowheads -->
+<defs>
+<marker id="arrowhead" markerheight="7" markerwidth="10" orient="auto" refx="28" refy="3.5">
+<polygon class="dark:fill-slate-600" fill="#334155" points="0 0, 10 3.5, 0 7"></polygon>
+</marker>
+<marker id="arrowhead-primary" markerheight="7" markerwidth="10" orient="auto" refx="28" refy="3.5">
+<polygon fill="#11d473" points="0 0, 10 3.5, 0 7"></polygon>
+</marker>
+</defs>
+<!-- Connecting Lines -->
+<!-- Incoming -->
+<line class="dark:stroke-slate-600" marker-end="url(#arrowhead)" stroke="#334155" stroke-width="1.5" x1="100" x2="300" y1="120" y2="200"></line>
+<line class="dark:stroke-slate-600" marker-end="url(#arrowhead)" stroke="#334155" stroke-width="1.5" x1="100" x2="300" y1="280" y2="200"></line>
+<!-- Outgoing -->
+<line marker-end="url(#arrowhead-primary)" stroke="#11d473" stroke-dasharray="5,3" stroke-width="1.5" x1="300" x2="500" y1="200" y2="120"></line>
+<line marker-end="url(#arrowhead-primary)" stroke="#11d473" stroke-width="1.5" x1="300" x2="500" y1="200" y2="280"></line>
+<!-- Incoming Nodes -->
+<g class="node-group cursor-pointer">
+<circle class="node-circle dark:fill-surface-dark dark:stroke-slate-600" cx="100" cy="120" fill="#1e293b" r="25" stroke="#334155" stroke-width="2"></circle>
+<text fill="#94a3b8" font-family="Inter" font-size="10" font-weight="500" text-anchor="middle" x="100" y="160">AuthModule</text>
+<text fill="#94a3b8" font-family="Material Icons Round" font-size="18" text-anchor="middle" x="100" y="125">lock</text>
+</g>
+<g class="node-group cursor-pointer">
+<circle class="node-circle dark:fill-surface-dark dark:stroke-slate-600" cx="100" cy="280" fill="#1e293b" r="25" stroke="#334155" stroke-width="2"></circle>
+<text fill="#94a3b8" font-family="Inter" font-size="10" font-weight="500" text-anchor="middle" x="100" y="320">Dashboard</text>
+<text fill="#94a3b8" font-family="Material Icons Round" font-size="18" text-anchor="middle" x="100" y="285">dashboard</text>
+</g>
+<!-- Center Node (Active) -->
+<g class="node-group cursor-pointer">
+<circle class="filter drop-shadow-lg" cx="300" cy="200" fill="#11d473" fill-opacity="0.1" r="35" stroke="#11d473" stroke-width="3"></circle>
+<text fill="#11d473" font-family="Inter" font-size="12" font-weight="700" text-anchor="middle" x="300" y="255">UserProfile</text>
+<text fill="#11d473" font-family="Material Icons Round" font-size="24" text-anchor="middle" x="300" y="208">person</text>
+</g>
+<!-- Outgoing Nodes -->
+<g class="node-group cursor-pointer">
+<circle class="node-circle dark:fill-surface-dark dark:stroke-slate-600" cx="500" cy="120" fill="#1e293b" r="25" stroke="#334155" stroke-width="2"></circle>
+<text fill="#94a3b8" font-family="Inter" font-size="10" font-weight="500" text-anchor="middle" x="500" y="160">UserService</text>
+<text fill="#94a3b8" font-family="Material Icons Round" font-size="18" text-anchor="middle" x="500" y="125">settings_ethernet</text>
+</g>
+<g class="node-group cursor-pointer">
+<circle class="node-circle dark:fill-surface-dark dark:stroke-slate-600" cx="500" cy="280" fill="#1e293b" r="25" stroke="#334155" stroke-width="2"></circle>
+<text fill="#94a3b8" font-family="Inter" font-size="10" font-weight="500" text-anchor="middle" x="500" y="320">Avatar</text>
+<text fill="#94a3b8" font-family="Material Icons Round" font-size="18" text-anchor="middle" x="500" y="285">account_circle</text>
+</g>
+</svg>
+<div class="absolute bottom-4 left-4 bg-surface-dark/90 backdrop-blur border border-white/5 rounded px-2 py-1 text-xs text-slate-400">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-slate-500"></span> Incoming (2)
+                                    </div>
+<div class="flex items-center gap-2 mt-1">
+<span class="w-2 h-2 rounded-full bg-primary"></span> Outgoing (2)
+                                    </div>
+</div>
+</div>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-3 gap-4">
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-white/5">
+<div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Bundle Size</div>
+<div class="text-xl font-bold dark:text-white">12.4 KB</div>
+<div class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+<span class="material-icons-round text-xs">arrow_downward</span> 2% vs last build
+                                </div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-white/5">
+<div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Dependents</div>
+<div class="text-xl font-bold dark:text-white">8 Modules</div>
+<div class="text-xs text-slate-400 mt-1">High impact component</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-white/5">
+<div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Test Coverage</div>
+<div class="text-xl font-bold dark:text-white">94%</div>
+<div class="w-full h-1 bg-slate-700 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full w-[94%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: Knowledge & Tips -->
+<div class="xl:col-span-1 flex flex-col gap-4">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+<span class="material-icons-round text-yellow-400">lightbulb</span>
+                                Knowledge Base
+                            </h3>
+<button class="text-xs text-primary font-medium hover:underline">Add Tip +</button>
+</div>
+<!-- Tip Card 1 (Warning) -->
+<div class="bg-white dark:bg-surface-dark border-l-4 border-red-500 rounded-lg p-5 shadow-sm relative group overflow-hidden">
+<div class="absolute right-0 top-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-slate-400 hover:text-white"><span class="material-icons-round text-sm">edit</span></button>
+</div>
+<div class="flex items-center gap-2 mb-3">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-500/20 text-red-400 border border-red-500/20 tracking-wider">Performance</span>
+<span class="text-xs text-slate-500">Tip #102</span>
+</div>
+<h4 class="font-medium text-slate-800 dark:text-slate-200 text-sm mb-2">Infinite Re-render Loop</h4>
+<p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-3">
+                                Do not use <code class="bg-slate-100 dark:bg-black/40 px-1 py-0.5 rounded text-red-400 font-mono text-xs">ChangeDetectionStrategy.Default</code> here. It causes loops when the avatar service emits rapid updates.
+                            </p>
+<div class="bg-slate-900 rounded p-3 font-mono text-xs text-slate-300 border border-white/5">
+<span class="text-purple-400">@Component</span>({<br/>
+                                  changeDetection: <span class="text-primary">ChangeDetectionStrategy.OnPush</span><br/>
+                                })
+                            </div>
+</div>
+<!-- Tip Card 2 (Setup) -->
+<div class="bg-white dark:bg-surface-dark border-l-4 border-blue-500 rounded-lg p-5 shadow-sm relative group">
+<div class="flex items-center gap-2 mb-3">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/20 tracking-wider">Setup</span>
+<span class="text-xs text-slate-500">Tip #45</span>
+</div>
+<h4 class="font-medium text-slate-800 dark:text-slate-200 text-sm mb-2">Initialization Requirement</h4>
+<p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                                Requires <code class="bg-slate-100 dark:bg-black/40 px-1 py-0.5 rounded text-blue-300 font-mono text-xs">AuthToken</code> in local storage to initialize properly. If missing, the component will render a skeleton loader indefinitely.
+                            </p>
+</div>
+<!-- Tip Card 3 (Best Practice) -->
+<div class="bg-white dark:bg-surface-dark border-l-4 border-primary rounded-lg p-5 shadow-sm relative group">
+<div class="flex items-center gap-2 mb-3">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-primary/20 text-primary border border-primary/20 tracking-wider">Style</span>
+<span class="text-xs text-slate-500">Tip #88</span>
+</div>
+<h4 class="font-medium text-slate-800 dark:text-slate-200 text-sm mb-2">Avatar Sizing</h4>
+<p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                                Use the pre-defined mixins for avatar sizes to ensure alignment with the sidebar text.
+                            </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Context Footer -->
+<footer class="h-8 border-t border-slate-200 dark:border-white/5 bg-white dark:bg-surface-darker px-4 flex items-center justify-between text-[10px] text-slate-500">
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span> TS Server Ready</span>
+<span>•</span>
+<span>Modified: 2h ago by @sarahj</span>
+</div>
+<div class="flex items-center gap-4">
+<span>Ln 42, Col 12</span>
+<span>UTF-8</span>
+<span>TypeScript</span>
+</div>
+</footer>
+</main>
+</div>
+</body></html>

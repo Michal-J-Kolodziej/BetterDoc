@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codebase Docs Sync"
+  short_description: "Sync docs after code changes"
+  default_prompt: "Use $codebase-doc-sync to update project documentation whenever application code changes."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Enterprise Web App Planner"
+  short_description: "Plan enterprise web apps from short briefs"
+  default_prompt: "Use $enterprise-web-app-planning-guide to turn a brief enterprise web app idea into an implementation-ready product and architecture plan."

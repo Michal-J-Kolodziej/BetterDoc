@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #f7fbff 0%, #ecf5ff 45%, #e9f0f8 100%);
+  color: #102133;
+}
+
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+  color: #0b3157;
+}
+
+section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #d1deec;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+code {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #ebf2f9;
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+}

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BetterDoc - Review &amp; Governance Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#11d473",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "surface-dark": "#162e22", // Derived lighter shade for surfaces
+                        "surface-hover": "#1c3b2b", // Derived hover shade
+                        "neutral-dark": "#5e7a6d", // Derived neutral text
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom Scrollbar for the dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102219; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #162e22; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #11d473; 
+        }
+        
+        .diff-added {
+            background-color: rgba(17, 212, 115, 0.15);
+            border-left: 2px solid #11d473;
+        }
+        .diff-removed {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-left: 2px solid #ef4444;
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 font-display h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation Header -->
+<header class="h-16 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-primary/20 flex items-center justify-between px-6 shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-background-dark font-bold text-lg">
+                    B
+                </div>
+<h1 class="font-semibold text-lg tracking-tight">BetterDoc</h1>
+</div>
+<div class="h-6 w-px bg-gray-200 dark:bg-primary/20 mx-2"></div>
+<div class="flex items-center gap-2 text-sm text-gray-500 dark:text-neutral-dark">
+<span class="font-medium text-gray-900 dark:text-gray-100">Governance Queue</span>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">12 Pending</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-gray-400">
+<button class="hover:text-primary transition-colors relative">
+<span class="material-icons text-[20px]">notifications</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary"></span>
+</button>
+<button class="hover:text-primary transition-colors">
+<span class="material-icons text-[20px]">help_outline</span>
+</button>
+</div>
+<div class="flex items-center gap-3 pl-6 border-l border-gray-200 dark:border-primary/20">
+<div class="text-right hidden sm:block">
+<div class="text-sm font-medium">Sarah Jenkins</div>
+<div class="text-xs text-gray-500 dark:text-neutral-dark">Tech Lead</div>
+</div>
+<img alt="User Avatar" class="w-9 h-9 rounded-full border-2 border-primary/30" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCns0_Q_h8SuMrbJLHlJhohXoukRQByWOlhEyd5DyozTdp4y4zrscp7OreUnNXtLVx4IEZP_7t7nh_boliQPpRqvGkcDnUMoE8y-DdcZqNbY3DfYMOPAYZAHEGzaXwEifmqPUJ_bHVNAEDiDJkUoTCj3RR-yJA99KBDxMoKObwYa69pxKokfhyGoiaPpV9EeVh9gwoTrJu18pa5mX-t4OKuHKsJaSivMA6OZ83_y1r4yrdbYn3vtxwCXkJZymd1U21nBTVreIYYfjw"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Sidebar: The Queue -->
+<aside class="w-80 lg:w-96 flex flex-col bg-gray-50 dark:bg-[#0c1a13] border-r border-gray-200 dark:border-primary/10 shrink-0">
+<!-- Filters -->
+<div class="p-4 border-b border-gray-200 dark:border-primary/10 space-y-3">
+<div class="relative">
+<span class="material-icons absolute left-3 top-2.5 text-gray-400 text-[18px]">search</span>
+<input class="w-full pl-9 pr-4 py-2 bg-white dark:bg-surface-dark border border-gray-200 dark:border-primary/20 rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-400 dark:placeholder-neutral-dark transition-all" placeholder="Search queue..." type="text"/>
+</div>
+<div class="flex gap-2">
+<select class="flex-1 bg-white dark:bg-surface-dark border border-gray-200 dark:border-primary/20 rounded-lg text-xs py-1.5 px-2 focus:outline-none focus:border-primary">
+<option>Sort by Date</option>
+<option>Sort by Severity</option>
+<option>Sort by Author</option>
+</select>
+<button class="p-1.5 bg-white dark:bg-surface-dark border border-gray-200 dark:border-primary/20 rounded-lg hover:bg-gray-50 dark:hover:bg-primary/10 text-gray-500 dark:text-gray-300">
+<span class="material-icons text-[18px]">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Queue List -->
+<div class="flex-1 overflow-y-auto p-3 space-y-2">
+<!-- Active Item -->
+<div class="p-3 rounded-lg bg-white dark:bg-surface-dark border border-primary shadow-sm relative group cursor-pointer ring-1 ring-primary/50">
+<div class="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<div class="flex justify-between items-start mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/20 text-primary">In Review</span>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">2h ago</span>
+</div>
+<h3 class="font-medium text-sm text-gray-900 dark:text-white mb-1 leading-snug">Preventing SQL Injection in Legacy Modules</h3>
+<div class="flex items-center gap-2 mt-2">
+<img alt="Author" class="w-5 h-5 rounded-full" data-alt="Author avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0rJs-H_mx20TuFgrQlUUuCMNKqJkxGr74kV8SHGE4227W-06Gcj63pwFExoQDUmX7kMFBdgUoCCw40CudaPg1tY4yAIjBZF31b-VRyDIbYddM_zEN8biRiRUjEk2Pf3jyLRqJ2JG8sBrx6eg6T9K_BgYtTLJu4dLVy1lr80EZIH4P6cWNYG9ZnShp8IEGmPxS12aek-_3D1Woi438Gh3ro1EcSqjW7dv3rplhw1clRXqdWGJ3CCp9HMGF0d3fBEblU75WhSvJ5iY"/>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">John Doe</span>
+</div>
+</div>
+<!-- Pending Item -->
+<div class="p-3 rounded-lg border border-transparent hover:bg-white dark:hover:bg-surface-dark/50 hover:border-gray-200 dark:hover:border-primary/20 cursor-pointer transition-all group">
+<div class="flex justify-between items-start mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-blue-500/10 text-blue-400">Update</span>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">4h ago</span>
+</div>
+<h3 class="font-medium text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors mb-1 leading-snug">API Rate Limiting Guidelines</h3>
+<div class="flex items-center gap-2 mt-2">
+<img alt="Author" class="w-5 h-5 rounded-full" data-alt="Author avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwhTnupeqrRw5V3ncJBGF_jU5SUDG_gmZNm8FNrONB1dF3fzvCs7dJ9puuiKmKqIPjc3-Z9WxSIc5yPFYnHNgBQ9iK6GbVmt8REFu4NDlNRKcXMGXxxdZc7zKVKhBZ2mLteC7lvs5jW3iQI0v-eD9sHRbWqUBd5q1qIfHKjlpnAWo4dhxYL_gbq644hIbjgrbCuAY1CX1y92h3Po0VWjESeXfq1xB1HEuPpEHANw7OoCR-EM0AYWhz64rM9aso-QlAb9jU493_iXQ"/>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">Alice Smith</span>
+</div>
+</div>
+<!-- Pending Item -->
+<div class="p-3 rounded-lg border border-transparent hover:bg-white dark:hover:bg-surface-dark/50 hover:border-gray-200 dark:hover:border-primary/20 cursor-pointer transition-all group">
+<div class="flex justify-between items-start mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-orange-500/10 text-orange-400">Critical</span>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">1d ago</span>
+</div>
+<h3 class="font-medium text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors mb-1 leading-snug">Deprecation: v1 Auth Token Headers</h3>
+<div class="flex items-center gap-2 mt-2">
+<img alt="Author" class="w-5 h-5 rounded-full" data-alt="Author avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7jyPpiCkxR8Qwf9aervFq2bFZBMaoChHT7dS5MSPN8eZw1vbcBJZxhmms_2VV2sCTuLUZWM7lWSnYb2YHY2fWykr4JosC_mZrRW1TW_sGEVoR_fKCDWg1QMjbrcJiPxsuD3yucb5nnpkKXJE8AMe-hR3xYkIgPx9aAAh1QnuVXCVCyf4l7b1KN29bKmVrilhBUL_cZXH15yqoDZPgGEM47dFxIroeo1VY_7hSoN09EdNj3ws4kfivH4eMBSRaih-6ODeiYO1tJXU"/>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">Mike Ross</span>
+</div>
+</div>
+<!-- Pending Item -->
+<div class="p-3 rounded-lg border border-transparent hover:bg-white dark:hover:bg-surface-dark/50 hover:border-gray-200 dark:hover:border-primary/20 cursor-pointer transition-all group">
+<div class="flex justify-between items-start mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-purple-500/10 text-purple-400">Cleanup</span>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">2d ago</span>
+</div>
+<h3 class="font-medium text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors mb-1 leading-snug">Refactoring User Service Imports</h3>
+<div class="flex items-center gap-2 mt-2">
+<img alt="Author" class="w-5 h-5 rounded-full" data-alt="Author avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDDKGkGc5MFnzyDmHToyx5INBdB04JA9X9eyqNxv6Nf4Y3nlZXOJG7ivUUSo3s5Ye8wZyGvUaUnb-26B_q27qVJqKoj7UGi0rK9PTF01c-T0Ae081kc5T1qT4W5Pb6n6496ck5rHvTJSNH7sWWUZXfUPqSBxaswyr1_Dr1_QGPOPBbrlSXiDjLbW8W9dwcoZwW9njFsmFtqv7MB0aJh8w3_XjrC9RdPlVzh0x-4x0VFId4cusAhuUMDofx3dgMkUWMawoJrQfliUY"/>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">Elena Gilbert</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Workspace: Diff Viewer -->
+<section class="flex-1 flex flex-col bg-background-light dark:bg-background-dark overflow-hidden relative">
+<!-- Metadata Header -->
+<div class="p-6 pb-2 shrink-0">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<span class="px-2.5 py-1 rounded text-xs font-medium bg-primary/20 text-primary border border-primary/20">TIP-2849</span>
+<span class="text-xs text-gray-500 dark:text-neutral-dark flex items-center gap-1">
+<span class="material-icons text-[14px]">calendar_today</span> Submitted 2 hours ago
+                            </span>
+</div>
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-2">Preventing SQL Injection in Legacy Modules</h2>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-xs bg-gray-200 dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-primary/10">Java</span>
+<span class="px-2 py-0.5 rounded text-xs bg-gray-200 dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-primary/10">Security</span>
+<span class="px-2 py-0.5 rounded text-xs bg-gray-200 dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-primary/10">Backend</span>
+</div>
+</div>
+<!-- Quick Stats or Info -->
+<div class="flex flex-col items-end gap-2">
+<div class="flex -space-x-2">
+<img alt="John" class="w-8 h-8 rounded-full border-2 border-background-light dark:border-background-dark" data-alt="Reviewer avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuADqwF7j2R_h5IBG9Jq4jpHHGGX_9_ncFZugWo8pbqytr6IPl2QNxO-Zy5yCdhPtPwEHbwrIgDiDl39XJGGUvz4yIiAnhTXH3_UnwyxApePmDMxFN5FdlPbDVvSum9mFOCDSiP21D0ZQ_3Q02qh7UzH_f96tvYyn17kRrpyQcG08hyFUJDqASJB8zN5ABgNmmji85wuB056Ix3ErWXptdDrYUnhmhWfgok3dUtEcSAAG7ppqx-TZwaeTtxd5aAvpr45SwCamHtjWD4"/>
+<div class="w-8 h-8 rounded-full border-2 border-background-light dark:border-background-dark bg-gray-200 dark:bg-surface-dark flex items-center justify-center text-xs font-medium text-gray-500">+2</div>
+</div>
+<span class="text-xs text-gray-500 dark:text-neutral-dark">3 comments on this review</span>
+</div>
+</div>
+</div>
+<!-- Main Diff Area -->
+<div class="flex-1 px-6 pb-24 overflow-y-auto">
+<div class="rounded-xl overflow-hidden border border-gray-200 dark:border-primary/20 shadow-sm bg-white dark:bg-[#0c1a13]">
+<!-- Diff Header -->
+<div class="flex border-b border-gray-200 dark:border-primary/20 bg-gray-50 dark:bg-surface-dark">
+<div class="w-1/2 p-3 text-xs font-mono text-gray-500 dark:text-neutral-dark border-r border-gray-200 dark:border-primary/20 flex items-center justify-between">
+<span>ORIGINAL VERSION (v1.2)</span>
+<span class="material-icons text-[16px]">history</span>
+</div>
+<div class="w-1/2 p-3 text-xs font-mono text-primary font-medium flex items-center justify-between">
+<span>PROPOSED CHANGES</span>
+<span class="material-icons text-[16px]">edit_note</span>
+</div>
+</div>
+<!-- Diff Content -->
+<div class="flex font-mono text-sm leading-6">
+<!-- Left Pane (Original) -->
+<div class="w-1/2 p-4 text-gray-600 dark:text-gray-400 border-r border-gray-200 dark:border-primary/20 bg-white dark:bg-[#0c1a13] select-none">
+<pre><code>// Legacy DB Connection
+String query = "SELECT * FROM users WHERE id = " + userId;
+Statement stmt = conn.createStatement();
+ResultSet rs = stmt.executeQuery(query);
+
+<span class="diff-removed block w-full -ml-4 pl-4 pr-4">if (rs.next()) {</span>
+<span class="diff-removed block w-full -ml-4 pl-4 pr-4">    return rs.getString("username");</span>
+<span class="diff-removed block w-full -ml-4 pl-4 pr-4">}</span>
+</code></pre>
+</div>
+<!-- Right Pane (Proposed) -->
+<div class="w-1/2 p-4 text-gray-800 dark:text-gray-200 bg-white dark:bg-[#0c1a13]">
+<pre><code>// Legacy DB Connection
+String query = "SELECT * FROM users WHERE id = ?";
+PreparedStatement stmt = conn.prepareStatement(query);
+<span class="diff-added block w-full -ml-4 pl-4 pr-4 text-gray-900 dark:text-white">stmt.setInt(1, userId);</span>
+ResultSet rs = stmt.executeQuery();
+
+<span class="diff-added block w-full -ml-4 pl-4 pr-4 text-gray-900 dark:text-white">if (rs.next()) {</span>
+<span class="diff-added block w-full -ml-4 pl-4 pr-4 text-gray-900 dark:text-white">    return rs.getString("username");</span>
+<span class="diff-added block w-full -ml-4 pl-4 pr-4 text-gray-900 dark:text-white">}</span>
+</code></pre>
+</div>
+</div>
+<!-- Description Text Diff -->
+<div class="border-t border-gray-200 dark:border-primary/20 p-6 bg-white dark:bg-[#0c1a13]">
+<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2 font-display">Description Update</h3>
+<div class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-display">
+                            Use <span class="diff-removed px-1 rounded">Statement</span> <span class="diff-added px-1 rounded text-gray-900 dark:text-white font-medium">PreparedStatement</span> when dealing with user inputs to ensure the application is protected against SQL Injection attacks. This is mandatory for all modules.
+                        </div>
+</div>
+</div>
+<!-- Discussion Thread (Collapsible Look) -->
+<div class="mt-6">
+<button class="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-primary transition-colors mb-4">
+<span class="material-icons text-[18px]">expand_more</span>
+                        Show Discussion (2)
+                    </button>
+<div class="pl-4 border-l-2 border-gray-200 dark:border-primary/20 space-y-4">
+<div class="flex gap-3">
+<img alt="Commenter" class="w-8 h-8 rounded-full mt-1" data-alt="Commenter avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcktT4I3MQsROxJAsDaBiPt8hIPfwqvC_FIkfYdAEAccYP0r0Uc3PW99mMuQ4od8836m6ObWU4xhBeEc8rZVKAInYBnLizS6kers-mGd82iAWRKX-hZ3DKq4H52Pt5MsH4pGSjEycbi9tNJzdT5vCSl1i8uxrtE-oDiGxe_WjvvuXiwrUXaGT1t1p6Aw7_Pm1KJ7fALhRD7XyPvlBHaskenrTJbW6AjpOeEddM3zb9KTsbUwyDXEaQe8ZOphKLAkwhcbBwaEp-Uf4"/>
+<div class="bg-white dark:bg-surface-dark p-3 rounded-lg rounded-tl-none border border-gray-200 dark:border-primary/10 shadow-sm flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="font-medium text-sm text-gray-900 dark:text-white">Mike Ross</span>
+<span class="text-xs text-gray-400">1h ago</span>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300">Is `PreparedStatement` supported in the legacy driver v4.2? We might need to upgrade the pom.xml dependency first.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Action Footer -->
+<div class="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-primary/20 flex items-center justify-between z-10 backdrop-blur-md bg-opacity-95 dark:bg-opacity-95">
+<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-neutral-dark hidden md:flex">
+<span class="px-2 py-1 rounded border border-gray-300 dark:border-primary/20">Cmd + Enter</span> to Approve
+                </div>
+<div class="flex items-center gap-3 ml-auto">
+<button class="px-4 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        Deprecate
+                    </button>
+<button class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-white border border-gray-300 dark:border-primary/30 hover:bg-gray-50 dark:hover:bg-primary/10 transition-colors">
+                        Request Changes
+                    </button>
+<button class="px-6 py-2 rounded-lg text-sm font-bold text-background-dark bg-primary hover:bg-[#0ebf66] shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center gap-2">
+<span class="material-icons text-[18px]">check_circle</span>
+                        Approve &amp; Publish
+                    </button>
+</div>
+</div>
+</section>
+</main>
+</body></html>

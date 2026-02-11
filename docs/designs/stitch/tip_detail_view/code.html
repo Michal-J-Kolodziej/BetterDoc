@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BetterDoc - Tip Detail View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#11d473",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "surface-dark": "#162e21", // Slightly lighter than background-dark for cards
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for code blocks */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(17, 212, 115, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(17, 212, 115, 0.3);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(17, 212, 115, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 font-display min-h-screen flex flex-col">
+<!-- Navbar -->
+<nav class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-primary/20">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between h-16">
+<div class="flex items-center">
+<div class="flex-shrink-0 flex items-center gap-2">
+<span class="material-icons text-primary text-3xl">bug_report</span>
+<span class="font-bold text-xl tracking-tight text-slate-900 dark:text-white">BetterDoc</span>
+</div>
+<div class="hidden md:ml-8 md:flex md:space-x-8">
+<a class="border-b-2 border-primary text-slate-900 dark:text-white inline-flex items-center px-1 pt-1 text-sm font-medium" href="#">
+                            Knowledge Base
+                        </a>
+<a class="border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 inline-flex items-center px-1 pt-1 text-sm font-medium" href="#">
+                            My Tips
+                        </a>
+<a class="border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 inline-flex items-center px-1 pt-1 text-sm font-medium" href="#">
+                            Requests
+                        </a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<input class="bg-slate-100 dark:bg-surface-dark border-none rounded-lg py-1.5 pl-4 pr-10 text-sm focus:ring-1 focus:ring-primary w-64 text-slate-900 dark:text-slate-200 placeholder-slate-500" placeholder="Search error codes..." type="text"/>
+<span class="material-icons absolute right-2 top-1.5 text-slate-400 text-sm">search</span>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/20 flex items-center gap-2">
+<span class="material-icons text-sm">add</span> New Tip
+                    </button>
+<img alt="User Avatar" class="h-8 w-8 rounded-full border border-slate-200 dark:border-primary/30" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGsiSJaJiiWTYPcNZ7Vu3ZoCH6wqBv6S-ylxS0iLlSbEEi2-DQQw6TpeKDstUS6NQwQ82qk3Si22Y8zSiFT5sVQ2hlgFdUIuOOZsZ4T0cl7S4icaSVKlWMN2ekqpWaTQIdkcKcs4SjXHcfGG-LA8xROQxvL9k7DC-YHUBoI9onoR21956MWpr7n52lCgKGWAdDDbeA5gZ4O9Ld3bqx0jcUC56KGWN0SVm3Tt30dbcquiDpWr-2lz6yagF0Ov8y_qdc2RkWrRlfGFE"/>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+<!-- Breadcrumbs & Actions -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+<nav aria-label="Breadcrumb" class="flex">
+<ol class="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
+<li><a class="hover:text-primary transition-colors" href="#">Backend</a></li>
+<li><span class="material-icons text-xs text-slate-400">chevron_right</span></li>
+<li><a class="hover:text-primary transition-colors" href="#">Database</a></li>
+<li><span class="material-icons text-xs text-slate-400">chevron_right</span></li>
+<li><a class="hover:text-primary transition-colors" href="#">PostgreSQL</a></li>
+<li><span class="material-icons text-xs text-slate-400">chevron_right</span></li>
+<li class="font-medium text-slate-900 dark:text-white truncate max-w-[200px]">Connection Timeout</li>
+</ol>
+</nav>
+<div class="flex items-center gap-3">
+<button class="text-slate-400 hover:text-primary transition-colors" title="Bookmark">
+<span class="material-icons">bookmark_border</span>
+</button>
+<button class="text-slate-400 hover:text-primary transition-colors" title="Share">
+<span class="material-icons">share</span>
+</button>
+<div class="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-1"></div>
+<button class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors">
+<span class="material-icons text-sm">edit</span> Edit Tip
+                </button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Rich Text Content (8 cols) -->
+<div class="lg:col-span-8 space-y-8">
+<!-- Title Header -->
+<div class="border-b border-slate-200 dark:border-primary/10 pb-6">
+<div class="flex items-center gap-3 mb-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+<span class="w-1.5 h-1.5 bg-primary rounded-full mr-1.5"></span>
+                            Verified Fix
+                        </span>
+<span class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+<span class="material-icons text-[14px]">visibility</span> 1.2k views
+                        </span>
+</div>
+<h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                        PostgreSQL Connection Timeout on heavy write loads
+                    </h1>
+</div>
+<!-- Section: Symptom -->
+<section class="bg-white dark:bg-surface-dark rounded-xl p-6 shadow-sm border border-slate-100 dark:border-primary/5">
+<div class="flex items-center gap-3 mb-4">
+<div class="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-500 dark:text-red-400">
+<span class="material-icons">warning</span>
+</div>
+<h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Symptom</h2>
+</div>
+<p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Application throws <code class="text-sm bg-slate-100 dark:bg-black/30 px-1.5 py-0.5 rounded text-red-500 font-mono">504 Gateway Timeouts</code> or <code class="text-sm bg-slate-100 dark:bg-black/30 px-1.5 py-0.5 rounded text-red-500 font-mono">PG::ConnectionBad</code> errors during peak traffic periods (usually 14:00 - 16:00 UTC). The error logs indicate that the connection pool is exhausted, and new worker threads hang indefinitely waiting for a database connection.
+                    </p>
+<div class="mt-4 bg-slate-50 dark:bg-black/40 rounded-lg p-4 font-mono text-sm text-red-400 border-l-4 border-red-500 overflow-x-auto custom-scrollbar">
+                        FATAL: remaining connection slots are reserved for non-replication superuser connections
+                    </div>
+</section>
+<!-- Section: Root Cause -->
+<section class="relative pl-6 border-l-2 border-slate-200 dark:border-primary/20">
+<div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-background-light dark:bg-background-dark border-2 border-primary"></div>
+<h2 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">Root Cause Analysis</h2>
+<p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
+                        The default connection pool size in our Rails <code class="text-sm bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded font-mono">database.yml</code> is set to 5. However, during high concurrency events, our Sidekiq workers scale up to 25 threads per process. Since we deploy 4 pods, we are attempting to open 100 connections, while our RDS instance `max_connections` is capped at 80 for the current instance type.
+                    </p>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                            PostgreSQL 14
+                        </span>
+<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                            Rails 7
+                        </span>
+<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                            Sidekiq
+                        </span>
+</div>
+</section>
+<!-- Section: Fix (Highlighted) -->
+<section class="bg-primary/5 border border-primary/20 rounded-xl p-6 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+<span class="material-icons text-9xl text-primary">check_circle</span>
+</div>
+<div class="flex items-center gap-3 mb-4 relative z-10">
+<div class="p-2 bg-primary text-white rounded-lg shadow-lg shadow-primary/30">
+<span class="material-icons">build</span>
+</div>
+<h2 class="text-xl font-bold text-slate-800 dark:text-white">Applied Fix</h2>
+</div>
+<p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4 relative z-10">
+                        We need to implement PgBouncer for connection pooling to allow transaction-level pooling instead of session-level. Additionally, adjust the <code class="font-mono text-primary font-medium">pool</code> size in the configuration to better match available resources.
+                    </p>
+<div class="relative group z-10">
+<div class="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-white/10 hover:bg-white/20 text-white text-xs px-2 py-1 rounded border border-white/20 backdrop-blur-sm">Copy</button>
+</div>
+<pre class="bg-[#0d151c] rounded-lg p-5 overflow-x-auto custom-scrollbar text-sm font-mono border border-white/10 shadow-inner"><span class="text-slate-500"># config/database.yml</span>
+
+<span class="text-purple-400">production:</span>
+  <span class="text-blue-400">adapter:</span> <span class="text-green-400">postgresql</span>
+  <span class="text-blue-400">encoding:</span> <span class="text-green-400">unicode</span>
+  <span class="text-slate-500"># Increase pool size to match sidekiq concurrency</span>
+  <span class="text-blue-400">pool:</span> <span class="text-yellow-400">25</span>
+  <span class="text-blue-400">host:</span> <span class="text-green-400">&lt;%= ENV['DATABASE_HOST'] %&gt;</span>
+  <span class="text-blue-400">username:</span> <span class="text-green-400">&lt;%= ENV['DATABASE_USER'] %&gt;</span>
+  <span class="text-blue-400">password:</span> <span class="text-green-400">&lt;%= ENV['DATABASE_PASSWORD'] %&gt;</span>
+  <span class="text-slate-500"># Enable prepared statements for PgBouncer compatibility</span>
+  <span class="text-blue-400">prepared_statements:</span> <span class="text-yellow-400">false</span></pre>
+</div>
+</section>
+<!-- Section: Prevention -->
+<section class="pl-6 border-l-2 border-slate-200 dark:border-primary/20">
+<h2 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
+<span class="material-icons text-primary text-lg">shield</span> Prevention
+                    </h2>
+<ul class="list-disc list-outside ml-4 space-y-2 text-slate-600 dark:text-slate-300">
+<li>Added Datadog monitor for <code class="font-mono text-xs bg-slate-100 dark:bg-white/10 px-1 rounded">postgresql.connections.active</code> hitting 80% threshold.</li>
+<li>Configured Sidekiq concurrency limit via ENV variables in Kubernetes deployment manifests.</li>
+<li>Scheduled team training on Connection Pooling vs Session Pooling.</li>
+</ul>
+</section>
+<!-- Feedback Widget -->
+<div class="flex items-center justify-between bg-white dark:bg-surface-dark rounded-lg p-4 border border-slate-200 dark:border-primary/10 mt-12">
+<span class="text-sm font-medium text-slate-600 dark:text-slate-300">Was this tip helpful?</span>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-primary/20 rounded-full transition-colors group">
+<span class="material-icons text-slate-400 group-hover:text-primary">thumb_up</span>
+</button>
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-red-500/20 rounded-full transition-colors group">
+<span class="material-icons text-slate-400 group-hover:text-red-500">thumb_down</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Column: Metadata Sidebar (4 cols) -->
+<div class="lg:col-span-4 space-y-6">
+<!-- Owner Card -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-slate-200 dark:border-primary/10">
+<h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Owner</h3>
+<div class="flex items-center gap-4">
+<img alt="Author Avatar" class="h-12 w-12 rounded-full ring-2 ring-primary/20" data-alt="Profile picture of Sarah Chen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVvP0TaI0DViy4CBhI6H3xS_gP6OetW9GxYRhpnoNyiIn3kN6we2-7WnSCzkA3Wa4YWM5gbobQ_zS9o9woU6nzEp7qRfE9acf46IYpy77nYPQkH9lhmFKCkaMcygPN6K4sck2d-jTpYfmHe2Pb5ZBzY_ot9YYmw6eWzHN_9M2wJnwkYsCMaMhx2gVZWHBNGYZwGRndC-miibXn4Ti8n9qygjdz82-LPCcmiWOle7g5jyIt8z3lXp3QACFXGN_plvDzo_e9VX0qjI0"/>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Sarah Chen</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Staff Engineer, Core Platform</p>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-slate-100 dark:border-white/5 grid grid-cols-2 gap-4">
+<div>
+<p class="text-xs text-slate-500 mb-1">Last Verified</p>
+<p class="text-sm font-medium text-primary flex items-center gap-1">
+<span class="material-icons text-xs">verified</span> 2 days ago
+                            </p>
+</div>
+<div>
+<p class="text-xs text-slate-500 mb-1">Confidence</p>
+<div class="flex items-center gap-1">
+<div class="flex-1 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden w-16">
+<div class="h-full bg-primary w-[90%]"></div>
+</div>
+<span class="text-xs font-medium text-slate-700 dark:text-slate-300">High</span>
+</div>
+</div>
+</div>
+</div>
+<!-- References -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-5 shadow-sm border border-slate-200 dark:border-primary/10">
+<h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">References</h3>
+<ul class="space-y-3">
+<li>
+<a class="flex items-center gap-3 group" href="#">
+<div class="w-8 h-8 rounded bg-[#0052CC]/10 flex items-center justify-center flex-shrink-0">
+<span class="material-icons text-[#0052CC] text-sm">assignment</span> <!-- Jira Icon proxy -->
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary truncate">PLAT-4201</p>
+<p class="text-xs text-slate-500 truncate">Improve DB connection resilience</p>
+</div>
+<span class="material-icons text-slate-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 group" href="#">
+<div class="w-8 h-8 rounded bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center flex-shrink-0">
+<span class="material-icons text-slate-700 dark:text-white text-sm">code</span> <!-- GitHub Icon proxy -->
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary truncate">PR #8821</p>
+<p class="text-xs text-slate-500 truncate">fix(db): adjust pool size</p>
+</div>
+<span class="material-icons text-slate-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 group" href="#">
+<div class="w-8 h-8 rounded bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+<span class="material-icons text-orange-500 text-sm">article</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary truncate">PostgreSQL Docs</p>
+<p class="text-xs text-slate-500 truncate">Resource Consumption</p>
+</div>
+<span class="material-icons text-slate-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Revision History -->
+<div class="bg-transparent rounded-xl p-1">
+<h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-4">Revision History</h3>
+<div class="relative pl-4 border-l border-slate-200 dark:border-primary/20 ml-4 space-y-6">
+<!-- Item 1 -->
+<div class="relative pl-6">
+<div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-background-light dark:ring-background-dark"></div>
+<p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Updated Fix Section</p>
+<p class="text-xs text-slate-500 mt-0.5">by Sarah Chen • 2 days ago</p>
+</div>
+<!-- Item 2 -->
+<div class="relative pl-6 opacity-60">
+<div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 ring-4 ring-background-light dark:ring-background-dark"></div>
+<p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Added Root Cause</p>
+<p class="text-xs text-slate-500 mt-0.5">by Mike Ross • 1 week ago</p>
+</div>
+<!-- Item 3 -->
+<div class="relative pl-6 opacity-40">
+<div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 ring-4 ring-background-light dark:ring-background-dark"></div>
+<p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Created Initial Draft</p>
+<p class="text-xs text-slate-500 mt-0.5">by Mike Ross • 1 week ago</p>
+</div>
+</div>
+<button class="w-full mt-6 text-xs text-center text-primary hover:text-primary/80 font-medium py-2">View full history</button>
+</div>
+<!-- Related Tags (Cloud) -->
+<div class="pt-4">
+<h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Tags</h3>
+<div class="flex flex-wrap gap-2">
+<span class="px-2.5 py-1 rounded-md bg-slate-200 dark:bg-surface-dark text-slate-600 dark:text-slate-400 text-xs font-medium hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer">#postgres</span>
+<span class="px-2.5 py-1 rounded-md bg-slate-200 dark:bg-surface-dark text-slate-600 dark:text-slate-400 text-xs font-medium hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer">#timeout</span>
+<span class="px-2.5 py-1 rounded-md bg-slate-200 dark:bg-surface-dark text-slate-600 dark:text-slate-400 text-xs font-medium hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer">#rails</span>
+<span class="px-2.5 py-1 rounded-md bg-slate-200 dark:bg-surface-dark text-slate-600 dark:text-slate-400 text-xs font-medium hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer">#production-incident</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Simple Footer -->
+<footer class="border-t border-slate-200 dark:border-primary/10 mt-auto bg-white dark:bg-background-dark py-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+<div class="text-sm text-slate-500 dark:text-slate-400">
+                © 2023 BetterDoc Internal. All rights reserved.
+            </div>
+<div class="flex space-x-6">
+<a class="text-slate-400 hover:text-primary text-sm" href="#">Guidelines</a>
+<a class="text-slate-400 hover:text-primary text-sm" href="#">API</a>
+<a class="text-slate-400 hover:text-primary text-sm" href="#">Support</a>
+</div>
+</div>
+</footer>
+</body></html>

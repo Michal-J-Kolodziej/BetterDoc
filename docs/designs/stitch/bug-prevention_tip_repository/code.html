@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BetterDoc - Bug Prevention Repository</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#11d473",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "surface-dark": "#183326", // Slightly lighter than background-dark for cards
+                        "surface-darker": "#0d1b14", // Slightly darker for inputs/sidebars
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for sidebar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102219; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a4f3d; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #11d473; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200 min-h-screen flex flex-col">
+<!-- Navbar -->
+<header class="sticky top-0 z-50 bg-white dark:bg-surface-dark border-b border-slate-200 dark:border-primary/10 h-16 flex items-center px-6 justify-between shadow-sm">
+<div class="flex items-center gap-8">
+<a class="flex items-center gap-2 group" href="#">
+<div class="bg-primary/20 p-1.5 rounded-lg group-hover:bg-primary/30 transition-colors">
+<span class="material-icons text-primary text-2xl">bug_report</span>
+</div>
+<span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Better<span class="text-primary">Doc</span></span>
+</a>
+<nav class="hidden md:flex gap-6 text-sm font-medium text-slate-500 dark:text-slate-400">
+<a class="text-primary hover:text-primary transition-colors" href="#">Repository</a>
+<a class="hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Analytics</a>
+<a class="hover:text-slate-900 dark:hover:text-white transition-colors" href="#">My Contributions</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative w-64 lg:w-96 hidden sm:block">
+<span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full bg-slate-100 dark:bg-surface-darker border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary placeholder-slate-400 dark:text-white" placeholder="Search tips, error codes, or snippets..." type="text"/>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+<kbd class="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-primary/10 rounded border border-slate-300 dark:border-primary/20">⌘ K</kbd>
+</div>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-green-500 text-white dark:text-background-dark px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-primary/20">
+<span class="material-icons text-lg">add</span>
+<span class="hidden sm:inline">New Tip</span>
+</button>
+<div class="w-9 h-9 rounded-full bg-slate-200 dark:bg-primary/20 overflow-hidden border border-slate-300 dark:border-primary/30">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="User avatar thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7uz_6WUxVoh-v5h0rvXF80d456VTJ7pqSLhTrntSX2-nJUTeZfiHUPDW1eI-Fiaz--gmUG9rV3P_4OM3cqVU9F-ENCUGo2i-zO8W1PZ5YTfgCu7S0cdHx652vQKRqwJJ1dwI8TV3OXfvR6kVgUGJFRF1gVxpZiGvOK16LWvBW2Md5rBPYHES4Tq8INA2F1ix3oNmpGTI1lid8XZcwCWMiJLuRXDpIbgESKqhg66J14QQeIv0n8hbvOGb_esIiU8JP_XiMgpIMtzc"/>
+</div>
+</div>
+</header>
+<!-- Main Layout -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar Filter Panel -->
+<aside class="w-72 bg-white dark:bg-surface-dark border-r border-slate-200 dark:border-primary/10 flex flex-col overflow-y-auto hidden md:flex shrink-0">
+<div class="p-6 pb-2">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Filters</h2>
+<button class="text-xs text-primary hover:text-green-400 font-medium">Reset All</button>
+</div>
+</div>
+<!-- Filter Group: Project -->
+<div class="px-6 py-4 border-b border-slate-100 dark:border-primary/5">
+<h3 class="text-sm font-semibold mb-3 dark:text-white">Project</h3>
+<div class="space-y-2">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Payment Gateway</span>
+<span class="ml-auto text-xs text-slate-400">12</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">User Auth Service</span>
+<span class="ml-auto text-xs text-slate-400">8</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Dashboard UI</span>
+<span class="ml-auto text-xs text-slate-400">24</span>
+</label>
+</div>
+</div>
+<!-- Filter Group: Severity -->
+<div class="px-6 py-4 border-b border-slate-100 dark:border-primary/5">
+<h3 class="text-sm font-semibold mb-3 dark:text-white">Impact / Severity</h3>
+<div class="space-y-2">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">
+<span class="w-2 h-2 rounded-full bg-red-500"></span> Critical
+                        </span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">
+<span class="w-2 h-2 rounded-full bg-orange-500"></span> High
+                        </span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">
+<span class="w-2 h-2 rounded-full bg-yellow-500"></span> Medium
+                        </span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span> Low
+                        </span>
+</label>
+</div>
+</div>
+<!-- Filter Group: Status -->
+<div class="px-6 py-4 border-b border-slate-100 dark:border-primary/5">
+<h3 class="text-sm font-semibold mb-3 dark:text-white">Status</h3>
+<div class="space-y-2">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Verified</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Under Review</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Deprecated</span>
+</label>
+</div>
+</div>
+<!-- Filter Group: Component -->
+<div class="px-6 py-4">
+<h3 class="text-sm font-semibold mb-3 dark:text-white">Component</h3>
+<div class="relative mb-3">
+<span class="material-icons absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full bg-slate-100 dark:bg-surface-darker border-none rounded py-1.5 pl-8 pr-2 text-xs focus:ring-1 focus:ring-primary placeholder-slate-500 dark:text-white" placeholder="Filter components..." type="text"/>
+</div>
+<div class="space-y-2 max-h-40 overflow-y-auto pr-2">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Database</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">API Endpoint</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Frontend State</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-primary/30 text-primary focus:ring-primary bg-transparent dark:bg-surface-darker" type="checkbox"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Authentication</span>
+</label>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-4 md:p-8">
+<!-- Control Bar -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+<div>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">Search Results</h1>
+<p class="text-sm text-slate-500 dark:text-slate-400">Showing <span class="font-medium text-slate-900 dark:text-white">4</span> tips based on your filters.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<select class="appearance-none bg-white dark:bg-surface-dark border border-slate-200 dark:border-primary/20 rounded-lg py-2 pl-4 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary dark:text-slate-200 cursor-pointer">
+<option>Newest First</option>
+<option>Most Impactful</option>
+<option>Most Viewed</option>
+</select>
+<span class="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-lg">expand_more</span>
+</div>
+<div class="bg-white dark:bg-surface-dark border border-slate-200 dark:border-primary/20 rounded-lg p-1 flex">
+<button class="p-1.5 rounded bg-slate-100 dark:bg-primary/20 text-slate-900 dark:text-primary">
+<span class="material-icons text-xl">view_list</span>
+</button>
+<button class="p-1.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+<span class="material-icons text-xl">grid_view</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Results List -->
+<div class="space-y-4">
+<!-- Tip Card 1 (Verified, High Impact) -->
+<article class="bg-white dark:bg-surface-dark rounded-xl p-5 border border-slate-200 dark:border-primary/10 hover:border-primary/30 transition-all shadow-sm hover:shadow-md group relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary/80"></div>
+<div class="flex flex-col md:flex-row gap-5">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="bg-primary/10 text-primary text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wide border border-primary/20 flex items-center gap-1">
+<span class="material-icons text-[12px]">verified</span> Verified
+                                </span>
+<span class="bg-red-500/10 text-red-500 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wide border border-red-500/20">Critical Impact</span>
+<span class="text-xs text-slate-400">Payment Gateway • Database</span>
+</div>
+<h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2 group-hover:text-primary transition-colors cursor-pointer">
+                                Handling Race Conditions in Async Transactions
+                            </h3>
+<p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4 max-w-3xl">
+                                When processing payments via Celery, multiple workers might attempt to update the same ledger entry simultaneously. Ensure you explicitly lock the database row using <code class="bg-slate-100 dark:bg-black/30 px-1 py-0.5 rounded text-red-500 dark:text-red-400 font-mono text-xs">select_for_update()</code> within the atomic block to prevent double spending.
+                            </p>
+<div class="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+<div class="flex items-center gap-2">
+<img alt="Sarah Chen" class="w-5 h-5 rounded-full" data-alt="Author avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkanMNupDn5X2PRnQoU4Olk_bQF-m8_kFVw1DESIMPhEE5VIMaC6W_3g0BzVlPvRI8J0hYe8b6f2eG9YY9qsDpBOFQC0V6JL_Pg0cUFXIHkbLPAKW7B3Qnurk9F4FFK-aQKYk4C4SUKxoZo5S9ZjoTRLjc7UDPjfjxpxy64hWy1ZujszSmMgvrlnHwQDRgiJ1GsCpBDHnkuFZitQZa_jgqMYdV3QuyuSJ9kF-8RQKcsBaKFwqJ7lPbYruPby-6cUOdg3vmc0yexUM"/>
+<span>Added by <span class="font-medium text-slate-700 dark:text-slate-300">Sarah Chen</span></span>
+</div>
+<span>•</span>
+<span>Updated 2 days ago</span>
+<span>•</span>
+<div class="flex items-center gap-1">
+<span class="material-icons text-sm">thumb_up</span> 24
+                                </div>
+</div>
+</div>
+<div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-4 shrink-0">
+<span class="text-xs font-medium text-primary px-2 py-1 bg-primary/5 rounded border border-primary/10">Active</span>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons">bookmark_border</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Tip Card 2 (Under Review, Medium Impact) -->
+<article class="bg-white dark:bg-surface-dark rounded-xl p-5 border border-slate-200 dark:border-primary/10 hover:border-primary/30 transition-all shadow-sm hover:shadow-md group relative">
+<div class="flex flex-col md:flex-row gap-5">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wide border border-yellow-500/20">Under Review</span>
+<span class="bg-orange-500/10 text-orange-500 dark:text-orange-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wide border border-orange-500/20">Medium Impact</span>
+<span class="text-xs text-slate-400">User Auth • JWT</span>
+</div>
+<h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2 group-hover:text-primary transition-colors cursor-pointer">
+                               JWT Expiration Strategy for Mobile Clients
+                           </h3>
+<p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4 max-w-3xl">
+                               Mobile clients often drift in system time. To prevent premature token expiration errors, include a clock skew leeway of at least 60 seconds when verifying the <code class="bg-slate-100 dark:bg-black/30 px-1 py-0.5 rounded text-orange-500 dark:text-orange-400 font-mono text-xs">exp</code> claim.
+                           </p>
+<div class="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+<div class="flex items-center gap-2">
+<img alt="Mike Ross" class="w-5 h-5 rounded-full" data-alt="Author avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB40S7o9DwBMAbY4GtHxPh-Vlj5T10QU4o5qJBUsVbHtZs6IgA96xpzSXsVqYXlrLUavpfQMeBapVxAsLIURgQXngg7g4DNJ5wRWuOUraHV_97UnYOpnh90h1aWvhNfDibuE5ATOcwFOYNjMTjyIbol8vi16dRdk4F0mlmmnIhXaJmuwkOGccoqzygcNEWgfFldwop6_HvRMO1tin9QXLD9C7VoUeLzhTdCMIbmnZaYbVelY2JQrUmsJ09b3TCsG0IlPgAOp-S9_S4"/>
+<span>Added by <span class="font-medium text-slate-700 dark:text-slate-300">Mike Ross</span></span>
+</div>
+<span>•</span>
+<span>Updated 5 hours ago</span>
+</div>
+</div>
+<div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-4 shrink-0">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons">bookmark_border</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Tip Card 3 (Verified, Low Impact) -->
+<article class="bg-white dark:bg-surface-dark rounded-xl p-5 border border-slate-200 dark:border-primary/10 hover:border-primary/30 transition-all shadow-sm hover:shadow-md group relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary/80"></div>
+<div class="flex flex-col md:flex-row gap-5">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="bg-primary/10 text-primary text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wide border border-primary/20 flex items-center gap-1">
+<span class="material-icons text-[12px]">verified</span> Verified
+                                </span>
+<span class="bg-blue-500/10 text-blue-500 dark:text-blue-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wide border border-blue-500/20">Low Impact</span>
+<span class="text-xs text-slate-400">Dashboard UI • CSS</span>
+</div>
+<h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2 group-hover:text-primary transition-colors cursor-pointer">
+                                Preventing Z-Index Wars in Modals
+                            </h3>
+<p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4 max-w-3xl">
+                                Instead of arbitrary high numbers like 9999, use the defined Tailwind z-index scale or CSS variables. Ensure stacking contexts are isolated by using <code class="bg-slate-100 dark:bg-black/30 px-1 py-0.5 rounded text-blue-500 dark:text-blue-400 font-mono text-xs">isolation: isolate</code> on container components.
+                            </p>
+<div class="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+<div class="flex items-center gap-2">
+<img alt="Jenny Doe" class="w-5 h-5 rounded-full" data-alt="Author avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHGkompX7H9WCtvSHIl0qtNg7hmkQhjKns4XHVBBYrLhmwTVSpYCd4RnimQuWjv2OwR7tBfzKxDwJjF7Uqqg2OJIOF4atZpvPStLFmKzv0Iq7mR_NJKodYAhYzLQrLAfiBMLbuvWSDuXJBknJ3ZUtpS2KlOSFRNynuL5EQxGjUjwF5vHsZDqYM3iiai3ormPq80fS7jcOZDBKwUUJHrEU1iKl6yWQqdWt6sAffeClyX9plKLjipUCG9i_OdC8A1PYhz00NqfcbSFM"/>
+<span>Added by <span class="font-medium text-slate-700 dark:text-slate-300">Jenny Doe</span></span>
+</div>
+<span>•</span>
+<span>Updated 1 week ago</span>
+</div>
+</div>
+<div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-4 shrink-0">
+<span class="text-xs font-medium text-primary px-2 py-1 bg-primary/5 rounded border border-primary/10">Active</span>
+<button class="text-primary hover:text-green-400 transition-colors">
+<span class="material-icons">bookmark</span>
+</button>
+</div>
+</div>
+</article>
+</div>
+<!-- Empty State (Hidden by default, shown for demo purpose in a separate section if needed, but I'll add it below as if filtered) -->
+<div class="mt-12 hidden">
+<!-- To test this view, add 'hidden' to the results list above and remove 'hidden' here -->
+<div class="flex flex-col items-center justify-center py-16 text-center">
+<div class="w-24 h-24 bg-surface-darker rounded-full flex items-center justify-center mb-6 shadow-inner ring-1 ring-primary/20">
+<span class="material-icons text-5xl text-slate-600 dark:text-slate-500">search_off</span>
+</div>
+<h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">No tips found</h2>
+<p class="text-slate-500 dark:text-slate-400 max-w-md mb-8">
+                        We couldn't find any bug prevention tips matching your current filters. Try adjusting your criteria or search for a general keyword.
+                    </p>
+<button class="text-primary hover:text-white border border-primary hover:bg-primary px-6 py-2 rounded-lg text-sm font-semibold transition-all">
+                        Clear all filters
+                    </button>
+</div>
+</div>
+<!-- Pagination -->
+<div class="mt-8 flex items-center justify-between border-t border-slate-200 dark:border-primary/10 pt-4">
+<p class="text-sm text-slate-500 dark:text-slate-400">Showing 1 to 3 of 42 results</p>
+<div class="flex gap-2">
+<button class="px-3 py-1 text-sm rounded border border-slate-200 dark:border-primary/20 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/10 transition-colors disabled:opacity-50" disabled="">Previous</button>
+<button class="px-3 py-1 text-sm rounded border border-slate-200 dark:border-primary/20 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-primary/10 transition-colors">Next</button>
+</div>
+</div>
+</main>
+</div>
+</body></html>
