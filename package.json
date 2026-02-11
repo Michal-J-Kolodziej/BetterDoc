@@ -18,6 +18,7 @@
   "dependencies": {
     "@tanstack/react-router": "latest",
     "@tanstack/react-start": "latest",
+    "@workos/authkit-tanstack-react-start": "^0.5.0",
     "convex": "latest",
     "react": "latest",
     "react-dom": "latest",

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 
-import { api } from '../../convex/_generated/api'
+import { api } from '../../convex/_generated/api.js'
 import {
   activeConvexDeployment,
   vercelConfig,
@@ -10,6 +10,9 @@ import {
 
 export const Route = createFileRoute('/')({
   ssr: false,
+  loader: async () => {
+    return null
+  },
   component: HomePage,
 })
 
@@ -18,10 +21,10 @@ function HomePage() {
 
   return (
     <main>
-      <h1>BetterDoc Foundation</h1>
+      <h1>BetterDoc</h1>
       <p>
-        TanStack Start is scaffolded and connected to Convex. This page exercises a
-        typed query reference via <code>api.health.getStatus</code>.
+        TanStack Start, Convex, and WorkOS AuthKit are wired. Use this page to
+        start sign-in and verify auth-protected routes.
       </p>
 
       <section>
@@ -41,6 +44,15 @@ function HomePage() {
         </p>
         <p>
           Redirect URI: <code>{workosClientConfig.redirectUri}</code>
+        </p>
+        <p>
+          <a href="/login">Sign in with WorkOS</a>
+        </p>
+        <p>
+          <a href="/dashboard">Go to protected dashboard</a>
+        </p>
+        <p>
+          <a href="/logout">Sign out</a>
         </p>
       </section>
 

@@ -35,3 +35,28 @@
   - `docs/change-log.md`
 - Impact:
   - Delivered BD-001 and BD-002 foundation: TanStack Start scaffold, Convex client wiring, validated `dev/staging/prod` env strategy, and operational scripts for lint/typecheck/test/build.
+
+## 2026-02-11 (BD-003)
+- Code paths changed:
+  - `package.json`
+  - `bun.lock`
+  - `.env.example`
+  - `src/start.ts`
+  - `src/routes/login.tsx`
+  - `src/routes/logout.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/api/auth/callback.tsx`
+  - `src/routes/index.tsx`
+  - `src/routeTree.gen.ts`
+  - `src/config/env.shared.ts`
+  - `src/config/env.server.ts`
+  - `src/config/workos.server.ts`
+  - `src/config/env.shared.test.ts`
+  - `scripts/validate-env.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Delivered WorkOS SSO login/logout/callback flow with middleware-backed sessions, protected dashboard access checks, and secure cookie environment controls.

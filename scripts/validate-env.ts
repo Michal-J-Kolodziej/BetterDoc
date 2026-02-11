@@ -12,8 +12,10 @@ const activeConvexDeployment =
 console.log(`[env] VITE_APP_ENV=${serverEnv.VITE_APP_ENV}`)
 console.log(`[env] Active Convex deployment=${activeConvexDeployment}`)
 console.log(
-  `[env] WorkOS redirect URI=${serverEnv.VITE_WORKOS_REDIRECT_URI}`,
+  `[env] WorkOS redirect URI=${serverEnv.WORKOS_REDIRECT_URI}`,
 )
+console.log(`[env] WorkOS cookie same-site=${serverEnv.WORKOS_COOKIE_SAME_SITE ?? 'lax'}`)
+console.log(`[env] WorkOS cookie name=${serverEnv.WORKOS_COOKIE_NAME ?? 'wos-session'}`)
 console.log(
   `[env] Vercel environment=${serverEnv.VITE_VERCEL_ENV ?? 'unset'}`,
 )

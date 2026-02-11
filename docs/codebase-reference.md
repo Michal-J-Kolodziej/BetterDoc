@@ -14,11 +14,13 @@ Last updated: 2026-02-11
 - Router entry: `src/router.tsx`
   - Exports `getRouter()` for TanStack Start runtime.
   - Builds router with `routeTree` from generated `src/routeTree.gen.ts`.
+- Start entry: `src/start.ts`
+  - Registers `authkitMiddleware()` for per-request WorkOS session validation/refresh.
 - Root route: `src/routes/__root.tsx`
   - Owns the HTML document shell and global providers.
   - Mounts `ConvexAppProvider` so route components can call Convex hooks.
 - Index route: `src/routes/index.tsx`
-  - Demonstrates typed Convex API usage with `useQuery(api.health.getStatus)`.
+  - Public landing page with links into auth flow and protected dashboard.
 
 ### Convex integration
 - Convex client provider: `src/lib/convex-client.tsx`
@@ -38,3 +40,22 @@ Last updated: 2026-02-11
 - `bun run build`
 
 All four pass with valid environment variables set.
+
+## Authentication (BD-003)
+
+### Runtime package
+- `@workos/authkit-tanstack-react-start`
+
+### Auth routes
+- Login redirect: `src/routes/login.tsx`
+  - `GET /login` server handler generates WorkOS sign-in URL and redirects.
+- Callback: `src/routes/api/auth/callback.tsx`
+  - `GET /api/auth/callback` uses `handleCallbackRoute()` to exchange code and set session.
+- Logout: `src/routes/logout.tsx`
+  - `GET /logout` clears session cookie and redirects to WorkOS logout URL.
+
+### Protected route
+- `src/routes/dashboard.tsx`
+  - `GET /dashboard` server handler checks `context.auth()` from middleware.
+  - Unauthenticated requests redirect to WorkOS sign-in.
+  - Authenticated requests call `next()` and render dashboard component.

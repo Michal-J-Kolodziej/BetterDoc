@@ -4,6 +4,7 @@ export const appEnvironmentSchema = z.enum(['dev', 'staging', 'prod'])
 export type AppEnvironment = z.infer<typeof appEnvironmentSchema>
 
 const vercelEnvironmentSchema = z.enum(['development', 'preview', 'production'])
+const workosCookieSameSiteSchema = z.enum(['lax', 'strict', 'none'])
 
 const publicEnvironmentSchema = z.object({
   VITE_APP_ENV: appEnvironmentSchema,
@@ -19,7 +20,14 @@ const publicEnvironmentSchema = z.object({
 })
 
 const serverEnvironmentSchema = publicEnvironmentSchema.extend({
-  WORKOS_API_KEY: z.string().min(1).optional(),
+  WORKOS_API_KEY: z.string().min(1),
+  WORKOS_CLIENT_ID: z.string().min(1),
+  WORKOS_REDIRECT_URI: z.string().url(),
+  WORKOS_COOKIE_PASSWORD: z.string().min(32),
+  WORKOS_COOKIE_NAME: z.string().min(1).optional(),
+  WORKOS_COOKIE_MAX_AGE: z.coerce.number().int().positive().optional(),
+  WORKOS_COOKIE_DOMAIN: z.string().min(1).optional(),
+  WORKOS_COOKIE_SAME_SITE: workosCookieSameSiteSchema.optional(),
 })
 
 export type PublicEnvironment = z.infer<typeof publicEnvironmentSchema>
@@ -85,9 +93,25 @@ export function parseServerEnvironment(raw: Record<string, unknown>): ServerEnvi
   }
 
   const environment = enforceStageRules(parsed.data)
+  const issues: string[] = []
 
-  if (environment.VITE_APP_ENV !== 'dev' && !environment.WORKOS_API_KEY) {
-    throw new Error('WORKOS_API_KEY is required in staging/prod.')
+  if (
+    environment.VITE_APP_ENV !== 'dev' &&
+    environment.WORKOS_REDIRECT_URI.startsWith('http://')
+  ) {
+    issues.push('WORKOS_REDIRECT_URI must use https in staging/prod.')
+  }
+
+  if (environment.VITE_WORKOS_CLIENT_ID !== environment.WORKOS_CLIENT_ID) {
+    issues.push('WORKOS_CLIENT_ID must match VITE_WORKOS_CLIENT_ID.')
+  }
+
+  if (environment.VITE_WORKOS_REDIRECT_URI !== environment.WORKOS_REDIRECT_URI) {
+    issues.push('WORKOS_REDIRECT_URI must match VITE_WORKOS_REDIRECT_URI.')
+  }
+
+  if (issues.length > 0) {
+    throw new Error(issues.join('\n'))
   }
 
   return environment

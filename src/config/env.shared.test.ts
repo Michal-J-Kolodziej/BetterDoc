@@ -9,10 +9,21 @@ const basePublicEnvironment = {
   VITE_CONVEX_DEPLOYMENT_STAGING: 'staging:betterdoc-staging',
   VITE_CONVEX_DEPLOYMENT_PROD: 'prod:betterdoc-prod',
   VITE_WORKOS_CLIENT_ID: 'client_1234',
-  VITE_WORKOS_REDIRECT_URI: 'http://localhost:3000/auth/callback',
+  VITE_WORKOS_REDIRECT_URI: 'http://localhost:3000/api/auth/callback',
   VITE_VERCEL_ENV: 'development',
   VITE_VERCEL_URL: 'localhost:3000',
   VITE_VERCEL_PROJECT_PRODUCTION_URL: 'betterdoc.example.com',
+} as const
+
+const baseServerEnvironment = {
+  ...basePublicEnvironment,
+  WORKOS_API_KEY: 'sk_test_123',
+  WORKOS_CLIENT_ID: basePublicEnvironment.VITE_WORKOS_CLIENT_ID,
+  WORKOS_REDIRECT_URI: basePublicEnvironment.VITE_WORKOS_REDIRECT_URI,
+  WORKOS_COOKIE_PASSWORD: 'local-dev-cookie-password-32-char',
+  WORKOS_COOKIE_NAME: 'betterdoc_session',
+  WORKOS_COOKIE_MAX_AGE: '34560000',
+  WORKOS_COOKIE_SAME_SITE: 'lax',
 } as const
 
 describe('parsePublicEnvironment', () => {
@@ -35,26 +46,34 @@ describe('parsePublicEnvironment', () => {
 })
 
 describe('parseServerEnvironment', () => {
-  it('requires WORKOS_API_KEY outside dev', () => {
+  it('requires WORKOS cookie password to be at least 32 chars', () => {
     expect(() =>
       parseServerEnvironment({
-        ...basePublicEnvironment,
-        VITE_APP_ENV: 'prod',
-        VITE_WORKOS_REDIRECT_URI: 'https://betterdoc.app/auth/callback',
-        VITE_VERCEL_ENV: 'production',
+        ...baseServerEnvironment,
+        WORKOS_COOKIE_PASSWORD: 'too-short',
       }),
-    ).toThrow(/WORKOS_API_KEY is required/)
+    ).toThrow(/WORKOS_COOKIE_PASSWORD/)
   })
 
   it('accepts prod when all required variables are present', () => {
     const parsed = parseServerEnvironment({
-      ...basePublicEnvironment,
+      ...baseServerEnvironment,
       VITE_APP_ENV: 'prod',
-      VITE_WORKOS_REDIRECT_URI: 'https://betterdoc.app/auth/callback',
+      VITE_WORKOS_REDIRECT_URI: 'https://betterdoc.app/api/auth/callback',
       VITE_VERCEL_ENV: 'production',
+      WORKOS_REDIRECT_URI: 'https://betterdoc.app/api/auth/callback',
       WORKOS_API_KEY: 'sk_live_123',
     })
 
     expect(parsed.VITE_APP_ENV).toBe('prod')
+  })
+
+  it('rejects mismatched WorkOS client IDs', () => {
+    expect(() =>
+      parseServerEnvironment({
+        ...baseServerEnvironment,
+        WORKOS_CLIENT_ID: 'client_mismatch',
+      }),
+    ).toThrow(/WORKOS_CLIENT_ID must match/)
   })
 })

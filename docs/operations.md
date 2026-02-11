@@ -22,9 +22,16 @@ Set with `VITE_APP_ENV`.
 - `VITE_CONVEX_DEPLOYMENT_PROD`
 - `VITE_WORKOS_CLIENT_ID`
 - `VITE_WORKOS_REDIRECT_URI`
+- `WORKOS_API_KEY`
+- `WORKOS_CLIENT_ID`
+- `WORKOS_REDIRECT_URI`
+- `WORKOS_COOKIE_PASSWORD`
 
-### Conditionally required
-- `WORKOS_API_KEY` is required for `staging` and `prod`.
+### Optional WorkOS cookie variables
+- `WORKOS_COOKIE_NAME`
+- `WORKOS_COOKIE_MAX_AGE`
+- `WORKOS_COOKIE_DOMAIN`
+- `WORKOS_COOKIE_SAME_SITE`
 
 ### Vercel metadata config points
 - `VITE_VERCEL_ENV` (`development|preview|production`)
@@ -53,3 +60,16 @@ Set with `VITE_APP_ENV`.
   - `bun run convex:deploy:prod`
 
 These commands source the deployment name from the corresponding environment variable.
+
+## Auth routes (BD-003)
+- `GET /login` -> redirect to WorkOS AuthKit sign-in URL.
+- `GET /api/auth/callback` -> callback exchange and session cookie set.
+- `GET /dashboard` -> protected page (redirects to sign-in when unauthenticated).
+- `GET /logout` -> clear session and redirect through WorkOS logout.
+
+## Local verification
+1. Run `bun run dev`.
+2. Open `http://localhost:5173/` and click `Sign in with WorkOS`.
+3. Confirm browser redirects to WorkOS and then back to `/api/auth/callback`.
+4. Confirm `/dashboard` is accessible only after successful sign-in.
+5. Confirm `/logout` clears session and returns to signed-out state.

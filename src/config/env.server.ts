@@ -12,6 +12,13 @@ const rawServerEnvironment: Record<string, unknown> = {
   VITE_VERCEL_URL: process.env.VITE_VERCEL_URL,
   VITE_VERCEL_PROJECT_PRODUCTION_URL: process.env.VITE_VERCEL_PROJECT_PRODUCTION_URL,
   WORKOS_API_KEY: process.env.WORKOS_API_KEY,
+  WORKOS_CLIENT_ID: process.env.WORKOS_CLIENT_ID,
+  WORKOS_REDIRECT_URI: process.env.WORKOS_REDIRECT_URI,
+  WORKOS_COOKIE_PASSWORD: process.env.WORKOS_COOKIE_PASSWORD,
+  WORKOS_COOKIE_NAME: process.env.WORKOS_COOKIE_NAME,
+  WORKOS_COOKIE_MAX_AGE: process.env.WORKOS_COOKIE_MAX_AGE,
+  WORKOS_COOKIE_DOMAIN: process.env.WORKOS_COOKIE_DOMAIN,
+  WORKOS_COOKIE_SAME_SITE: process.env.WORKOS_COOKIE_SAME_SITE,
 }
 
 export const serverEnv = Object.freeze(parseServerEnvironment(rawServerEnvironment))
