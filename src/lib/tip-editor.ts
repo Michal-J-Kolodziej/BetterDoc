@@ -3,6 +3,9 @@ export type TipEditorFormState = {
   rootCause: string
   fix: string
   prevention: string
+  project: string
+  library: string
+  component: string
   tags: string
   references: string
 }
@@ -12,6 +15,9 @@ export type TipDraftPayload = {
   rootCause: string
   fix: string
   prevention: string
+  project?: string
+  library?: string
+  component?: string
   tags: string[]
   references: string[]
 }
@@ -21,13 +27,25 @@ export type TipEditorValidationErrors = Partial<
 >
 
 const textFieldLimits: Record<
-  keyof Pick<TipEditorFormState, 'symptom' | 'rootCause' | 'fix' | 'prevention'>,
+  keyof Pick<
+    TipEditorFormState,
+    | 'symptom'
+    | 'rootCause'
+    | 'fix'
+    | 'prevention'
+    | 'project'
+    | 'library'
+    | 'component'
+  >,
   number
 > = {
   symptom: 280,
   rootCause: 8000,
   fix: 8000,
   prevention: 8000,
+  project: 96,
+  library: 96,
+  component: 96,
 }
 
 const listLimits = {
@@ -51,6 +69,9 @@ export function createEmptyTipEditorState(): TipEditorFormState {
     rootCause: '',
     fix: '',
     prevention: '',
+    project: '',
+    library: '',
+    component: '',
     tags: '',
     references: '',
   }
@@ -107,6 +128,14 @@ export function validateTipEditorForm(
     }
   }
 
+  for (const field of ['project', 'library', 'component'] as const) {
+    const trimmed = state[field].trim()
+    if (trimmed.length > textFieldLimits[field]) {
+      const label = field[0].toUpperCase() + field.slice(1)
+      errors[field] = `${label} must be ${textFieldLimits[field]} characters or fewer.`
+    }
+  }
+
   const tags = splitListField(state.tags)
   const references = splitListField(state.references)
 
@@ -150,6 +179,9 @@ export function buildTipDraftPayload(state: TipEditorFormState): {
       rootCause: state.rootCause.trim(),
       fix: state.fix.trim(),
       prevention: state.prevention.trim(),
+      project: state.project.trim() || undefined,
+      library: state.library.trim() || undefined,
+      component: state.component.trim() || undefined,
       tags: normalizeList(
         splitListField(state.tags),
         listLimits.tags.maxItems,

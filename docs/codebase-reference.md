@@ -30,11 +30,11 @@ Last updated: 2026-02-12
   - Exposes `getStatus` query for initial end-to-end health check.
 - Convex RBAC/audit module: `convex/accessControl.ts`
   - Public queries: `getAccessProfile`, `listTips`, `getTipForEditor`, `listTipRevisions`, `listAuditEvents`.
-  - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `saveTipDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
+  - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `saveTipDraft`, `submitTipForReview`, `returnTipToDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
   - Enforces capability checks server-side for privileged operations and audit reads.
 - RBAC constants/validators: `convex/rbac.ts`
 - Convex schema: `convex/schema.ts`
-  - Tables: `memberships`, `tips`, `tipRevisions`, `integrationConfigs`, `auditEvents`.
+  - Tables: `memberships`, `tips`, `tipRevisions`, `tipTagFacets`, `integrationConfigs`, `auditEvents`.
 - Typed API stubs:
   - `convex/_generated/api.ts`
   - `convex/_generated/server.ts`
@@ -92,39 +92,63 @@ All four pass with valid environment variables set.
 - Audit writes are append-only via `insertAuditEvent()` in `convex/accessControl.ts`.
 - No mutation is exposed to update/delete records in `auditEvents`.
 
-## Tips Core + Editor (BD-006, BD-007)
+## Tips Core + Editor + Workflow + Search (BD-006, BD-007, BD-008, BD-009)
 
 ### Tip data model
 - `convex/schema.ts`
-  - `tips` stores the latest draft/published state with structured content:
-    - `symptom`, `rootCause`, `fix`, `prevention`, `tags`, `references`
+  - `tips` stores latest tip state with structured content + searchable facets:
+    - content: `symptom`, `rootCause`, `fix`, `prevention`, `tags`, `references`
+    - scope facets: `project`, `library`, `component`
+    - denormalized search field: `searchText`
+    - lifecycle status: `draft`, `in_review`, `published`, `deprecated`
     - revision cursor: `currentRevision`
     - ownership/timestamps: `createdByWorkosUserId`, `createdAt`, `updatedByWorkosUserId`, `updatedAt`
-  - `tipRevisions` stores immutable snapshots for each draft save:
+  - `tipRevisions` stores immutable snapshots for each draft save or status transition:
     - link: `tipId`
     - sequence: `revisionNumber`
-    - full content snapshot + status + editor + timestamp
+    - full content/search snapshot + status + editor + timestamp
+  - `tipTagFacets` stores normalized (`lowercase`) tag-to-tip rows for indexed tag filters.
+
+### Indexed querying
+- `convex/schema.ts` indexes:
+  - `tips`: organization-aware compound indexes (`by_org_status_updated_at`, `by_org_project_updated_at`, `by_org_library_updated_at`, `by_org_component_updated_at`) plus `search_text` search index with filter fields.
+  - `tipTagFacets`: tag indexes (`by_org_tag_*`, `by_tag_*`) for fast tag-first candidate lookups.
+- `convex/accessControl.ts` `listTips` query:
+  - accepts combinable filters (`searchText`, `project`, `library`, `component`, `tag`, `status`)
+  - chooses an indexed query strategy first, then applies final in-memory predicate checks and returns newest-first limited results.
+  - enforces reader visibility to published tips only.
 
 ### Draft save + revision workflow
 - `convex/tipDraft.ts`
-  - Normalizes and validates draft content server-side (required structured fields, length limits, tag/reference normalization).
+  - Normalizes and validates draft content server-side (required structured fields, optional project/library/component facets, length limits, tag/reference normalization).
   - Generates metadata (`slug`, `title`) from the symptom field.
+  - Builds denormalized `searchText` content used by the `tips.search_text` index.
 - `convex/accessControl.ts`
-  - `saveTipDraft` creates or updates a draft tip and always inserts a `tipRevisions` row.
+  - `saveTipDraft` creates or updates draft content, enforces valid transition to `draft` (including reviewer requirement for `in_review -> draft` edits), updates tag facets, and appends a revision snapshot.
+  - `submitTipForReview` transitions `draft -> in_review`.
+  - `returnTipToDraft` transitions `in_review -> draft` (review feedback loop).
+  - `publishTip` transitions `in_review -> published` and writes an audit event.
+  - `deprecateTip` transitions `published -> deprecated` and writes an audit event.
+  - Invalid transitions are rejected server-side by `assertStatusTransition()`.
   - `listTipRevisions` returns newest-first revision metadata for editor history.
   - `getTipForEditor` reads structured tip content for edit workflows.
-  - `publishTip` and `deprecateTip` now enforce organization-scoped tip access.
+  - Existing-tip writes and transitions enforce organization-scoped access.
 
 ### Editor UI
 - `src/routes/dashboard.tsx`
-  - Adds a structured editor section with fields:
+  - Structured editor fields:
     - `symptom`
     - `root cause`
     - `fix`
     - `prevention`
+    - `project` (optional)
+    - `library` (optional)
+    - `component` (optional)
     - `tags`
     - `references`
   - Uses `saveTipDraft` for draft saves and shows revision history from `listTipRevisions`.
   - Includes an explicit load action to populate the editor from an existing tip.
+  - Adds workflow controls for submit/review return/publish/deprecate with status-aware button gating.
+  - Adds a search/filter section with empty, local-validation error, and permission-denied states.
 - `src/lib/tip-editor.ts`
-  - Client-side field validation and payload shaping for tags/references before mutation calls.
+  - Client-side validation and payload shaping for core fields, optional facets, tags, and references before mutation calls.

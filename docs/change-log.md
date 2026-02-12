@@ -1,5 +1,21 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-008, BD-009)
+- Code paths changed:
+  - `convex/schema.ts`
+  - `convex/accessControl.ts`
+  - `convex/tipDraft.ts`
+  - `src/routes/dashboard.tsx`
+  - `src/lib/tip-editor.ts`
+  - `src/lib/tip-editor.test.ts`
+  - `src/lib/tip-draft.server.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added validated tip lifecycle transitions (`draft`, `in_review`, `published`, `deprecated`) with reviewer-gated publish/deprecate actions, introduced indexed multi-filter tip search (text/project/library/component/tag/status), and updated dashboard UX for workflow, filtering, and empty/error/permission handling.
+
 ## 2026-02-12 (BD-006, BD-007)
 - Code paths changed:
   - `convex/schema.ts`

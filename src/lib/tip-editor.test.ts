@@ -22,6 +22,9 @@ describe('tip editor validation', () => {
       rootCause: 'An effect registers duplicate event listeners.',
       fix: 'Scope listener setup to a single lifecycle branch.',
       prevention: 'Use cleanup callbacks and add regression tests.',
+      project: 'media-press',
+      library: 'ui-kit',
+      component: 'SubmitButton',
       tags: 'react, hooks,React\nfrontend',
       references: 'https://internal/wiki/bug-12, https://internal/wiki/bug-12\nRFC-77',
     })
@@ -32,6 +35,9 @@ describe('tip editor validation', () => {
       rootCause: 'An effect registers duplicate event listeners.',
       fix: 'Scope listener setup to a single lifecycle branch.',
       prevention: 'Use cleanup callbacks and add regression tests.',
+      project: 'media-press',
+      library: 'ui-kit',
+      component: 'SubmitButton',
       tags: ['react', 'hooks', 'frontend'],
       references: ['https://internal/wiki/bug-12', 'RFC-77'],
     })
@@ -43,6 +49,9 @@ describe('tip editor validation', () => {
       rootCause: 'cause',
       fix: 'fix',
       prevention: 'prevent',
+      project: '',
+      library: '',
+      component: '',
       tags: '',
       references: '',
     })

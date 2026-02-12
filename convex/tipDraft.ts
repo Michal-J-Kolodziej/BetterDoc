@@ -5,6 +5,7 @@ export const tipDraftLimits = {
   bodyFieldMaxLength: 8000,
   titleMaxLength: 160,
   slugMaxLength: 96,
+  facetMaxLength: 96,
   maxTags: 20,
   maxTagLength: 48,
   maxReferences: 20,
@@ -16,6 +17,9 @@ export type TipDraftInput = {
   rootCause: string
   fix: string
   prevention: string
+  project?: string
+  library?: string
+  component?: string
   tags: string[]
   references: string[]
 }
@@ -25,6 +29,9 @@ export type NormalizedTipDraft = {
   rootCause: string
   fix: string
   prevention: string
+  project?: string
+  library?: string
+  component?: string
   tags: string[]
   references: string[]
 }
@@ -85,6 +92,27 @@ function normalizeList(
   return normalized
 }
 
+function normalizeOptionalField(
+  value: string | undefined,
+  label: string,
+  maxLength: number,
+): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return undefined
+  }
+
+  if (trimmed.length > maxLength) {
+    throw new ConvexError(`${label} must be ${maxLength} characters or fewer.`)
+  }
+
+  return trimmed
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -117,7 +145,7 @@ export function buildTipMetadata(symptom: string, now: number): {
 export function normalizeTipDraftInput(
   input: TipDraftInput,
 ): NormalizedTipDraft {
-  return {
+  const normalized: NormalizedTipDraft = {
     symptom: requireTrimmedField(
       input.symptom,
       'Symptom',
@@ -147,4 +175,53 @@ export function normalizeTipDraftInput(
       tipDraftLimits.maxReferenceLength,
     ),
   }
+
+  const project = normalizeOptionalField(
+    input.project,
+    'Project',
+    tipDraftLimits.facetMaxLength,
+  )
+  if (project) {
+    normalized.project = project
+  }
+
+  const library = normalizeOptionalField(
+    input.library,
+    'Library',
+    tipDraftLimits.facetMaxLength,
+  )
+  if (library) {
+    normalized.library = library
+  }
+
+  const component = normalizeOptionalField(
+    input.component,
+    'Component',
+    tipDraftLimits.facetMaxLength,
+  )
+  if (component) {
+    normalized.component = component
+  }
+
+  return normalized
+}
+
+export function buildTipSearchText(
+  title: string,
+  draft: NormalizedTipDraft,
+): string {
+  const parts = [
+    title,
+    draft.symptom,
+    draft.rootCause,
+    draft.fix,
+    draft.prevention,
+    draft.project ?? '',
+    draft.library ?? '',
+    draft.component ?? '',
+    ...draft.tags,
+    ...draft.references,
+  ]
+
+  return parts.join(' ').replace(/\s+/g, ' ').trim()
 }

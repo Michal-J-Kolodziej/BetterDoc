@@ -12,7 +12,11 @@ import {
   type Permission,
   type PrivilegedAction,
 } from './rbac'
-import { buildTipMetadata, normalizeTipDraftInput } from './tipDraft'
+import {
+  buildTipMetadata,
+  buildTipSearchText,
+  normalizeTipDraftInput,
+} from './tipDraft'
 
 const actorContextShape = {
   actorWorkosUserId: v.string(),
@@ -27,9 +31,19 @@ const auditTargetTypeValidator = v.union(
 
 const tipStatusValidator = v.union(
   v.literal('draft'),
+  v.literal('in_review'),
   v.literal('published'),
   v.literal('deprecated'),
 )
+
+type TipStatus = 'draft' | 'in_review' | 'published' | 'deprecated'
+
+const tipStatusTransitions: Record<TipStatus, readonly TipStatus[]> = {
+  draft: ['in_review'],
+  in_review: ['draft', 'published'],
+  published: ['deprecated'],
+  deprecated: [],
+}
 
 type DatabaseReaderLike = QueryCtx['db'] | MutationCtx['db']
 
@@ -108,6 +122,150 @@ function assertTipOrganizationAccess(
   }
 }
 
+function normalizeOptionalFilter(value: string | undefined): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+function normalizeTagFacet(tag: string): string {
+  return tag.trim().toLowerCase()
+}
+
+function canReadTipStatus(actorRole: AppRole, status: TipStatus): boolean {
+  if (actorRole === 'Reader') {
+    return status === 'published'
+  }
+
+  return true
+}
+
+function assertStatusTransition(current: TipStatus, next: TipStatus): void {
+  if (current === next) {
+    return
+  }
+
+  if (!tipStatusTransitions[current].includes(next)) {
+    throw new ConvexError(
+      `Invalid status transition: ${current} -> ${next}. Allowed next states: ${tipStatusTransitions[current].join(', ') || 'none'}.`,
+    )
+  }
+}
+
+async function replaceTipTagFacets(
+  ctx: MutationCtx,
+  args: {
+    tipId: Id<'tips'>
+    organizationId?: string
+    status: TipStatus
+    tags: string[]
+    updatedAt: number
+  },
+): Promise<void> {
+  const existingFacets = await ctx.db
+    .query('tipTagFacets')
+    .withIndex('by_tip_id', (queryBuilder) => queryBuilder.eq('tipId', args.tipId))
+    .collect()
+
+  await Promise.all(existingFacets.map((facet) => ctx.db.delete(facet._id)))
+
+  const uniqueTagFacets = [...new Set(args.tags.map(normalizeTagFacet))]
+
+  await Promise.all(
+    uniqueTagFacets
+      .filter((tag) => tag.length > 0)
+      .map((tag) =>
+        ctx.db.insert('tipTagFacets', {
+          tipId: args.tipId,
+          tag,
+          status: args.status,
+          organizationId: args.organizationId,
+          updatedAt: args.updatedAt,
+        }),
+      ),
+  )
+}
+
+async function appendTipRevisionSnapshot(
+  ctx: MutationCtx,
+  args: {
+    tip: Doc<'tips'>
+    revisionNumber: number
+    status: TipStatus
+    editedByWorkosUserId: string
+    createdAt: number
+  },
+): Promise<void> {
+  await ctx.db.insert('tipRevisions', {
+    tipId: args.tip._id,
+    revisionNumber: args.revisionNumber,
+    title: args.tip.title,
+    slug: args.tip.slug,
+    symptom: args.tip.symptom,
+    rootCause: args.tip.rootCause,
+    fix: args.tip.fix,
+    prevention: args.tip.prevention,
+    project: args.tip.project,
+    library: args.tip.library,
+    component: args.tip.component,
+    tags: args.tip.tags,
+    references: args.tip.references,
+    searchText: args.tip.searchText,
+    status: args.status,
+    organizationId: args.tip.organizationId,
+    editedByWorkosUserId: args.editedByWorkosUserId,
+    createdAt: args.createdAt,
+  })
+}
+
+async function patchTipStatusWithRevision(
+  ctx: MutationCtx,
+  args: {
+    tip: Doc<'tips'>
+    nextStatus: TipStatus
+    actorWorkosUserId: string
+    now: number
+  },
+): Promise<number> {
+  assertStatusTransition(args.tip.status as TipStatus, args.nextStatus)
+
+  const revisionNumber = args.tip.currentRevision + 1
+
+  await ctx.db.patch(args.tip._id, {
+    status: args.nextStatus,
+    currentRevision: revisionNumber,
+    updatedByWorkosUserId: args.actorWorkosUserId,
+    updatedAt: args.now,
+  })
+
+  await appendTipRevisionSnapshot(ctx, {
+    tip: {
+      ...args.tip,
+      status: args.nextStatus,
+      currentRevision: revisionNumber,
+      updatedByWorkosUserId: args.actorWorkosUserId,
+      updatedAt: args.now,
+    },
+    revisionNumber,
+    status: args.nextStatus,
+    editedByWorkosUserId: args.actorWorkosUserId,
+    createdAt: args.now,
+  })
+
+  await replaceTipTagFacets(ctx, {
+    tipId: args.tip._id,
+    organizationId: args.tip.organizationId,
+    status: args.nextStatus,
+    tags: args.tip.tags,
+    updatedAt: args.now,
+  })
+
+  return revisionNumber
+}
+
 export const getAccessProfile = query({
   args: {
     workosUserId: v.string(),
@@ -177,6 +335,13 @@ export const listTips = query({
   args: {
     actorWorkosUserId: v.string(),
     actorOrganizationId: v.optional(v.string()),
+    searchText: v.optional(v.string()),
+    project: v.optional(v.string()),
+    library: v.optional(v.string()),
+    component: v.optional(v.string()),
+    tag: v.optional(v.string()),
+    status: v.optional(tipStatusValidator),
+    limit: v.optional(v.number()),
   },
   returns: v.array(
     v.object({
@@ -184,6 +349,10 @@ export const listTips = query({
       slug: v.string(),
       title: v.string(),
       status: tipStatusValidator,
+      project: v.union(v.string(), v.null()),
+      library: v.union(v.string(), v.null()),
+      component: v.union(v.string(), v.null()),
+      tags: v.array(v.string()),
       currentRevision: v.number(),
       organizationId: v.union(v.string(), v.null()),
       updatedByWorkosUserId: v.string(),
@@ -197,23 +366,225 @@ export const listTips = query({
       'tips.read',
     )
 
-    const tips = await ctx.db.query('tips').order('desc').take(100)
+    const searchText = normalizeOptionalFilter(args.searchText)
+    const projectFilter = normalizeOptionalFilter(args.project)
+    const libraryFilter = normalizeOptionalFilter(args.library)
+    const componentFilter = normalizeOptionalFilter(args.component)
+    const tagFilter = normalizeOptionalFilter(args.tag)
+    const normalizedTagFilter = tagFilter ? normalizeTagFacet(tagFilter) : undefined
+    const normalizedProjectFilter = projectFilter?.toLowerCase()
+    const normalizedLibraryFilter = libraryFilter?.toLowerCase()
+    const normalizedComponentFilter = componentFilter?.toLowerCase()
+    const limit = Math.min(Math.max(args.limit ?? 30, 1), 80)
+    const fetchLimit = Math.min(limit * 4, 240)
 
-    return tips
+    if (
+      actorRole === 'Reader' &&
+      args.status &&
+      args.status !== 'published'
+    ) {
+      return []
+    }
+
+    const effectiveStatus: TipStatus | undefined =
+      actorRole === 'Reader' ? 'published' : args.status
+
+    let candidateTips: Doc<'tips'>[] = []
+
+    if (searchText) {
+      candidateTips = await ctx.db
+        .query('tips')
+        .withSearchIndex('search_text', (queryBuilder) => {
+          let searchQuery = queryBuilder.search('searchText', searchText)
+
+          if (args.actorOrganizationId) {
+            searchQuery = searchQuery.eq(
+              'organizationId',
+              args.actorOrganizationId,
+            )
+          }
+
+          if (effectiveStatus) {
+            searchQuery = searchQuery.eq('status', effectiveStatus)
+          }
+
+          if (projectFilter) {
+            searchQuery = searchQuery.eq('project', projectFilter)
+          }
+
+          if (libraryFilter) {
+            searchQuery = searchQuery.eq('library', libraryFilter)
+          }
+
+          if (componentFilter) {
+            searchQuery = searchQuery.eq('component', componentFilter)
+          }
+
+          return searchQuery
+        })
+        .take(fetchLimit)
+    } else if (normalizedTagFilter) {
+      const facets = args.actorOrganizationId
+        ? effectiveStatus
+          ? await ctx.db
+              .query('tipTagFacets')
+              .withIndex('by_org_tag_status_updated_at', (queryBuilder) =>
+                queryBuilder
+                  .eq('organizationId', args.actorOrganizationId)
+                  .eq('tag', normalizedTagFilter)
+                  .eq('status', effectiveStatus),
+              )
+              .order('desc')
+              .take(fetchLimit)
+          : await ctx.db
+              .query('tipTagFacets')
+              .withIndex('by_org_tag_updated_at', (queryBuilder) =>
+                queryBuilder
+                  .eq('organizationId', args.actorOrganizationId)
+                  .eq('tag', normalizedTagFilter),
+              )
+              .order('desc')
+              .take(fetchLimit)
+        : effectiveStatus
+          ? await ctx.db
+              .query('tipTagFacets')
+              .withIndex('by_tag_status_updated_at', (queryBuilder) =>
+                queryBuilder
+                  .eq('tag', normalizedTagFilter)
+                  .eq('status', effectiveStatus),
+              )
+              .order('desc')
+              .take(fetchLimit)
+          : await ctx.db
+              .query('tipTagFacets')
+              .withIndex('by_tag_updated_at', (queryBuilder) =>
+                queryBuilder.eq('tag', normalizedTagFilter),
+              )
+              .order('desc')
+              .take(fetchLimit)
+
+      const orderedTipIds = [...new Set(facets.map((facet) => facet.tipId))]
+      const loadedTips = await Promise.all(
+        orderedTipIds.map((tipId) => ctx.db.get(tipId)),
+      )
+
+      candidateTips = loadedTips.filter((tip): tip is Doc<'tips'> => tip !== null)
+    } else if (args.actorOrganizationId) {
+      if (effectiveStatus) {
+        candidateTips = await ctx.db
+          .query('tips')
+          .withIndex('by_org_status_updated_at', (queryBuilder) =>
+            queryBuilder
+              .eq('organizationId', args.actorOrganizationId)
+              .eq('status', effectiveStatus),
+          )
+          .order('desc')
+          .take(fetchLimit)
+      } else if (projectFilter) {
+        candidateTips = await ctx.db
+          .query('tips')
+          .withIndex('by_org_project_updated_at', (queryBuilder) =>
+            queryBuilder
+              .eq('organizationId', args.actorOrganizationId)
+              .eq('project', projectFilter),
+          )
+          .order('desc')
+          .take(fetchLimit)
+      } else if (libraryFilter) {
+        candidateTips = await ctx.db
+          .query('tips')
+          .withIndex('by_org_library_updated_at', (queryBuilder) =>
+            queryBuilder
+              .eq('organizationId', args.actorOrganizationId)
+              .eq('library', libraryFilter),
+          )
+          .order('desc')
+          .take(fetchLimit)
+      } else if (componentFilter) {
+        candidateTips = await ctx.db
+          .query('tips')
+          .withIndex('by_org_component_updated_at', (queryBuilder) =>
+            queryBuilder
+              .eq('organizationId', args.actorOrganizationId)
+              .eq('component', componentFilter),
+          )
+          .order('desc')
+          .take(fetchLimit)
+      } else {
+        candidateTips = await ctx.db
+          .query('tips')
+          .withIndex('by_org_updated_at', (queryBuilder) =>
+            queryBuilder.eq('organizationId', args.actorOrganizationId),
+          )
+          .order('desc')
+          .take(fetchLimit)
+      }
+    } else {
+      candidateTips = await ctx.db.query('tips').order('desc').take(fetchLimit)
+    }
+
+    const filteredTips = candidateTips
       .filter((tip) => {
-        const sameOrg = args.actorOrganizationId
-          ? tip.organizationId === args.actorOrganizationId
-          : true
-        const canSeeStatus =
-          actorRole === 'Reader' ? tip.status === 'published' : true
+        if (
+          args.actorOrganizationId &&
+          tip.organizationId !== args.actorOrganizationId
+        ) {
+          return false
+        }
 
-        return sameOrg && canSeeStatus
+        const tipStatus = tip.status as TipStatus
+
+        if (!canReadTipStatus(actorRole, tipStatus)) {
+          return false
+        }
+
+        if (effectiveStatus && tipStatus !== effectiveStatus) {
+          return false
+        }
+
+        if (
+          normalizedProjectFilter &&
+          (tip.project ?? '').toLowerCase() !== normalizedProjectFilter
+        ) {
+          return false
+        }
+
+        if (
+          normalizedLibraryFilter &&
+          (tip.library ?? '').toLowerCase() !== normalizedLibraryFilter
+        ) {
+          return false
+        }
+
+        if (
+          normalizedComponentFilter &&
+          (tip.component ?? '').toLowerCase() !== normalizedComponentFilter
+        ) {
+          return false
+        }
+
+        if (
+          normalizedTagFilter &&
+          !tip.tags.some((tag) => normalizeTagFacet(tag) === normalizedTagFilter)
+        ) {
+          return false
+        }
+
+        return true
       })
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .slice(0, limit)
+
+    return filteredTips
       .map((tip) => ({
         id: tip._id,
         slug: tip.slug,
         title: tip.title,
         status: tip.status,
+        project: tip.project ?? null,
+        library: tip.library ?? null,
+        component: tip.component ?? null,
+        tags: tip.tags,
         currentRevision: tip.currentRevision,
         organizationId: tip.organizationId ?? null,
         updatedByWorkosUserId: tip.updatedByWorkosUserId,
@@ -296,6 +667,9 @@ export const getTipForEditor = query({
     rootCause: v.string(),
     fix: v.string(),
     prevention: v.string(),
+    project: v.union(v.string(), v.null()),
+    library: v.union(v.string(), v.null()),
+    component: v.union(v.string(), v.null()),
     tags: v.array(v.string()),
     references: v.array(v.string()),
     status: tipStatusValidator,
@@ -319,6 +693,9 @@ export const getTipForEditor = query({
       rootCause: tip.rootCause,
       fix: tip.fix,
       prevention: tip.prevention,
+      project: tip.project ?? null,
+      library: tip.library ?? null,
+      component: tip.component ?? null,
       tags: tip.tags,
       references: tip.references,
       status: tip.status,
@@ -381,6 +758,9 @@ export const saveTipDraft = mutation({
     rootCause: v.string(),
     fix: v.string(),
     prevention: v.string(),
+    project: v.optional(v.string()),
+    library: v.optional(v.string()),
+    component: v.optional(v.string()),
     tags: v.array(v.string()),
     references: v.array(v.string()),
   },
@@ -398,16 +778,18 @@ export const saveTipDraft = mutation({
       rootCause: args.rootCause,
       fix: args.fix,
       prevention: args.prevention,
+      project: args.project,
+      library: args.library,
+      component: args.component,
       tags: args.tags,
       references: args.references,
     })
 
     const now = Date.now()
     const metadata = buildTipMetadata(normalizedDraft.symptom, now)
+    const searchText = buildTipSearchText(metadata.title, normalizedDraft)
     let tipId: Id<'tips'>
     let revisionNumber = 1
-    let slug = metadata.slug
-    let organizationId = args.actorOrganizationId
 
     if (args.tipId) {
       const existingTip = await ctx.db.get(args.tipId)
@@ -417,11 +799,15 @@ export const saveTipDraft = mutation({
       }
 
       assertTipOrganizationAccess(existingTip, args.actorOrganizationId)
+      assertStatusTransition(existingTip.status as TipStatus, 'draft')
+
+      if (existingTip.status === 'in_review') {
+        await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.publish')
+      }
 
       revisionNumber = (existingTip.currentRevision ?? 0) + 1
       tipId = existingTip._id
-      slug = existingTip.slug
-      organizationId = existingTip.organizationId ?? args.actorOrganizationId
+      const organizationId = existingTip.organizationId ?? args.actorOrganizationId
 
       await ctx.db.patch(existingTip._id, {
         title: metadata.title,
@@ -429,8 +815,12 @@ export const saveTipDraft = mutation({
         rootCause: normalizedDraft.rootCause,
         fix: normalizedDraft.fix,
         prevention: normalizedDraft.prevention,
+        project: normalizedDraft.project,
+        library: normalizedDraft.library,
+        component: normalizedDraft.component,
         tags: normalizedDraft.tags,
         references: normalizedDraft.references,
+        searchText,
         status: 'draft',
         organizationId,
         currentRevision: revisionNumber,
@@ -439,16 +829,20 @@ export const saveTipDraft = mutation({
       })
     } else {
       tipId = await ctx.db.insert('tips', {
-        slug,
+        slug: metadata.slug,
         title: metadata.title,
         symptom: normalizedDraft.symptom,
         rootCause: normalizedDraft.rootCause,
         fix: normalizedDraft.fix,
         prevention: normalizedDraft.prevention,
+        project: normalizedDraft.project,
+        library: normalizedDraft.library,
+        component: normalizedDraft.component,
         tags: normalizedDraft.tags,
         references: normalizedDraft.references,
+        searchText,
         status: 'draft',
-        organizationId,
+        organizationId: args.actorOrganizationId,
         createdByWorkosUserId: args.actorWorkosUserId,
         createdAt: now,
         currentRevision: revisionNumber,
@@ -457,21 +851,25 @@ export const saveTipDraft = mutation({
       })
     }
 
-    await ctx.db.insert('tipRevisions', {
-      tipId,
+    const tip = await ctx.db.get(tipId)
+    if (!tip) {
+      throw new ConvexError('Tip not found after save.')
+    }
+
+    await appendTipRevisionSnapshot(ctx, {
+      tip,
       revisionNumber,
-      title: metadata.title,
-      slug,
-      symptom: normalizedDraft.symptom,
-      rootCause: normalizedDraft.rootCause,
-      fix: normalizedDraft.fix,
-      prevention: normalizedDraft.prevention,
-      tags: normalizedDraft.tags,
-      references: normalizedDraft.references,
       status: 'draft',
-      organizationId,
       editedByWorkosUserId: args.actorWorkosUserId,
       createdAt: now,
+    })
+
+    await replaceTipTagFacets(ctx, {
+      tipId,
+      organizationId: tip.organizationId,
+      status: 'draft',
+      tags: tip.tags,
+      updatedAt: now,
     })
 
     return {
@@ -479,6 +877,78 @@ export const saveTipDraft = mutation({
       status: 'draft' as const,
       revisionNumber,
       updatedAt: now,
+    }
+  },
+})
+
+export const submitTipForReview = mutation({
+  args: {
+    ...actorContextShape,
+    tipId: v.id('tips'),
+  },
+  returns: v.object({
+    tipId: v.id('tips'),
+    status: v.literal('in_review'),
+    revisionNumber: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.create')
+
+    const tip = await ctx.db.get(args.tipId)
+    if (!tip) {
+      throw new ConvexError('Tip not found.')
+    }
+
+    assertTipOrganizationAccess(tip, args.actorOrganizationId)
+
+    const now = Date.now()
+    const revisionNumber = await patchTipStatusWithRevision(ctx, {
+      tip,
+      nextStatus: 'in_review',
+      actorWorkosUserId: args.actorWorkosUserId,
+      now,
+    })
+
+    return {
+      tipId: tip._id,
+      status: 'in_review' as const,
+      revisionNumber,
+    }
+  },
+})
+
+export const returnTipToDraft = mutation({
+  args: {
+    ...actorContextShape,
+    tipId: v.id('tips'),
+  },
+  returns: v.object({
+    tipId: v.id('tips'),
+    status: v.literal('draft'),
+    revisionNumber: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.publish')
+
+    const tip = await ctx.db.get(args.tipId)
+    if (!tip) {
+      throw new ConvexError('Tip not found.')
+    }
+
+    assertTipOrganizationAccess(tip, args.actorOrganizationId)
+
+    const now = Date.now()
+    const revisionNumber = await patchTipStatusWithRevision(ctx, {
+      tip,
+      nextStatus: 'draft',
+      actorWorkosUserId: args.actorWorkosUserId,
+      now,
+    })
+
+    return {
+      tipId: tip._id,
+      status: 'draft' as const,
+      revisionNumber,
     }
   },
 })
@@ -491,6 +961,7 @@ export const publishTip = mutation({
   returns: v.object({
     tipId: v.id('tips'),
     status: v.literal('published'),
+    revisionNumber: v.number(),
     auditEventId: v.id('auditEvents'),
   }),
   handler: async (ctx, args) => {
@@ -507,11 +978,12 @@ export const publishTip = mutation({
     }
 
     assertTipOrganizationAccess(tip, args.actorOrganizationId)
-
-    await ctx.db.patch(tip._id, {
-      status: 'published',
-      updatedByWorkosUserId: args.actorWorkosUserId,
-      updatedAt: Date.now(),
+    const now = Date.now()
+    const revisionNumber = await patchTipStatusWithRevision(ctx, {
+      tip,
+      nextStatus: 'published',
+      actorWorkosUserId: args.actorWorkosUserId,
+      now,
     })
 
     const auditEventId = await insertAuditEvent(ctx, {
@@ -527,6 +999,7 @@ export const publishTip = mutation({
     return {
       tipId: tip._id,
       status: 'published' as const,
+      revisionNumber,
       auditEventId,
     }
   },
@@ -540,6 +1013,7 @@ export const deprecateTip = mutation({
   returns: v.object({
     tipId: v.id('tips'),
     status: v.literal('deprecated'),
+    revisionNumber: v.number(),
     auditEventId: v.id('auditEvents'),
   }),
   handler: async (ctx, args) => {
@@ -556,11 +1030,12 @@ export const deprecateTip = mutation({
     }
 
     assertTipOrganizationAccess(tip, args.actorOrganizationId)
-
-    await ctx.db.patch(tip._id, {
-      status: 'deprecated',
-      updatedByWorkosUserId: args.actorWorkosUserId,
-      updatedAt: Date.now(),
+    const now = Date.now()
+    const revisionNumber = await patchTipStatusWithRevision(ctx, {
+      tip,
+      nextStatus: 'deprecated',
+      actorWorkosUserId: args.actorWorkosUserId,
+      now,
     })
 
     const auditEventId = await insertAuditEvent(ctx, {
@@ -576,6 +1051,7 @@ export const deprecateTip = mutation({
     return {
       tipId: tip._id,
       status: 'deprecated' as const,
+      revisionNumber,
       auditEventId,
     }
   },

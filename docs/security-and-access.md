@@ -72,11 +72,14 @@ Convex enforcement:
   - `listTipRevisions` requires `tips.create` (draft revision history access).
 - Mutation guards:
   - `assignRole` requires `roles.assign`.
-  - `saveTipDraft` requires `tips.create`.
-  - `publishTip` requires `tips.publish`.
-  - `deprecateTip` requires `tips.deprecate`.
+  - `saveTipDraft` requires `tips.create` and additionally enforces reviewer permission (`tips.publish`) when editing an `in_review` tip back to `draft`.
+  - `submitTipForReview` requires `tips.create`.
+  - `returnTipToDraft` requires `tips.publish`.
+  - `publishTip` requires `tips.publish` and only allows `in_review -> published`.
+  - `deprecateTip` requires `tips.deprecate` and only allows `published -> deprecated`.
   - `configureIntegration` requires `integration.configure`.
   - Tip mutations enforce organization-scoped access via `assertTipOrganizationAccess()` before modifying an existing tip.
+  - Workflow transitions are server-validated via `assertStatusTransition()` in `convex/accessControl.ts` (`draft -> in_review -> published -> deprecated`, plus `in_review -> draft` for reviewer feedback).
 
 Frontend guards:
 - Dashboard UI (`src/routes/dashboard.tsx`) uses `src/lib/rbac.ts` to disable privileged controls when the signed-in role lacks capability.
