@@ -104,6 +104,45 @@ Retry rules:
 - Do not reuse an `idempotencyKey` with different payload content.
 - Use `scanIngestion.getLatestSuccessfulScanRun` to verify successful ingest per workspace.
 
+## Azure DevOps scan pipelines (BD-014)
+
+Pipeline definitions:
+- `.azure-pipelines/incremental-scan.yml`
+  - Runs on PRs targeting `main` and merges/pushes to `main`.
+  - Uses path filters to run only when Angular workspace inputs change:
+    - `angular.json`, `workspace.json`, `project.json`, `apps/**`, `libs/**`, `projects/**`, `src/**`, `tsconfig.json`, `tsconfig.base.json`.
+  - Posts with `INGEST_SOURCE=pipeline`.
+- `.azure-pipelines/nightly-full-scan.yml`
+  - Runs nightly full scan at `02:00 UTC` on `main` (`always: true`).
+  - Posts with `INGEST_SOURCE=scheduled`.
+
+Both pipelines execute:
+1. Install Bun runtime.
+2. Run `bun install --frozen-lockfile`.
+3. Generate scanner output JSON with:
+   - `bun run scan:angular -- --workspace "$(SCAN_WORKSPACE_PATH)" --output "$(Build.ArtifactStagingDirectory)/scan-snapshot.json"`
+4. Post JSON snapshot to Convex via:
+   - `bun run scripts/ci/post-scan-ingestion.ts`
+5. Publish `scan-snapshot.json` as a build artifact.
+
+Secret references:
+- Azure variable group: `betterdoc-scan-ingestion-secrets`
+- Required secret/variable: `CONVEX_INGEST_URL` (for example `https://<deployment>.convex.site/scanner/ingest`)
+- Optional secret: `CONVEX_INGEST_BEARER_TOKEN` (added as `Authorization: Bearer <token>` when present)
+- Non-secret workspace defaults:
+  - `SCAN_WORKSPACE_PATH=$(Build.SourcesDirectory)`
+  - `SCAN_WORKSPACE_ID=$(System.TeamProject)/$(Build.Repository.Name)`
+
+Retry and timeout policy:
+- Azure task policy:
+  - `retryCountOnTaskFailure` on Bun install/dependency/ingestion steps.
+  - `timeoutInMinutes` on scanner and ingestion steps, plus job-level timeout.
+- Ingestion script policy (`scripts/ci/post-scan-ingestion.ts`):
+  - Per-request timeout: `INGEST_TIMEOUT_MS`.
+  - Retry attempts: `INGEST_MAX_ATTEMPTS`.
+  - Exponential backoff bounds: `INGEST_INITIAL_BACKOFF_MS` and `INGEST_MAX_BACKOFF_MS`.
+  - Retries transient failures only (network/timeout + HTTP `408`, `425`, `429`, `500`, `502`, `503`, `504`).
+
 ## Auth routes (BD-003)
 - `GET /login` -> redirect to WorkOS AuthKit sign-in URL.
 - `GET /api/auth/callback` -> callback exchange and session cookie set.

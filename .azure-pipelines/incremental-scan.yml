@@ -1,0 +1,126 @@
+name: betterdoc-incremental-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - angular.json
+      - workspace.json
+      - project.json
+      - apps/**
+      - libs/**
+      - projects/**
+      - src/**
+      - tsconfig.json
+      - tsconfig.base.json
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - angular.json
+      - workspace.json
+      - project.json
+      - apps/**
+      - libs/**
+      - projects/**
+      - src/**
+      - tsconfig.json
+      - tsconfig.base.json
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: betterdoc-scan-ingestion-secrets
+  - name: SCAN_WORKSPACE_ID
+    value: $(System.TeamProject)/$(Build.Repository.Name)
+  - name: SCAN_WORKSPACE_PATH
+    value: $(Build.SourcesDirectory)
+  - name: SCANNER_NAME
+    value: angular-scanner
+  - name: INGEST_SOURCE
+    value: pipeline
+  - name: INGEST_MAX_ATTEMPTS
+    value: 4
+  - name: INGEST_TIMEOUT_MS
+    value: 30000
+  - name: INGEST_INITIAL_BACKOFF_MS
+    value: 2000
+  - name: INGEST_MAX_BACKOFF_MS
+    value: 15000
+  - name: SCAN_SNAPSHOT_FILE
+    value: $(Build.ArtifactStagingDirectory)/scan-snapshot.json
+  - name: INGEST_IDEMPOTENCY_KEY
+    value: azdo-incremental-$(Build.BuildId)-attempt-$(System.JobAttempt)
+
+stages:
+  - stage: incremental_scan
+    displayName: Incremental Scan and Ingestion
+    jobs:
+      - job: scan_and_ingest
+        displayName: Build scanner snapshot and ingest
+        timeoutInMinutes: 25
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 0
+
+          - bash: |
+              set -euo pipefail
+              curl -fsSL https://bun.sh/install | bash
+              echo "##vso[task.prependpath]$HOME/.bun/bin"
+              bun --version
+            displayName: Install Bun
+            timeoutInMinutes: 5
+            retryCountOnTaskFailure: 2
+
+          - bash: |
+              set -euo pipefail
+              bun install --frozen-lockfile
+            displayName: Install dependencies
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 2
+
+          - bash: |
+              set -euo pipefail
+              mkdir -p "$(Build.ArtifactStagingDirectory)"
+              bun run scan:angular -- \
+                --workspace "$(SCAN_WORKSPACE_PATH)" \
+                --output "$(SCAN_SNAPSHOT_FILE)"
+            displayName: Build incremental scan snapshot
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 1
+
+          - bash: |
+              set -euo pipefail
+              bun run scripts/ci/post-scan-ingestion.ts
+            displayName: Post snapshot to Convex ingestion endpoint
+            timeoutInMinutes: 8
+            retryCountOnTaskFailure: 2
+            env:
+              CONVEX_INGEST_URL: $(CONVEX_INGEST_URL)
+              CONVEX_INGEST_BEARER_TOKEN: $(CONVEX_INGEST_BEARER_TOKEN)
+              SCAN_SNAPSHOT_FILE: $(SCAN_SNAPSHOT_FILE)
+              SCAN_WORKSPACE_ID: $(SCAN_WORKSPACE_ID)
+              SCANNER_NAME: $(SCANNER_NAME)
+              SCANNER_VERSION: $(Build.SourceVersion)
+              INGEST_SOURCE: $(INGEST_SOURCE)
+              INGEST_IDEMPOTENCY_KEY: $(INGEST_IDEMPOTENCY_KEY)
+              INGEST_MAX_ATTEMPTS: $(INGEST_MAX_ATTEMPTS)
+              INGEST_TIMEOUT_MS: $(INGEST_TIMEOUT_MS)
+              INGEST_INITIAL_BACKOFF_MS: $(INGEST_INITIAL_BACKOFF_MS)
+              INGEST_MAX_BACKOFF_MS: $(INGEST_MAX_BACKOFF_MS)
+              INGEST_BRANCH: $(Build.SourceBranchName)
+              INGEST_COMMIT_SHA: $(Build.SourceVersion)
+              INGEST_RUN_ID: $(Build.BuildId)
+
+          - publish: $(SCAN_SNAPSHOT_FILE)
+            artifact: scan-snapshot-incremental
+            displayName: Publish scan snapshot artifact
+            condition: succeededOrFailed()

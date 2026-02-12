@@ -1,5 +1,17 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-014)
+- Code paths changed:
+  - `.azure-pipelines/incremental-scan.yml`
+  - `.azure-pipelines/nightly-full-scan.yml`
+  - `scripts/ci/post-scan-ingestion.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added Azure DevOps YAML definitions for PR/merge incremental scan ingestion and nightly full scan ingestion, wired to `POST /scanner/ingest` through a reusable CI script with configurable timeout/retry backoff and secret-backed endpoint/token references.
+
 ## 2026-02-12 (BD-012, BD-013)
 - Code paths changed:
   - `convex/schema.ts`

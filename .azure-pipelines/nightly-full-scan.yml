@@ -1,0 +1,104 @@
+name: betterdoc-nightly-full-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: "0 2 * * *"
+    displayName: Nightly full scan (02:00 UTC)
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: betterdoc-scan-ingestion-secrets
+  - name: SCAN_WORKSPACE_ID
+    value: $(System.TeamProject)/$(Build.Repository.Name)
+  - name: SCAN_WORKSPACE_PATH
+    value: $(Build.SourcesDirectory)
+  - name: SCANNER_NAME
+    value: angular-scanner
+  - name: INGEST_SOURCE
+    value: scheduled
+  - name: INGEST_MAX_ATTEMPTS
+    value: 5
+  - name: INGEST_TIMEOUT_MS
+    value: 45000
+  - name: INGEST_INITIAL_BACKOFF_MS
+    value: 3000
+  - name: INGEST_MAX_BACKOFF_MS
+    value: 20000
+  - name: SCAN_SNAPSHOT_FILE
+    value: $(Build.ArtifactStagingDirectory)/scan-snapshot.json
+  - name: INGEST_IDEMPOTENCY_KEY
+    value: azdo-nightly-$(Build.BuildId)-attempt-$(System.JobAttempt)
+
+stages:
+  - stage: nightly_full_scan
+    displayName: Nightly Full Scan and Ingestion
+    jobs:
+      - job: scan_and_ingest
+        displayName: Build full scanner snapshot and ingest
+        timeoutInMinutes: 35
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 0
+
+          - bash: |
+              set -euo pipefail
+              curl -fsSL https://bun.sh/install | bash
+              echo "##vso[task.prependpath]$HOME/.bun/bin"
+              bun --version
+            displayName: Install Bun
+            timeoutInMinutes: 5
+            retryCountOnTaskFailure: 2
+
+          - bash: |
+              set -euo pipefail
+              bun install --frozen-lockfile
+            displayName: Install dependencies
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 2
+
+          - bash: |
+              set -euo pipefail
+              mkdir -p "$(Build.ArtifactStagingDirectory)"
+              bun run scan:angular -- \
+                --workspace "$(SCAN_WORKSPACE_PATH)" \
+                --output "$(SCAN_SNAPSHOT_FILE)"
+            displayName: Build full scan snapshot
+            timeoutInMinutes: 15
+            retryCountOnTaskFailure: 1
+
+          - bash: |
+              set -euo pipefail
+              bun run scripts/ci/post-scan-ingestion.ts
+            displayName: Post snapshot to Convex ingestion endpoint
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 2
+            env:
+              CONVEX_INGEST_URL: $(CONVEX_INGEST_URL)
+              CONVEX_INGEST_BEARER_TOKEN: $(CONVEX_INGEST_BEARER_TOKEN)
+              SCAN_SNAPSHOT_FILE: $(SCAN_SNAPSHOT_FILE)
+              SCAN_WORKSPACE_ID: $(SCAN_WORKSPACE_ID)
+              SCANNER_NAME: $(SCANNER_NAME)
+              SCANNER_VERSION: $(Build.SourceVersion)
+              INGEST_SOURCE: $(INGEST_SOURCE)
+              INGEST_IDEMPOTENCY_KEY: $(INGEST_IDEMPOTENCY_KEY)
+              INGEST_MAX_ATTEMPTS: $(INGEST_MAX_ATTEMPTS)
+              INGEST_TIMEOUT_MS: $(INGEST_TIMEOUT_MS)
+              INGEST_INITIAL_BACKOFF_MS: $(INGEST_INITIAL_BACKOFF_MS)
+              INGEST_MAX_BACKOFF_MS: $(INGEST_MAX_BACKOFF_MS)
+              INGEST_BRANCH: $(Build.SourceBranchName)
+              INGEST_COMMIT_SHA: $(Build.SourceVersion)
+              INGEST_RUN_ID: $(Build.BuildId)
+
+          - publish: $(SCAN_SNAPSHOT_FILE)
+            artifact: scan-snapshot-nightly
+            displayName: Publish scan snapshot artifact
+            condition: succeededOrFailed()

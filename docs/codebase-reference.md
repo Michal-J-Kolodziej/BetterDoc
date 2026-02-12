@@ -231,6 +231,18 @@ All four pass with valid environment variables set.
 ### Query surface
 - `getLatestSuccessfulScanRun(workspaceId)` returns the latest succeeded run metadata + linked graph version info for operational checks and downstream UI loading.
 
+## Azure DevOps Scan Pipelines (BD-014)
+
+### Pipeline assets
+- `.azure-pipelines/incremental-scan.yml`
+  - PR + merge trigger pipeline for incremental scan ingestion.
+- `.azure-pipelines/nightly-full-scan.yml`
+  - Scheduled nightly full scan ingestion pipeline.
+- `scripts/ci/post-scan-ingestion.ts`
+  - Reusable ingestion client used by both pipelines.
+  - Reads scanner JSON snapshot from disk, attaches Azure run metadata, and posts to `POST /scanner/ingest`.
+  - Supports configurable timeout/retry/backoff via environment variables and optional bearer auth header.
+
 ## Component Explorer + Tip Linking (BD-012, BD-013)
 
 ### Explorer routes
