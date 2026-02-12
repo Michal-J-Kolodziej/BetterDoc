@@ -19,7 +19,7 @@ Last updated: 2026-02-12
   - Uses `VITE_WORKOS_REDIRECT_URI` from `import.meta.env` for middleware redirect override so browser bundles do not evaluate server-only env parsing.
 - Root route: `src/routes/__root.tsx`
   - Owns the HTML document shell and global providers.
-  - Mounts `ConvexAppProvider` so route components can call Convex hooks.
+  - Mounts `AuthKitProvider` for client auth state and `ConvexAppProvider` for Convex hooks.
 - Index route: `src/routes/index.tsx`
   - Public landing page with links into auth flow and protected dashboard.
 
@@ -28,7 +28,13 @@ Last updated: 2026-02-12
   - Initializes `ConvexReactClient` using validated `VITE_CONVEX_URL`.
 - Convex function: `convex/health.ts`
   - Exposes `getStatus` query for initial end-to-end health check.
+- Convex RBAC/audit module: `convex/accessControl.ts`
+  - Public queries: `getAccessProfile`, `listTips`, `listAuditEvents`.
+  - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `createTipDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
+  - Enforces capability checks server-side for privileged operations and audit reads.
+- RBAC constants/validators: `convex/rbac.ts`
 - Convex schema: `convex/schema.ts`
+  - Tables: `memberships`, `tips`, `integrationConfigs`, `auditEvents`.
 - Typed API stubs:
   - `convex/_generated/api.ts`
   - `convex/_generated/server.ts`
@@ -59,4 +65,29 @@ All four pass with valid environment variables set.
 - `src/routes/dashboard.tsx`
   - `GET /dashboard` server handler checks `context.auth()` from middleware.
   - Unauthenticated requests redirect to WorkOS sign-in.
-  - Authenticated requests call `next()` and render dashboard component.
+  - Authenticated requests call `next()` and render dashboard component with role-aware guards.
+
+## Authorization + Audit (BD-004, BD-005)
+
+### Role-to-capability matrix
+- `Reader`: `tips.read`
+- `Contributor`: `tips.read`, `tips.create`
+- `Reviewer`: `tips.read`, `tips.create`, `tips.publish`, `tips.deprecate`, `audit.read`
+- `Admin`: Reviewer capabilities + `roles.assign`, `integration.configure`
+
+### Enforcement points
+- Server-side RBAC guard helpers:
+  - `convex/rbac.ts`: `hasPermission()`, matrix constants, validators.
+  - `convex/accessControl.ts`: `requirePermission()` checks inside guarded queries/mutations.
+- Frontend UI guards:
+  - `src/lib/rbac.ts`: shared role/capability map used by route components.
+  - `src/routes/dashboard.tsx`: disables/hides privileged controls unless role has required capability.
+
+### Immutable audit events
+- Privileged actions that always append an audit row:
+  - `tip.publish`
+  - `tip.deprecate`
+  - `role.assign`
+  - `integration.configure`
+- Audit writes are append-only via `insertAuditEvent()` in `convex/accessControl.ts`.
+- No mutation is exposed to update/delete records in `auditEvents`.

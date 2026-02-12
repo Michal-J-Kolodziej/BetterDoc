@@ -1,5 +1,22 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-004, BD-005)
+- Code paths changed:
+  - `convex/schema.ts`
+  - `convex/rbac.ts`
+  - `convex/accessControl.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/routes/__root.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/lib/rbac.ts`
+  - `src/lib/rbac.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added Reader/Contributor/Reviewer/Admin RBAC model, enforced role checks in Convex queries/mutations and dashboard UI guards, and introduced immutable audit events for publish/deprecate/role/integration privileged actions.
+
 ## 2026-02-12 (BD-003 follow-up)
 - Code paths changed:
   - `src/start.ts`
