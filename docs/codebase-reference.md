@@ -29,12 +29,12 @@ Last updated: 2026-02-12
 - Convex function: `convex/health.ts`
   - Exposes `getStatus` query for initial end-to-end health check.
 - Convex RBAC/audit module: `convex/accessControl.ts`
-  - Public queries: `getAccessProfile`, `listTips`, `listAuditEvents`.
-  - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `createTipDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
+  - Public queries: `getAccessProfile`, `listTips`, `getTipForEditor`, `listTipRevisions`, `listAuditEvents`.
+  - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `saveTipDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
   - Enforces capability checks server-side for privileged operations and audit reads.
 - RBAC constants/validators: `convex/rbac.ts`
 - Convex schema: `convex/schema.ts`
-  - Tables: `memberships`, `tips`, `integrationConfigs`, `auditEvents`.
+  - Tables: `memberships`, `tips`, `tipRevisions`, `integrationConfigs`, `auditEvents`.
 - Typed API stubs:
   - `convex/_generated/api.ts`
   - `convex/_generated/server.ts`
@@ -91,3 +91,40 @@ All four pass with valid environment variables set.
   - `integration.configure`
 - Audit writes are append-only via `insertAuditEvent()` in `convex/accessControl.ts`.
 - No mutation is exposed to update/delete records in `auditEvents`.
+
+## Tips Core + Editor (BD-006, BD-007)
+
+### Tip data model
+- `convex/schema.ts`
+  - `tips` stores the latest draft/published state with structured content:
+    - `symptom`, `rootCause`, `fix`, `prevention`, `tags`, `references`
+    - revision cursor: `currentRevision`
+    - ownership/timestamps: `createdByWorkosUserId`, `createdAt`, `updatedByWorkosUserId`, `updatedAt`
+  - `tipRevisions` stores immutable snapshots for each draft save:
+    - link: `tipId`
+    - sequence: `revisionNumber`
+    - full content snapshot + status + editor + timestamp
+
+### Draft save + revision workflow
+- `convex/tipDraft.ts`
+  - Normalizes and validates draft content server-side (required structured fields, length limits, tag/reference normalization).
+  - Generates metadata (`slug`, `title`) from the symptom field.
+- `convex/accessControl.ts`
+  - `saveTipDraft` creates or updates a draft tip and always inserts a `tipRevisions` row.
+  - `listTipRevisions` returns newest-first revision metadata for editor history.
+  - `getTipForEditor` reads structured tip content for edit workflows.
+  - `publishTip` and `deprecateTip` now enforce organization-scoped tip access.
+
+### Editor UI
+- `src/routes/dashboard.tsx`
+  - Adds a structured editor section with fields:
+    - `symptom`
+    - `root cause`
+    - `fix`
+    - `prevention`
+    - `tags`
+    - `references`
+  - Uses `saveTipDraft` for draft saves and shows revision history from `listTipRevisions`.
+  - Includes an explicit load action to populate the editor from an existing tip.
+- `src/lib/tip-editor.ts`
+  - Client-side field validation and payload shaping for tags/references before mutation calls.

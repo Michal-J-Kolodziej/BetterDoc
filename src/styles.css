@@ -40,3 +40,37 @@ code {
   padding: 0.15rem 0.35rem;
   border-radius: 6px;
 }
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #bfd1e4;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+textarea {
+  resize: vertical;
+}
+
+button {
+  cursor: pointer;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #bfd1e4;
+  border-radius: 8px;
+  background: #f4f9ff;
+}
+
+small {
+  color: #8b1f1f;
+}

@@ -1,5 +1,23 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-006, BD-007)
+- Code paths changed:
+  - `convex/schema.ts`
+  - `convex/accessControl.ts`
+  - `convex/tipDraft.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/routes/dashboard.tsx`
+  - `src/lib/tip-editor.ts`
+  - `src/lib/tip-editor.test.ts`
+  - `src/lib/tip-draft.server.test.ts`
+  - `src/styles.css`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/change-log.md`
+- Impact:
+  - Delivered structured tips + revision persistence with server/client validation, added a draft editor UI for symptom/root-cause/fix/prevention/tags/references, and wired draft saves to immutable `tipRevisions` history.
+
 ## 2026-02-12 (BD-004, BD-005)
 - Code paths changed:
   - `convex/schema.ts`

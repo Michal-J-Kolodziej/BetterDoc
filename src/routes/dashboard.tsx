@@ -7,6 +7,12 @@ import { useState } from 'react'
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
 import { hasPermission, type AppRole, type Permission } from '../lib/rbac'
+import {
+  buildTipDraftPayload,
+  createEmptyTipEditorState,
+  type TipEditorFormState,
+  type TipEditorValidationErrors,
+} from '../lib/tip-editor'
 
 export const Route = createFileRoute('/dashboard')({
   server: {
@@ -34,13 +40,19 @@ export const Route = createFileRoute('/dashboard')({
 function DashboardPage() {
   const auth = useAuth()
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [tipEditorMessage, setTipEditorMessage] = useState<string | null>(null)
   const [draftTipId, setDraftTipId] = useState<Id<'tips'> | null>(null)
+  const [tipEditorState, setTipEditorState] = useState<TipEditorFormState>(
+    createEmptyTipEditorState,
+  )
+  const [tipValidationErrors, setTipValidationErrors] =
+    useState<TipEditorValidationErrors>({})
   const [targetWorkosUserId, setTargetWorkosUserId] = useState('')
   const [nextRole, setNextRole] = useState<AppRole>('Reader')
 
   const bootstrapFirstAdmin = useMutation(api.accessControl.bootstrapFirstAdmin)
   const assignRole = useMutation(api.accessControl.assignRole)
-  const createTipDraft = useMutation(api.accessControl.createTipDraft)
+  const saveTipDraft = useMutation(api.accessControl.saveTipDraft)
   const publishTip = useMutation(api.accessControl.publishTip)
   const deprecateTip = useMutation(api.accessControl.deprecateTip)
   const configureIntegration = useMutation(api.accessControl.configureIntegration)
@@ -58,6 +70,10 @@ function DashboardPage() {
       : 'skip',
   )
 
+  const role = accessProfile?.role ?? 'Reader'
+  const canCreateTips = accessProfile
+    ? hasPermission(accessProfile.role, 'tips.create')
+    : false
   const canReadAudit = accessProfile
     ? hasPermission(accessProfile.role, 'audit.read')
     : false
@@ -83,7 +99,29 @@ function DashboardPage() {
       : 'skip',
   )
 
-  const role = accessProfile?.role ?? 'Reader'
+  const editorTip = useQuery(
+    api.accessControl.getTipForEditor,
+    user && draftTipId && canCreateTips
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          tipId: draftTipId,
+        }
+      : 'skip',
+  )
+
+  const tipRevisions = useQuery(
+    api.accessControl.listTipRevisions,
+    user && draftTipId && canCreateTips
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          tipId: draftTipId,
+          limit: 10,
+        }
+      : 'skip',
+  )
+
   const can = (permission: Permission) =>
     accessProfile ? hasPermission(role, permission) : false
 
@@ -97,6 +135,64 @@ function DashboardPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setStatusMessage(`Action failed: ${message}`)
+    }
+  }
+
+  const setEditorField = (
+    field: keyof TipEditorFormState,
+    value: string,
+  ) => {
+    setTipEditorState((current) => ({
+      ...current,
+      [field]: value,
+    }))
+
+    setTipValidationErrors((current) => {
+      if (!current[field]) {
+        return current
+      }
+
+      const nextErrors = { ...current }
+      delete nextErrors[field]
+      return nextErrors
+    })
+  }
+
+  const resetEditorToNewDraft = () => {
+    setDraftTipId(null)
+    setTipEditorState(createEmptyTipEditorState())
+    setTipValidationErrors({})
+    setTipEditorMessage(null)
+  }
+
+  const saveEditorDraft = async () => {
+    if (!user) {
+      return
+    }
+
+    const { payload, errors } = buildTipDraftPayload(tipEditorState)
+    if (!payload) {
+      setTipValidationErrors(errors)
+      setTipEditorMessage('Fix validation errors before saving.')
+      return
+    }
+
+    try {
+      const result = await saveTipDraft({
+        actorWorkosUserId: user.id,
+        actorOrganizationId: organizationId,
+        tipId: draftTipId ?? undefined,
+        ...payload,
+      })
+
+      setDraftTipId(result.tipId)
+      setTipValidationErrors({})
+      setTipEditorMessage(
+        `Draft saved as revision ${result.revisionNumber} at ${new Date(result.updatedAt).toLocaleString()}.`,
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      setTipEditorMessage(`Draft save failed: ${message}`)
     }
   }
 
@@ -149,6 +245,199 @@ function DashboardPage() {
       </section>
 
       <section>
+        <h2>Tip Editor (BD-006, BD-007)</h2>
+        {!canCreateTips && (
+          <p>
+            Permission denied. <code>tips.create</code> is required.
+          </p>
+        )}
+
+        {canCreateTips && (
+          <>
+            <p>
+              Structured fields are stored as tip revisions. Root cause, fix, and
+              prevention support markdown text.
+            </p>
+
+            <p>
+              <label htmlFor="tip-selector">Edit existing tip: </label>
+              <select
+                id="tip-selector"
+                value={draftTipId ?? ''}
+                onChange={(event) => {
+                  const nextTipId = event.target.value
+                  setTipEditorMessage(null)
+
+                  if (!nextTipId) {
+                    resetEditorToNewDraft()
+                    return
+                  }
+
+                  setDraftTipId(nextTipId as Id<'tips'>)
+                  setTipValidationErrors({})
+                }}
+              >
+                <option value="">Create new draft</option>
+                {tips?.map((tip) => (
+                  <option key={tip.id} value={tip.id}>
+                    {tip.title} ({tip.status}, r{tip.currentRevision})
+                  </option>
+                ))}
+              </select>
+            </p>
+
+            {draftTipId && editorTip && (
+              <p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTipEditorState({
+                      symptom: editorTip.symptom,
+                      rootCause: editorTip.rootCause,
+                      fix: editorTip.fix,
+                      prevention: editorTip.prevention,
+                      tags: editorTip.tags.join(', '),
+                      references: editorTip.references.join('\n'),
+                    })
+                    setTipValidationErrors({})
+                    setTipEditorMessage('Loaded selected tip content into the editor.')
+                  }}
+                >
+                  Load selected tip content
+                </button>
+              </p>
+            )}
+
+            <p>
+              <label htmlFor="tip-symptom">Symptom</label>
+              <br />
+              <textarea
+                id="tip-symptom"
+                rows={3}
+                value={tipEditorState.symptom}
+                onChange={(event) =>
+                  setEditorField('symptom', event.target.value)
+                }
+              />
+              {tipValidationErrors.symptom && <br />}
+              {tipValidationErrors.symptom && (
+                <small>{tipValidationErrors.symptom}</small>
+              )}
+            </p>
+
+            <p>
+              <label htmlFor="tip-root-cause">Root cause</label>
+              <br />
+              <textarea
+                id="tip-root-cause"
+                rows={5}
+                value={tipEditorState.rootCause}
+                onChange={(event) =>
+                  setEditorField('rootCause', event.target.value)
+                }
+              />
+              {tipValidationErrors.rootCause && <br />}
+              {tipValidationErrors.rootCause && (
+                <small>{tipValidationErrors.rootCause}</small>
+              )}
+            </p>
+
+            <p>
+              <label htmlFor="tip-fix">Fix</label>
+              <br />
+              <textarea
+                id="tip-fix"
+                rows={5}
+                value={tipEditorState.fix}
+                onChange={(event) => setEditorField('fix', event.target.value)}
+              />
+              {tipValidationErrors.fix && <br />}
+              {tipValidationErrors.fix && <small>{tipValidationErrors.fix}</small>}
+            </p>
+
+            <p>
+              <label htmlFor="tip-prevention">Prevention</label>
+              <br />
+              <textarea
+                id="tip-prevention"
+                rows={5}
+                value={tipEditorState.prevention}
+                onChange={(event) =>
+                  setEditorField('prevention', event.target.value)
+                }
+              />
+              {tipValidationErrors.prevention && <br />}
+              {tipValidationErrors.prevention && (
+                <small>{tipValidationErrors.prevention}</small>
+              )}
+            </p>
+
+            <p>
+              <label htmlFor="tip-tags">Tags (comma or newline separated)</label>
+              <br />
+              <textarea
+                id="tip-tags"
+                rows={3}
+                value={tipEditorState.tags}
+                onChange={(event) => setEditorField('tags', event.target.value)}
+              />
+              {tipValidationErrors.tags && <br />}
+              {tipValidationErrors.tags && <small>{tipValidationErrors.tags}</small>}
+            </p>
+
+            <p>
+              <label htmlFor="tip-references">
+                References (comma or newline separated)
+              </label>
+              <br />
+              <textarea
+                id="tip-references"
+                rows={4}
+                value={tipEditorState.references}
+                onChange={(event) =>
+                  setEditorField('references', event.target.value)
+                }
+              />
+              {tipValidationErrors.references && <br />}
+              {tipValidationErrors.references && (
+                <small>{tipValidationErrors.references}</small>
+              )}
+            </p>
+
+            <p>
+              <button type="button" onClick={saveEditorDraft}>
+                Save draft
+              </button>{' '}
+              <button type="button" onClick={resetEditorToNewDraft}>
+                New draft
+              </button>
+            </p>
+
+            {draftTipId && (
+              <p>
+                Current draft tip ID: <code>{draftTipId}</code>
+              </p>
+            )}
+            {tipEditorMessage && <p>{tipEditorMessage}</p>}
+
+            {draftTipId && (
+              <>
+                <h3>Revision history</h3>
+                {tipRevisions?.length === 0 && <p>No revisions saved yet.</p>}
+                {tipRevisions?.map((revision) => (
+                  <p key={revision.revisionId}>
+                    r{revision.revisionNumber} ({revision.status}) by{' '}
+                    <code>{revision.editedByWorkosUserId}</code> at{' '}
+                    {new Date(revision.createdAt).toISOString()}
+                  </p>
+                ))}
+              </>
+            )}
+          </>
+        )}
+      </section>
+
+      <section>
         <h2>Privileged Actions (Guarded)</h2>
         <p>
           <button
@@ -169,31 +458,11 @@ function DashboardPage() {
         <p>
           <button
             type="button"
-            disabled={!can('tips.create')}
-            onClick={() =>
-              runAction('Draft tip saved.', async () => {
-                const draft = await createTipDraft({
-                  actorWorkosUserId: user.id,
-                  actorOrganizationId: organizationId,
-                  slug: 'bd-004-rbac-demo-tip',
-                  title: 'RBAC guarded workflow demo',
-                })
-                setDraftTipId(draft.tipId)
-              })
-            }
-          >
-            Create draft tip (Contributor+)
-          </button>
-        </p>
-
-        <p>
-          <button
-            type="button"
             disabled={!can('tips.publish') || !draftTipId}
             onClick={() =>
               runAction('Tip published and audit event stored.', async () => {
                 if (!draftTipId) {
-                  throw new Error('Create a draft tip first.')
+                  throw new Error('Save a draft tip first.')
                 }
 
                 await publishTip({
@@ -215,7 +484,7 @@ function DashboardPage() {
             onClick={() =>
               runAction('Tip deprecated and audit event stored.', async () => {
                 if (!draftTipId) {
-                  throw new Error('Create a draft tip first.')
+                  throw new Error('Save a draft tip first.')
                 }
 
                 await deprecateTip({
@@ -293,11 +562,6 @@ function DashboardPage() {
           </button>
         </p>
 
-        {draftTipId && (
-          <p>
-            Current draft tip ID: <code>{draftTipId}</code>
-          </p>
-        )}
         {statusMessage && <p>{statusMessage}</p>}
       </section>
 
@@ -328,7 +592,8 @@ function DashboardPage() {
         {tips?.length === 0 && <p>No visible tips for the current role.</p>}
         {tips?.map((tip) => (
           <p key={tip.id}>
-            <code>{tip.slug}</code> - {tip.title} ({tip.status})
+            <code>{tip.slug}</code> - {tip.title} ({tip.status}, r
+            {tip.currentRevision})
           </p>
         ))}
       </section>

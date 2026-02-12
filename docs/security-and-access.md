@@ -68,12 +68,15 @@ Convex enforcement:
 - Query guards:
   - `listAuditEvents` requires `audit.read`.
   - `listTips` requires `tips.read` and additionally restricts `Reader` to published tips only.
+  - `getTipForEditor` requires `tips.create` (draft authoring access).
+  - `listTipRevisions` requires `tips.create` (draft revision history access).
 - Mutation guards:
   - `assignRole` requires `roles.assign`.
-  - `createTipDraft` requires `tips.create`.
+  - `saveTipDraft` requires `tips.create`.
   - `publishTip` requires `tips.publish`.
   - `deprecateTip` requires `tips.deprecate`.
   - `configureIntegration` requires `integration.configure`.
+  - Tip mutations enforce organization-scoped access via `assertTipOrganizationAccess()` before modifying an existing tip.
 
 Frontend guards:
 - Dashboard UI (`src/routes/dashboard.tsx`) uses `src/lib/rbac.ts` to disable privileged controls when the signed-in role lacks capability.

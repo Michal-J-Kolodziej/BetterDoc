@@ -11,6 +11,7 @@
 import type * as accessControl from "../accessControl.js";
 import type * as health from "../health.js";
 import type * as rbac from "../rbac.js";
+import type * as tipDraft from "../tipDraft.js";
 
 import type {
   ApiFromModules,
@@ -22,6 +23,7 @@ declare const fullApi: ApiFromModules<{
   accessControl: typeof accessControl;
   health: typeof health;
   rbac: typeof rbac;
+  tipDraft: typeof tipDraft;
 }>;
 
 /**
