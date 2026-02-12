@@ -1,6 +1,6 @@
 # BetterDoc Codebase Reference
 
-Last updated: 2026-02-11
+Last updated: 2026-02-12
 
 ## App Foundation (BD-001)
 
@@ -16,6 +16,7 @@ Last updated: 2026-02-11
   - Builds router with `routeTree` from generated `src/routeTree.gen.ts`.
 - Start entry: `src/start.ts`
   - Registers `authkitMiddleware()` for per-request WorkOS session validation/refresh.
+  - Uses `VITE_WORKOS_REDIRECT_URI` from `import.meta.env` for middleware redirect override so browser bundles do not evaluate server-only env parsing.
 - Root route: `src/routes/__root.tsx`
   - Owns the HTML document shell and global providers.
   - Mounts `ConvexAppProvider` so route components can call Convex hooks.

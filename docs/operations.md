@@ -1,6 +1,6 @@
 # BetterDoc Operations
 
-Last updated: 2026-02-11
+Last updated: 2026-02-12
 
 ## Package manager
 - Standard package manager: `bun`
@@ -45,11 +45,16 @@ Set with `VITE_APP_ENV`.
   - `bun run env:validate`
 - Local dev server:
   - `bun run dev`
+  - Vite dev port is pinned to `3000` (`strictPort=true` in `vite.config.ts`) so WorkOS callback URI stays stable.
 - Quality checks:
   - `bun run lint`
   - `bun run typecheck`
   - `bun run test`
   - `bun run build`
+
+## Troubleshooting
+- If you see browser errors mentioning `src/config/env.server.ts`, ensure the app is started with `bun run dev` and not a direct tool invocation that bypasses project scripts.
+- If sign-in returns to `localhost:3000/api/auth/callback` and the page says connection refused, your app is not listening on `3000`. Start with `bun run dev` and free port `3000` if occupied by another process.
 
 ## Convex deployment command mapping
 - Dev local workflow:
@@ -69,7 +74,7 @@ These commands source the deployment name from the corresponding environment var
 
 ## Local verification
 1. Run `bun run dev`.
-2. Open `http://localhost:5173/` and click `Sign in with WorkOS`.
+2. Open `http://localhost:3000/` and click `Sign in with WorkOS`.
 3. Confirm browser redirects to WorkOS and then back to `/api/auth/callback`.
 4. Confirm `/dashboard` is accessible only after successful sign-in.
 5. Confirm `/logout` clears session and returns to signed-out state.

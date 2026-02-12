@@ -1,5 +1,25 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-003 follow-up)
+- Code paths changed:
+  - `src/start.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Fixed client runtime crash caused by eager server env validation import path; auth middleware now reads redirect override from public `VITE_WORKOS_REDIRECT_URI`.
+
+## 2026-02-12 (BD-003 callback port hardening)
+- Code paths changed:
+  - `vite.config.ts`
+- Documentation updated:
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Locked Vite dev server to port `3000` with strict port behavior so WorkOS callback URI remains stable during local sign-in flow.
+
 ## 2026-02-11
 - Code paths changed:
   - `package.json`

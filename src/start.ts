@@ -1,12 +1,15 @@
 import { createStart } from '@tanstack/react-start'
 import { authkitMiddleware } from '@workos/authkit-tanstack-react-start'
 
-import { serverEnv } from './config/env.server'
+const workosRedirectUri =
+  typeof import.meta.env.VITE_WORKOS_REDIRECT_URI === 'string'
+    ? import.meta.env.VITE_WORKOS_REDIRECT_URI
+    : undefined
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [
     authkitMiddleware({
-      redirectUri: serverEnv.WORKOS_REDIRECT_URI,
+      redirectUri: workosRedirectUri,
     }),
   ],
 }))

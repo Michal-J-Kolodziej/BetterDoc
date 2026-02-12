@@ -1,10 +1,11 @@
 # BetterDoc Security And Access
 
-Last updated: 2026-02-11
+Last updated: 2026-02-12
 
 ## Current state
 - WorkOS AuthKit SSO is implemented for login, callback, logout, and protected-route enforcement.
 - Session handling is performed server-side via `authkitMiddleware()` in `src/start.ts`.
+- Middleware redirect override in `src/start.ts` is sourced from `VITE_WORKOS_REDIRECT_URI` (public env) to avoid loading `src/config/env.server.ts` in client runtime.
 
 ## WorkOS configuration points
 - Public WorkOS settings (client-visible):
