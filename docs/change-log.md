@@ -1,5 +1,22 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-011)
+- Code paths changed:
+  - `convex/schema.ts`
+  - `convex/scanIngestion.ts`
+  - `convex/scanIngestionInternal.ts`
+  - `convex/http.ts`
+  - `src/lib/scan-ingestion.ts`
+  - `src/lib/scan-ingestion.test.ts`
+  - `convex/_generated/api.d.ts`
+- Documentation updated:
+  - `docs/scanner-ingestion-api.md`
+  - `docs/codebase-reference.md`
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added idempotent/retry-safe scanner snapshot ingestion with `scanRuns` + versioned component graph persistence and a dedicated HTTP contract (`POST /scanner/ingest`) for pipeline integrations.
+
 ## 2026-02-12 (BD-010)
 - Code paths changed:
   - `package.json`

@@ -101,6 +101,98 @@ export default defineSchema({
       'status',
       'updatedAt',
     ]),
+  scanRuns: defineTable({
+    idempotencyKey: v.string(),
+    payloadHash: v.string(),
+    workspaceId: v.string(),
+    scannerName: v.string(),
+    scannerVersion: v.optional(v.string()),
+    source: v.union(
+      v.literal('manual'),
+      v.literal('pipeline'),
+      v.literal('scheduled'),
+    ),
+    status: v.union(
+      v.literal('processing'),
+      v.literal('succeeded'),
+      v.literal('failed'),
+    ),
+    attemptCount: v.number(),
+    graphVersionId: v.optional(v.id('componentGraphVersions')),
+    graphVersionNumber: v.optional(v.number()),
+    projectCount: v.number(),
+    libraryCount: v.number(),
+    componentCount: v.number(),
+    dependencyCount: v.number(),
+    metadata: v.optional(
+      v.object({
+        branch: v.optional(v.string()),
+        commitSha: v.optional(v.string()),
+        runId: v.optional(v.string()),
+      }),
+    ),
+    errorCode: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    startedAt: v.number(),
+    completedAt: v.number(),
+  })
+    .index('by_idempotency_key', ['idempotencyKey'])
+    .index('by_workspace_status_started_at', ['workspaceId', 'status', 'startedAt'])
+    .index('by_status_completed_at', ['status', 'completedAt']),
+  componentGraphHeads: defineTable({
+    workspaceId: v.string(),
+    latestVersion: v.number(),
+    updatedAt: v.number(),
+  }).index('by_workspace_id', ['workspaceId']),
+  componentGraphVersions: defineTable({
+    workspaceId: v.string(),
+    version: v.number(),
+    scanRunId: v.id('scanRuns'),
+    payloadHash: v.string(),
+    schemaVersion: v.number(),
+    workspaceConfigPath: v.string(),
+    projectCount: v.number(),
+    libraryCount: v.number(),
+    componentCount: v.number(),
+    dependencyCount: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_workspace_version', ['workspaceId', 'version'])
+    .index('by_scan_run_id', ['scanRunId'])
+    .index('by_workspace_created_at', ['workspaceId', 'createdAt']),
+  componentGraphProjects: defineTable({
+    versionId: v.id('componentGraphVersions'),
+    name: v.string(),
+    type: v.union(v.literal('application'), v.literal('library')),
+    rootPath: v.string(),
+    sourceRootPath: v.union(v.string(), v.null()),
+    configFilePath: v.string(),
+    dependencies: v.array(v.string()),
+  })
+    .index('by_version_id', ['versionId'])
+    .index('by_version_name', ['versionId', 'name']),
+  componentGraphComponents: defineTable({
+    versionId: v.id('componentGraphVersions'),
+    name: v.string(),
+    className: v.union(v.string(), v.null()),
+    selector: v.union(v.string(), v.null()),
+    standalone: v.union(v.boolean(), v.null()),
+    project: v.string(),
+    filePath: v.string(),
+    dependencies: v.array(v.string()),
+  })
+    .index('by_version_id', ['versionId'])
+    .index('by_version_project', ['versionId', 'project']),
+  componentGraphDependencies: defineTable({
+    versionId: v.id('componentGraphVersions'),
+    sourceProject: v.string(),
+    targetProject: v.string(),
+    viaFiles: v.array(v.string()),
+  })
+    .index('by_version_id', ['versionId'])
+    .index('by_version_edge', ['versionId', 'sourceProject', 'targetProject']),
   integrationConfigs: defineTable({
     key: v.string(),
     enabled: v.boolean(),

@@ -28,13 +28,21 @@ Last updated: 2026-02-12
   - Initializes `ConvexReactClient` using validated `VITE_CONVEX_URL`.
 - Convex function: `convex/health.ts`
   - Exposes `getStatus` query for initial end-to-end health check.
+- Convex scan ingestion modules:
+  - `convex/scanIngestion.ts`
+    - Public action: `ingestScannerSnapshot`
+    - Public query: `getLatestSuccessfulScanRun`
+  - `convex/scanIngestionInternal.ts`
+    - Internal mutations: `acquireScanRunForIngestion`, `finalizeScanRunSuccess`, `markScanRunFailed`
+  - `convex/http.ts`
+    - HTTP endpoint: `POST /scanner/ingest` (bridges JSON payloads to `ingestScannerSnapshot`)
 - Convex RBAC/audit module: `convex/accessControl.ts`
   - Public queries: `getAccessProfile`, `listTips`, `getTipForEditor`, `listTipRevisions`, `listAuditEvents`.
   - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `saveTipDraft`, `submitTipForReview`, `returnTipToDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
   - Enforces capability checks server-side for privileged operations and audit reads.
 - RBAC constants/validators: `convex/rbac.ts`
 - Convex schema: `convex/schema.ts`
-  - Tables: `memberships`, `tips`, `tipRevisions`, `tipTagFacets`, `integrationConfigs`, `auditEvents`.
+  - Tables: `memberships`, `tips`, `tipRevisions`, `tipTagFacets`, `scanRuns`, `componentGraphHeads`, `componentGraphVersions`, `componentGraphProjects`, `componentGraphComponents`, `componentGraphDependencies`, `integrationConfigs`, `auditEvents`.
 - Typed API stubs:
   - `convex/_generated/api.ts`
   - `convex/_generated/server.ts`
@@ -181,3 +189,42 @@ All four pass with valid environment variables set.
   - Verifies deterministic snapshot output across repeated scans.
   - Verifies `project.json` project reference loading.
   - Verifies explicit parse/missing-workspace errors.
+
+## Scanner Snapshot Ingestion (BD-011)
+
+### Ingestion contract + endpoint
+- Public Convex action: `convex/scanIngestion.ts` -> `ingestScannerSnapshot`
+- HTTP endpoint: `POST /scanner/ingest` in `convex/http.ts`
+- Full payload/response contract doc: `docs/scanner-ingestion-api.md`
+- Request payload contract:
+  - `idempotencyKey`: caller-generated unique key for a scan attempt (reused on retries)
+  - `workspaceId`: stable workspace/repository identifier used for graph version sequencing
+  - `source`: `manual | pipeline | scheduled` (optional, defaults to `manual`)
+  - `scanner`: `{ name, version? }`
+  - `metadata?`: `{ branch?, commitSha?, runId? }`
+  - `snapshot`: Angular scanner JSON payload (`schemaVersion: 1`, `projects`, `libs`, `components`, `dependencies`)
+
+### Persistence model
+- `scanRuns`:
+  - stores idempotency key, payload hash, lifecycle status (`processing`, `failed`, `succeeded`), attempt count, and summary counts.
+  - records failure metadata (`errorCode`, `errorMessage`) for retry diagnostics.
+  - links successful runs to a graph version (`graphVersionId`, `graphVersionNumber`).
+- `componentGraphHeads`:
+  - one row per `workspaceId`, tracks latest assigned graph version.
+- `componentGraphVersions`:
+  - immutable version metadata per successful ingest.
+- `componentGraphProjects`, `componentGraphComponents`, `componentGraphDependencies`:
+  - immutable per-version graph rows used by downstream explorer/linking work.
+
+### Idempotency + retry behavior
+- Duplicate call with same `idempotencyKey` + same payload hash:
+  - returns existing successful result without creating new rows.
+- Duplicate call with same key while first attempt is still processing:
+  - returns `processing` status and no duplicate writes.
+- Reusing a key with a different payload:
+  - request is rejected (`Idempotency key reuse detected with a different scanner snapshot payload.`).
+- Failed run retry with same key + same payload:
+  - run transitions back to `processing`, increments `attemptCount`, and retries safely.
+
+### Query surface
+- `getLatestSuccessfulScanRun(workspaceId)` returns the latest succeeded run metadata + linked graph version info for operational checks and downstream UI loading.

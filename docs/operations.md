@@ -55,6 +55,11 @@ Set with `VITE_APP_ENV`.
   - `bun run scan:angular -- --help`
   - `bun run scan:angular -- --workspace /path/to/angular-repo --output ./scan-output.json`
   - Full usage and snapshot schema: `docs/angular-scanner-cli.md`
+- Scanner snapshot ingestion (BD-011):
+  - HTTP endpoint: `POST /scanner/ingest`
+  - Convex action: `scanIngestion.ingestScannerSnapshot`
+  - Latest successful run query: `scanIngestion.getLatestSuccessfulScanRun`
+  - Contract reference: `docs/scanner-ingestion-api.md`
 
 ## Troubleshooting
 - If you see browser errors mentioning `src/config/env.server.ts`, ensure the app is started with `bun run dev` and not a direct tool invocation that bypasses project scripts.
@@ -69,6 +74,35 @@ Set with `VITE_APP_ENV`.
   - `bun run convex:deploy:prod`
 
 These commands source the deployment name from the corresponding environment variable.
+
+## Scanner ingestion payload (BD-011)
+
+Send scanner output to Convex with a caller-managed idempotency key:
+
+```bash
+curl -X POST "$VITE_CONVEX_URL/scanner/ingest" \
+  -H "content-type: application/json" \
+  -d '{
+    "idempotencyKey": "azure-run-1421-attempt-1",
+    "workspaceId": "media-press/hubert",
+    "source": "pipeline",
+    "scanner": {
+      "name": "angular-scanner",
+      "version": "1.0.0"
+    },
+    "metadata": {
+      "branch": "main",
+      "commitSha": "abc123",
+      "runId": "1421"
+    },
+    "snapshot": { "...": "scanner JSON output from BD-010" }
+  }'
+```
+
+Retry rules:
+- Use the same `idempotencyKey` and payload on retries for retry-safe behavior.
+- Do not reuse an `idempotencyKey` with different payload content.
+- Use `scanIngestion.getLatestSuccessfulScanRun` to verify successful ingest per workspace.
 
 ## Auth routes (BD-003)
 - `GET /login` -> redirect to WorkOS AuthKit sign-in URL.

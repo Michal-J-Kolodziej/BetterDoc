@@ -10,7 +10,10 @@
 
 import type * as accessControl from "../accessControl.js";
 import type * as health from "../health.js";
+import type * as http from "../http.js";
 import type * as rbac from "../rbac.js";
+import type * as scanIngestion from "../scanIngestion.js";
+import type * as scanIngestionInternal from "../scanIngestionInternal.js";
 import type * as tipDraft from "../tipDraft.js";
 
 import type {
@@ -22,7 +25,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   accessControl: typeof accessControl;
   health: typeof health;
+  http: typeof http;
   rbac: typeof rbac;
+  scanIngestion: typeof scanIngestion;
+  scanIngestionInternal: typeof scanIngestionInternal;
   tipDraft: typeof tipDraft;
 }>;
 
