@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "env:validate": "bun run scripts/validate-env.ts",
+    "scan:angular": "bun run scripts/angular-scanner.ts",
     "convex:codegen": "convex codegen",
     "convex:dev": "CONVEX_DEPLOYMENT=$VITE_CONVEX_DEPLOYMENT_DEV convex dev",
     "convex:deploy:staging": "CONVEX_DEPLOYMENT=$VITE_CONVEX_DEPLOYMENT_STAGING convex deploy",

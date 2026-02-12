@@ -51,6 +51,10 @@ Set with `VITE_APP_ENV`.
   - `bun run typecheck`
   - `bun run test`
   - `bun run build`
+- Angular scanner (BD-010):
+  - `bun run scan:angular -- --help`
+  - `bun run scan:angular -- --workspace /path/to/angular-repo --output ./scan-output.json`
+  - Full usage and snapshot schema: `docs/angular-scanner-cli.md`
 
 ## Troubleshooting
 - If you see browser errors mentioning `src/config/env.server.ts`, ensure the app is started with `bun run dev` and not a direct tool invocation that bypasses project scripts.

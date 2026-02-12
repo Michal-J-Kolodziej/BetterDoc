@@ -152,3 +152,32 @@ All four pass with valid environment variables set.
   - Adds a search/filter section with empty, local-validation error, and permission-denied states.
 - `src/lib/tip-editor.ts`
   - Client-side validation and payload shaping for core fields, optional facets, tags, and references before mutation calls.
+
+## Angular Scanner CLI (BD-010)
+
+### Implementation
+- Scanner library: `src/lib/angular-scanner.ts`
+  - Loads Angular workspace config (`angular.json` or `workspace.json`) and project metadata.
+  - Supports string project references by resolving `project.json` files.
+  - Scans TypeScript sources to identify `@Component` classes and extract:
+    - component class name
+    - selector
+    - standalone flag
+    - project ownership
+    - component file path
+    - component-level internal dependencies
+  - Builds project dependency edges from imports using:
+    - relative file imports mapped to project roots
+    - TS path alias mapping from `tsconfig.base.json` / `tsconfig.json`
+  - Emits deterministic snapshot objects with sorted projects/libs/components/dependencies.
+- CLI entrypoint: `scripts/angular-scanner.ts`
+  - Command: `bun run scan:angular -- --workspace <path> --output <file>`
+  - Defaults workspace to current directory and output to stdout.
+  - Reports structured scanner errors with explicit error codes for missing/invalid workspace and path issues.
+
+### Test coverage
+- `src/lib/angular-scanner.test.ts`
+  - Verifies extraction of projects, libraries, components, dependencies, and file paths.
+  - Verifies deterministic snapshot output across repeated scans.
+  - Verifies `project.json` project reference loading.
+  - Verifies explicit parse/missing-workspace errors.

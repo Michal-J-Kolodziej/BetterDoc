@@ -1,5 +1,19 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-010)
+- Code paths changed:
+  - `package.json`
+  - `scripts/angular-scanner.ts`
+  - `src/lib/angular-scanner.ts`
+  - `src/lib/angular-scanner.test.ts`
+- Documentation updated:
+  - `docs/angular-scanner-cli.md`
+  - `docs/codebase-reference.md`
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added Angular scanner CLI support for deterministic JSON snapshots of workspace projects/libraries/components/internal dependencies with clear structured error reporting and automated test coverage.
+
 ## 2026-02-12 (BD-008, BD-009)
 - Code paths changed:
   - `convex/schema.ts`
