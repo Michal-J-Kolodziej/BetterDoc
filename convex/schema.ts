@@ -101,6 +101,26 @@ export default defineSchema({
       'status',
       'updatedAt',
     ]),
+  tipComponentLinks: defineTable({
+    tipId: v.id('tips'),
+    workspaceId: v.string(),
+    projectName: v.string(),
+    componentName: v.string(),
+    componentFilePath: v.string(),
+    organizationId: v.optional(v.string()),
+    linkedByWorkosUserId: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_tip_id', ['tipId'])
+    .index('by_workspace', ['workspaceId'])
+    .index('by_workspace_project', ['workspaceId', 'projectName'])
+    .index('by_workspace_component_file', [
+      'workspaceId',
+      'projectName',
+      'componentName',
+      'componentFilePath',
+    ]),
   scanRuns: defineTable({
     idempotencyKey: v.string(),
     payloadHash: v.string(),

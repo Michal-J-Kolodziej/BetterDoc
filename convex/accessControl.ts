@@ -45,6 +45,65 @@ const tipStatusTransitions: Record<TipStatus, readonly TipStatus[]> = {
   deprecated: [],
 }
 
+const componentGraphProjectTypeValidator = v.union(
+  v.literal('application'),
+  v.literal('library'),
+)
+
+const scanIngestionSourceValidator = v.union(
+  v.literal('manual'),
+  v.literal('pipeline'),
+  v.literal('scheduled'),
+)
+
+const tipComponentLinkInputValidator = v.object({
+  workspaceId: v.string(),
+  projectName: v.string(),
+  componentName: v.string(),
+  componentFilePath: v.string(),
+})
+
+type TipComponentLinkInput = {
+  workspaceId: string
+  projectName: string
+  componentName: string
+  componentFilePath: string
+}
+
+const componentLinkFieldLimits = {
+  workspaceId: 128,
+  projectName: 128,
+  componentName: 160,
+  componentFilePath: 320,
+} as const
+
+const componentExplorerProjectValidator = v.object({
+  name: v.string(),
+  type: componentGraphProjectTypeValidator,
+  rootPath: v.string(),
+  sourceRootPath: v.union(v.string(), v.null()),
+  configFilePath: v.string(),
+  dependencies: v.array(v.string()),
+  componentCount: v.number(),
+})
+
+const componentExplorerDependencyValidator = v.object({
+  sourceProject: v.string(),
+  targetProject: v.string(),
+  viaFiles: v.array(v.string()),
+})
+
+const componentExplorerComponentValidator = v.object({
+  id: v.id('componentGraphComponents'),
+  name: v.string(),
+  className: v.union(v.string(), v.null()),
+  selector: v.union(v.string(), v.null()),
+  standalone: v.union(v.boolean(), v.null()),
+  project: v.string(),
+  filePath: v.string(),
+  dependencies: v.array(v.string()),
+})
+
 type DatabaseReaderLike = QueryCtx['db'] | MutationCtx['db']
 
 async function getMembershipByWorkosUserId(
@@ -131,8 +190,77 @@ function normalizeOptionalFilter(value: string | undefined): string | undefined 
   return trimmed.length > 0 ? trimmed : undefined
 }
 
+function normalizeRequiredText(
+  value: string,
+  field: string,
+  maxLength: number,
+): string {
+  const normalized = value.trim()
+
+  if (!normalized) {
+    throw new ConvexError(`${field} is required.`)
+  }
+
+  if (normalized.length > maxLength) {
+    throw new ConvexError(
+      `${field} must be ${String(maxLength)} characters or fewer.`,
+    )
+  }
+
+  return normalized
+}
+
 function normalizeTagFacet(tag: string): string {
   return tag.trim().toLowerCase()
+}
+
+function normalizeTipComponentLinks(
+  links: TipComponentLinkInput[],
+): TipComponentLinkInput[] {
+  const dedupedLinks = new Map<string, TipComponentLinkInput>()
+
+  for (const link of links) {
+    const workspaceId = normalizeRequiredText(
+      link.workspaceId,
+      'workspaceId',
+      componentLinkFieldLimits.workspaceId,
+    )
+    const projectName = normalizeRequiredText(
+      link.projectName,
+      'projectName',
+      componentLinkFieldLimits.projectName,
+    )
+    const componentName = normalizeRequiredText(
+      link.componentName,
+      'componentName',
+      componentLinkFieldLimits.componentName,
+    )
+    const componentFilePath = normalizeRequiredText(
+      link.componentFilePath,
+      'componentFilePath',
+      componentLinkFieldLimits.componentFilePath,
+    )
+
+    const dedupeKey = [
+      workspaceId.toLowerCase(),
+      projectName.toLowerCase(),
+      componentName.toLowerCase(),
+      componentFilePath.toLowerCase(),
+    ].join('::')
+
+    dedupedLinks.set(dedupeKey, {
+      workspaceId,
+      projectName,
+      componentName,
+      componentFilePath,
+    })
+  }
+
+  if (dedupedLinks.size > 40) {
+    throw new ConvexError('No more than 40 component links are allowed per tip.')
+  }
+
+  return [...dedupedLinks.values()]
 }
 
 function canReadTipStatus(actorRole: AppRole, status: TipStatus): boolean {
@@ -264,6 +392,77 @@ async function patchTipStatusWithRevision(
   })
 
   return revisionNumber
+}
+
+async function replaceTipComponentLinks(
+  ctx: MutationCtx,
+  args: {
+    tipId: Id<'tips'>
+    organizationId: string | undefined
+    actorWorkosUserId: string
+    links: TipComponentLinkInput[]
+    now: number
+  },
+): Promise<void> {
+  const existingLinks = await ctx.db
+    .query('tipComponentLinks')
+    .withIndex('by_tip_id', (queryBuilder) => queryBuilder.eq('tipId', args.tipId))
+    .collect()
+
+  await Promise.all(existingLinks.map((link) => ctx.db.delete(link._id)))
+
+  await Promise.all(
+    args.links.map((link) =>
+      ctx.db.insert('tipComponentLinks', {
+        tipId: args.tipId,
+        workspaceId: link.workspaceId,
+        projectName: link.projectName,
+        componentName: link.componentName,
+        componentFilePath: link.componentFilePath,
+        organizationId: args.organizationId,
+        linkedByWorkosUserId: args.actorWorkosUserId,
+        createdAt: args.now,
+        updatedAt: args.now,
+      }),
+    ),
+  )
+}
+
+async function getLatestSuccessfulWorkspaceGraph(
+  db: DatabaseReaderLike,
+  workspaceId: string,
+): Promise<{
+  scanRun: Doc<'scanRuns'>
+  graphVersionId: Id<'componentGraphVersions'>
+  graphVersionNumber: number
+} | null> {
+  const latestRuns = await db
+    .query('scanRuns')
+    .withIndex('by_workspace_status_started_at', (queryBuilder) =>
+      queryBuilder.eq('workspaceId', workspaceId).eq('status', 'succeeded'),
+    )
+    .order('desc')
+    .take(1)
+
+  const latestRun = latestRuns[0]
+  if (!latestRun) {
+    return null
+  }
+
+  if (
+    !latestRun.graphVersionId ||
+    typeof latestRun.graphVersionNumber !== 'number'
+  ) {
+    throw new ConvexError(
+      'scanRuns record is inconsistent: succeeded run has no graph version linkage.',
+    )
+  }
+
+  return {
+    scanRun: latestRun,
+    graphVersionId: latestRun.graphVersionId,
+    graphVersionNumber: latestRun.graphVersionNumber,
+  }
 }
 
 export const getAccessProfile = query({
@@ -593,6 +792,493 @@ export const listTips = query({
   },
 })
 
+export const listComponentExplorerWorkspaces = query({
+  args: {
+    ...actorContextShape,
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      workspaceId: v.string(),
+      scanRunId: v.id('scanRuns'),
+      graphVersionId: v.id('componentGraphVersions'),
+      graphVersionNumber: v.number(),
+      scannerName: v.string(),
+      scannerVersion: v.union(v.string(), v.null()),
+      source: scanIngestionSourceValidator,
+      projectCount: v.number(),
+      libraryCount: v.number(),
+      componentCount: v.number(),
+      dependencyCount: v.number(),
+      completedAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const limit = Math.min(Math.max(args.limit ?? 12, 1), 30)
+    const recentSucceededRuns = await ctx.db
+      .query('scanRuns')
+      .withIndex('by_status_completed_at', (queryBuilder) =>
+        queryBuilder.eq('status', 'succeeded'),
+      )
+      .order('desc')
+      .take(300)
+
+    const latestRunByWorkspace = new Map<string, Doc<'scanRuns'>>()
+
+    for (const run of recentSucceededRuns) {
+      if (latestRunByWorkspace.has(run.workspaceId)) {
+        continue
+      }
+
+      if (
+        !run.graphVersionId ||
+        typeof run.graphVersionNumber !== 'number'
+      ) {
+        continue
+      }
+
+      latestRunByWorkspace.set(run.workspaceId, run)
+
+      if (latestRunByWorkspace.size >= limit) {
+        break
+      }
+    }
+
+    return [...latestRunByWorkspace.values()].map((run) => ({
+      workspaceId: run.workspaceId,
+      scanRunId: run._id,
+      graphVersionId: run.graphVersionId as Id<'componentGraphVersions'>,
+      graphVersionNumber: run.graphVersionNumber as number,
+      scannerName: run.scannerName,
+      scannerVersion: run.scannerVersion ?? null,
+      source: run.source,
+      projectCount: run.projectCount,
+      libraryCount: run.libraryCount,
+      componentCount: run.componentCount,
+      dependencyCount: run.dependencyCount,
+      completedAt: run.completedAt,
+    }))
+  },
+})
+
+export const getComponentExplorerWorkspace = query({
+  args: {
+    ...actorContextShape,
+    workspaceId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      workspaceId: v.string(),
+      scanRunId: v.id('scanRuns'),
+      graphVersionId: v.id('componentGraphVersions'),
+      graphVersionNumber: v.number(),
+      scannerName: v.string(),
+      scannerVersion: v.union(v.string(), v.null()),
+      source: scanIngestionSourceValidator,
+      projectCount: v.number(),
+      libraryCount: v.number(),
+      componentCount: v.number(),
+      dependencyCount: v.number(),
+      completedAt: v.number(),
+      projects: v.array(componentExplorerProjectValidator),
+      libraries: v.array(componentExplorerProjectValidator),
+      dependencies: v.array(componentExplorerDependencyValidator),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const workspaceId = normalizeRequiredText(
+      args.workspaceId,
+      'workspaceId',
+      componentLinkFieldLimits.workspaceId,
+    )
+    const latestGraph = await getLatestSuccessfulWorkspaceGraph(
+      ctx.db,
+      workspaceId,
+    )
+
+    if (!latestGraph) {
+      return null
+    }
+
+    const [projects, components, dependencies] = await Promise.all([
+      ctx.db
+        .query('componentGraphProjects')
+        .withIndex('by_version_id', (queryBuilder) =>
+          queryBuilder.eq('versionId', latestGraph.graphVersionId),
+        )
+        .collect(),
+      ctx.db
+        .query('componentGraphComponents')
+        .withIndex('by_version_id', (queryBuilder) =>
+          queryBuilder.eq('versionId', latestGraph.graphVersionId),
+        )
+        .collect(),
+      ctx.db
+        .query('componentGraphDependencies')
+        .withIndex('by_version_id', (queryBuilder) =>
+          queryBuilder.eq('versionId', latestGraph.graphVersionId),
+        )
+        .collect(),
+    ])
+
+    const componentCountByProject = components.reduce<Map<string, number>>(
+      (counts, component) => {
+        const current = counts.get(component.project) ?? 0
+        counts.set(component.project, current + 1)
+        return counts
+      },
+      new Map<string, number>(),
+    )
+
+    const normalizedProjects = projects
+      .map((project) => ({
+        name: project.name,
+        type: project.type,
+        rootPath: project.rootPath,
+        sourceRootPath: project.sourceRootPath,
+        configFilePath: project.configFilePath,
+        dependencies: [...project.dependencies].sort((left, right) =>
+          left.localeCompare(right),
+        ),
+        componentCount: componentCountByProject.get(project.name) ?? 0,
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name))
+
+    return {
+      workspaceId: latestGraph.scanRun.workspaceId,
+      scanRunId: latestGraph.scanRun._id,
+      graphVersionId: latestGraph.graphVersionId,
+      graphVersionNumber: latestGraph.graphVersionNumber,
+      scannerName: latestGraph.scanRun.scannerName,
+      scannerVersion: latestGraph.scanRun.scannerVersion ?? null,
+      source: latestGraph.scanRun.source,
+      projectCount: latestGraph.scanRun.projectCount,
+      libraryCount: latestGraph.scanRun.libraryCount,
+      componentCount: latestGraph.scanRun.componentCount,
+      dependencyCount: latestGraph.scanRun.dependencyCount,
+      completedAt: latestGraph.scanRun.completedAt,
+      projects: normalizedProjects,
+      libraries: normalizedProjects.filter((project) => project.type === 'library'),
+      dependencies: dependencies
+        .map((dependency) => ({
+          sourceProject: dependency.sourceProject,
+          targetProject: dependency.targetProject,
+          viaFiles: [...dependency.viaFiles].sort((left, right) =>
+            left.localeCompare(right),
+          ),
+        }))
+        .sort((left, right) => {
+          const sourceOrder = left.sourceProject.localeCompare(right.sourceProject)
+          if (sourceOrder !== 0) {
+            return sourceOrder
+          }
+
+          return left.targetProject.localeCompare(right.targetProject)
+        }),
+    }
+  },
+})
+
+export const getComponentExplorerProject = query({
+  args: {
+    ...actorContextShape,
+    workspaceId: v.string(),
+    projectName: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      workspaceId: v.string(),
+      graphVersionId: v.id('componentGraphVersions'),
+      graphVersionNumber: v.number(),
+      project: componentExplorerProjectValidator,
+      components: v.array(componentExplorerComponentValidator),
+      dependenciesOut: v.array(componentExplorerDependencyValidator),
+      dependenciesIn: v.array(componentExplorerDependencyValidator),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const workspaceId = normalizeRequiredText(
+      args.workspaceId,
+      'workspaceId',
+      componentLinkFieldLimits.workspaceId,
+    )
+    const projectName = normalizeRequiredText(
+      args.projectName,
+      'projectName',
+      componentLinkFieldLimits.projectName,
+    )
+    const latestGraph = await getLatestSuccessfulWorkspaceGraph(
+      ctx.db,
+      workspaceId,
+    )
+
+    if (!latestGraph) {
+      return null
+    }
+
+    const [project, components, dependencies] = await Promise.all([
+      ctx.db
+        .query('componentGraphProjects')
+        .withIndex('by_version_name', (queryBuilder) =>
+          queryBuilder
+            .eq('versionId', latestGraph.graphVersionId)
+            .eq('name', projectName),
+        )
+        .unique(),
+      ctx.db
+        .query('componentGraphComponents')
+        .withIndex('by_version_project', (queryBuilder) =>
+          queryBuilder
+            .eq('versionId', latestGraph.graphVersionId)
+            .eq('project', projectName),
+        )
+        .collect(),
+      ctx.db
+        .query('componentGraphDependencies')
+        .withIndex('by_version_id', (queryBuilder) =>
+          queryBuilder.eq('versionId', latestGraph.graphVersionId),
+        )
+        .collect(),
+    ])
+
+    if (!project) {
+      return null
+    }
+
+    return {
+      workspaceId,
+      graphVersionId: latestGraph.graphVersionId,
+      graphVersionNumber: latestGraph.graphVersionNumber,
+      project: {
+        name: project.name,
+        type: project.type,
+        rootPath: project.rootPath,
+        sourceRootPath: project.sourceRootPath,
+        configFilePath: project.configFilePath,
+        dependencies: [...project.dependencies].sort((left, right) =>
+          left.localeCompare(right),
+        ),
+        componentCount: components.length,
+      },
+      components: components
+        .map((component) => ({
+          id: component._id,
+          name: component.name,
+          className: component.className,
+          selector: component.selector,
+          standalone: component.standalone,
+          project: component.project,
+          filePath: component.filePath,
+          dependencies: [...component.dependencies].sort((left, right) =>
+            left.localeCompare(right),
+          ),
+        }))
+        .sort((left, right) => {
+          const nameOrder = left.name.localeCompare(right.name)
+          if (nameOrder !== 0) {
+            return nameOrder
+          }
+
+          return left.filePath.localeCompare(right.filePath)
+        }),
+      dependenciesOut: dependencies
+        .filter((dependency) => dependency.sourceProject === projectName)
+        .map((dependency) => ({
+          sourceProject: dependency.sourceProject,
+          targetProject: dependency.targetProject,
+          viaFiles: [...dependency.viaFiles].sort((left, right) =>
+            left.localeCompare(right),
+          ),
+        })),
+      dependenciesIn: dependencies
+        .filter((dependency) => dependency.targetProject === projectName)
+        .map((dependency) => ({
+          sourceProject: dependency.sourceProject,
+          targetProject: dependency.targetProject,
+          viaFiles: [...dependency.viaFiles].sort((left, right) =>
+            left.localeCompare(right),
+          ),
+        })),
+    }
+  },
+})
+
+export const getComponentExplorerComponent = query({
+  args: {
+    ...actorContextShape,
+    workspaceId: v.string(),
+    componentId: v.id('componentGraphComponents'),
+  },
+  returns: v.union(
+    v.object({
+      workspaceId: v.string(),
+      graphVersionId: v.id('componentGraphVersions'),
+      graphVersionNumber: v.number(),
+      component: componentExplorerComponentValidator,
+      project: v.object({
+        name: v.string(),
+        type: componentGraphProjectTypeValidator,
+      }),
+      dependenciesOut: v.array(componentExplorerDependencyValidator),
+      dependenciesIn: v.array(componentExplorerDependencyValidator),
+      relatedPublishedTips: v.array(
+        v.object({
+          id: v.id('tips'),
+          slug: v.string(),
+          title: v.string(),
+          project: v.union(v.string(), v.null()),
+          library: v.union(v.string(), v.null()),
+          component: v.union(v.string(), v.null()),
+          tags: v.array(v.string()),
+          currentRevision: v.number(),
+          updatedAt: v.number(),
+        }),
+      ),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const workspaceId = normalizeRequiredText(
+      args.workspaceId,
+      'workspaceId',
+      componentLinkFieldLimits.workspaceId,
+    )
+    const latestGraph = await getLatestSuccessfulWorkspaceGraph(
+      ctx.db,
+      workspaceId,
+    )
+
+    if (!latestGraph) {
+      return null
+    }
+
+    const component = await ctx.db.get(args.componentId)
+    if (!component || component.versionId !== latestGraph.graphVersionId) {
+      return null
+    }
+
+    const [project, dependencies, relatedLinks] = await Promise.all([
+      ctx.db
+        .query('componentGraphProjects')
+        .withIndex('by_version_name', (queryBuilder) =>
+          queryBuilder
+            .eq('versionId', latestGraph.graphVersionId)
+            .eq('name', component.project),
+        )
+        .unique(),
+      ctx.db
+        .query('componentGraphDependencies')
+        .withIndex('by_version_id', (queryBuilder) =>
+          queryBuilder.eq('versionId', latestGraph.graphVersionId),
+        )
+        .collect(),
+      ctx.db
+        .query('tipComponentLinks')
+        .withIndex('by_workspace_component_file', (queryBuilder) =>
+          queryBuilder
+            .eq('workspaceId', workspaceId)
+            .eq('projectName', component.project)
+            .eq('componentName', component.name)
+            .eq('componentFilePath', component.filePath),
+        )
+        .collect(),
+    ])
+
+    if (!project) {
+      return null
+    }
+
+    const filteredLinks = relatedLinks.filter((link) => {
+      if (!args.actorOrganizationId) {
+        return true
+      }
+
+      return link.organizationId === args.actorOrganizationId
+    })
+
+    const relatedTipIds = [...new Set(filteredLinks.map((link) => link.tipId))]
+    const relatedTips = await Promise.all(
+      relatedTipIds.map((tipId) => ctx.db.get(tipId)),
+    )
+
+    const relatedPublishedTips = relatedTips
+      .filter((tip): tip is Doc<'tips'> => {
+        if (!tip || tip.status !== 'published') {
+          return false
+        }
+
+        if (!args.actorOrganizationId) {
+          return true
+        }
+
+        return tip.organizationId === args.actorOrganizationId
+      })
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .map((tip) => ({
+        id: tip._id,
+        slug: tip.slug,
+        title: tip.title,
+        project: tip.project ?? null,
+        library: tip.library ?? null,
+        component: tip.component ?? null,
+        tags: tip.tags,
+        currentRevision: tip.currentRevision,
+        updatedAt: tip.updatedAt,
+      }))
+
+    return {
+      workspaceId,
+      graphVersionId: latestGraph.graphVersionId,
+      graphVersionNumber: latestGraph.graphVersionNumber,
+      component: {
+        id: component._id,
+        name: component.name,
+        className: component.className,
+        selector: component.selector,
+        standalone: component.standalone,
+        project: component.project,
+        filePath: component.filePath,
+        dependencies: [...component.dependencies].sort((left, right) =>
+          left.localeCompare(right),
+        ),
+      },
+      project: {
+        name: project.name,
+        type: project.type,
+      },
+      dependenciesOut: dependencies
+        .filter((dependency) => dependency.sourceProject === component.project)
+        .map((dependency) => ({
+          sourceProject: dependency.sourceProject,
+          targetProject: dependency.targetProject,
+          viaFiles: [...dependency.viaFiles].sort((left, right) =>
+            left.localeCompare(right),
+          ),
+        })),
+      dependenciesIn: dependencies
+        .filter((dependency) => dependency.targetProject === component.project)
+        .map((dependency) => ({
+          sourceProject: dependency.sourceProject,
+          targetProject: dependency.targetProject,
+          viaFiles: [...dependency.viaFiles].sort((left, right) =>
+            left.localeCompare(right),
+          ),
+        })),
+      relatedPublishedTips,
+    }
+  },
+})
+
 export const assignRole = mutation({
   args: {
     ...actorContextShape,
@@ -750,6 +1436,64 @@ export const listTipRevisions = query({
   },
 })
 
+export const listTipComponentLinksForEditor = query({
+  args: {
+    ...actorContextShape,
+    tipId: v.id('tips'),
+  },
+  returns: v.array(
+    v.object({
+      workspaceId: v.string(),
+      projectName: v.string(),
+      componentName: v.string(),
+      componentFilePath: v.string(),
+      updatedAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.create')
+
+    const tip = await ctx.db.get(args.tipId)
+    if (!tip) {
+      throw new ConvexError('Tip not found.')
+    }
+
+    assertTipOrganizationAccess(tip, args.actorOrganizationId)
+
+    const links = await ctx.db
+      .query('tipComponentLinks')
+      .withIndex('by_tip_id', (queryBuilder) => queryBuilder.eq('tipId', args.tipId))
+      .collect()
+
+    return links
+      .sort((left, right) => {
+        const workspaceOrder = left.workspaceId.localeCompare(right.workspaceId)
+        if (workspaceOrder !== 0) {
+          return workspaceOrder
+        }
+
+        const projectOrder = left.projectName.localeCompare(right.projectName)
+        if (projectOrder !== 0) {
+          return projectOrder
+        }
+
+        const componentOrder = left.componentName.localeCompare(right.componentName)
+        if (componentOrder !== 0) {
+          return componentOrder
+        }
+
+        return left.componentFilePath.localeCompare(right.componentFilePath)
+      })
+      .map((link) => ({
+        workspaceId: link.workspaceId,
+        projectName: link.projectName,
+        componentName: link.componentName,
+        componentFilePath: link.componentFilePath,
+        updatedAt: link.updatedAt,
+      }))
+  },
+})
+
 export const saveTipDraft = mutation({
   args: {
     ...actorContextShape,
@@ -763,6 +1507,7 @@ export const saveTipDraft = mutation({
     component: v.optional(v.string()),
     tags: v.array(v.string()),
     references: v.array(v.string()),
+    componentLinks: v.optional(v.array(tipComponentLinkInputValidator)),
   },
   returns: v.object({
     tipId: v.id('tips'),
@@ -784,6 +1529,9 @@ export const saveTipDraft = mutation({
       tags: args.tags,
       references: args.references,
     })
+    const normalizedComponentLinks = args.componentLinks
+      ? normalizeTipComponentLinks(args.componentLinks)
+      : undefined
 
     const now = Date.now()
     const metadata = buildTipMetadata(normalizedDraft.symptom, now)
@@ -871,6 +1619,16 @@ export const saveTipDraft = mutation({
       tags: tip.tags,
       updatedAt: now,
     })
+
+    if (normalizedComponentLinks) {
+      await replaceTipComponentLinks(ctx, {
+        tipId,
+        organizationId: tip.organizationId,
+        actorWorkosUserId: args.actorWorkosUserId,
+        links: normalizedComponentLinks,
+        now,
+      })
+    }
 
     return {
       tipId,

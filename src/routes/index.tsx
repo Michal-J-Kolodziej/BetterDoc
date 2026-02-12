@@ -52,6 +52,9 @@ function HomePage() {
           <a href="/dashboard">Go to protected dashboard</a>
         </p>
         <p>
+          <a href="/explorer">Open component explorer</a>
+        </p>
+        <p>
           <a href="/logout">Sign out</a>
         </p>
       </section>

@@ -1,5 +1,24 @@
 # BetterDoc Change Log
 
+## 2026-02-12 (BD-012, BD-013)
+- Code paths changed:
+  - `convex/schema.ts`
+  - `convex/accessControl.ts`
+  - `src/routes/explorer.tsx`
+  - `src/routes/explorer.$workspaceId.tsx`
+  - `src/routes/explorer.$workspaceId.project.$projectName.tsx`
+  - `src/routes/explorer.$workspaceId.lib.$libraryName.tsx`
+  - `src/routes/explorer.$workspaceId.component.$componentId.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/index.tsx`
+  - `src/routeTree.gen.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Delivered component explorer navigation for workspace/project/library/component views with dependency graph visibility, added many-to-many tip-to-component linking in the dashboard editor, and exposed related published tips on component detail pages via new Convex explorer/linking queries.
+  - Marked explorer routes as client-rendered (`ssr: false`) to keep Convex query hooks inside the client provider tree.
+
 ## 2026-02-12 (BD-011)
 - Code paths changed:
   - `convex/schema.ts`

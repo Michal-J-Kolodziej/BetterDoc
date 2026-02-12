@@ -26,6 +26,22 @@ type TipSearchState = {
   status: TipSearchStatus
 }
 
+type TipComponentLink = {
+  workspaceId: string
+  projectName: string
+  componentName: string
+  componentFilePath: string
+}
+
+function getTipComponentLinkKey(link: TipComponentLink): string {
+  return [
+    link.workspaceId.toLowerCase(),
+    link.projectName.toLowerCase(),
+    link.componentName.toLowerCase(),
+    link.componentFilePath.toLowerCase(),
+  ].join('::')
+}
+
 const searchFieldLimits = {
   project: 96,
   library: 96,
@@ -106,6 +122,11 @@ function DashboardPage() {
   )
   const [targetWorkosUserId, setTargetWorkosUserId] = useState('')
   const [nextRole, setNextRole] = useState<AppRole>('Reader')
+  const [tipComponentLinks, setTipComponentLinks] = useState<TipComponentLink[]>([])
+  const [tipComponentMessage, setTipComponentMessage] = useState<string | null>(null)
+  const [linkWorkspaceId, setLinkWorkspaceId] = useState('')
+  const [linkProjectName, setLinkProjectName] = useState('')
+  const [linkComponentId, setLinkComponentId] = useState('')
 
   const bootstrapFirstAdmin = useMutation(api.accessControl.bootstrapFirstAdmin)
   const assignRole = useMutation(api.accessControl.assignRole)
@@ -207,6 +228,51 @@ function DashboardPage() {
       : 'skip',
   )
 
+  const editorTipComponentLinks = useQuery(
+    api.accessControl.listTipComponentLinksForEditor,
+    user && draftTipId && canCreateTips
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          tipId: draftTipId,
+        }
+      : 'skip',
+  )
+
+  const componentWorkspaces = useQuery(
+    api.accessControl.listComponentExplorerWorkspaces,
+    user && canCreateTips
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          limit: 20,
+        }
+      : 'skip',
+  )
+
+  const selectedWorkspaceGraph = useQuery(
+    api.accessControl.getComponentExplorerWorkspace,
+    user && canCreateTips && linkWorkspaceId
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          workspaceId: linkWorkspaceId,
+        }
+      : 'skip',
+  )
+
+  const selectedProjectGraph = useQuery(
+    api.accessControl.getComponentExplorerProject,
+    user && canCreateTips && linkWorkspaceId && linkProjectName
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          workspaceId: linkWorkspaceId,
+          projectName: linkProjectName,
+        }
+      : 'skip',
+  )
+
   const selectedTipStatus =
     editorTip?.status ?? tips?.find((tip) => tip.id === draftTipId)?.status ?? null
 
@@ -224,6 +290,52 @@ function DashboardPage() {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setStatusMessage(`Action failed: ${message}`)
     }
+  }
+
+  const addSelectedComponentLink = () => {
+    if (!selectedProjectGraph || !linkComponentId) {
+      setTipComponentMessage(
+        'Select a workspace, project, and component before adding a link.',
+      )
+      return
+    }
+
+    const component = selectedProjectGraph.components.find(
+      (entry) => entry.id === linkComponentId,
+    )
+
+    if (!component) {
+      setTipComponentMessage('Selected component was not found in this project.')
+      return
+    }
+
+    const nextLink: TipComponentLink = {
+      workspaceId: linkWorkspaceId,
+      projectName: selectedProjectGraph.project.name,
+      componentName: component.name,
+      componentFilePath: component.filePath,
+    }
+
+    const nextKey = getTipComponentLinkKey(nextLink)
+    const hasDuplicate = tipComponentLinks.some(
+      (link) => getTipComponentLinkKey(link) === nextKey,
+    )
+
+    if (hasDuplicate) {
+      setTipComponentMessage('This component is already linked to the draft.')
+      return
+    }
+
+    setTipComponentLinks((current) => [...current, nextLink])
+    setTipComponentMessage('Component link added.')
+  }
+
+  const removeComponentLink = (linkToRemove: TipComponentLink) => {
+    const removeKey = getTipComponentLinkKey(linkToRemove)
+    setTipComponentLinks((current) =>
+      current.filter((link) => getTipComponentLinkKey(link) !== removeKey),
+    )
+    setTipComponentMessage('Component link removed.')
   }
 
   const setEditorField = (
@@ -261,6 +373,11 @@ function DashboardPage() {
     setTipEditorState(createEmptyTipEditorState())
     setTipValidationErrors({})
     setTipEditorMessage(null)
+    setTipComponentLinks([])
+    setTipComponentMessage(null)
+    setLinkWorkspaceId('')
+    setLinkProjectName('')
+    setLinkComponentId('')
   }
 
   const saveEditorDraft = async () => {
@@ -281,12 +398,13 @@ function DashboardPage() {
         actorOrganizationId: organizationId,
         tipId: draftTipId ?? undefined,
         ...payload,
+        componentLinks: tipComponentLinks,
       })
 
       setDraftTipId(result.tipId)
       setTipValidationErrors({})
       setTipEditorMessage(
-        `Draft saved as revision ${result.revisionNumber} at ${new Date(result.updatedAt).toLocaleString()}.`,
+        `Draft saved as revision ${result.revisionNumber} at ${new Date(result.updatedAt).toLocaleString()} with ${String(tipComponentLinks.length)} linked component${tipComponentLinks.length === 1 ? '' : 's'}.`,
       )
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -365,6 +483,7 @@ function DashboardPage() {
                 onChange={(event) => {
                   const nextTipId = event.target.value
                   setTipEditorMessage(null)
+                  setTipComponentMessage(null)
 
                   if (!nextTipId) {
                     resetEditorToNewDraft()
@@ -373,6 +492,7 @@ function DashboardPage() {
 
                   setDraftTipId(nextTipId as Id<'tips'>)
                   setTipValidationErrors({})
+                  setTipComponentLinks([])
                 }}
               >
                 <option value="">Create new draft</option>
@@ -400,6 +520,23 @@ function DashboardPage() {
                       tags: editorTip.tags.join(', '),
                       references: editorTip.references.join('\n'),
                     })
+                    if (editorTipComponentLinks) {
+                      setTipComponentLinks(
+                        editorTipComponentLinks.map((link) => ({
+                          workspaceId: link.workspaceId,
+                          projectName: link.projectName,
+                          componentName: link.componentName,
+                          componentFilePath: link.componentFilePath,
+                        })),
+                      )
+                      setTipComponentMessage(
+                        `Loaded ${String(editorTipComponentLinks.length)} linked component${editorTipComponentLinks.length === 1 ? '' : 's'}.`,
+                      )
+                    } else {
+                      setTipComponentMessage(
+                        'Tip content loaded. Component links are still loading.',
+                      )
+                    }
                     setTipValidationErrors({})
                     setTipEditorMessage('Loaded selected tip content into the editor.')
                   }}
@@ -519,6 +656,149 @@ function DashboardPage() {
             </p>
 
             <p>
+              <label htmlFor="tip-link-workspace">Component links (BD-013)</label>
+              <br />
+              <small>
+                Link this tip to scanned components for many-to-many lookup from
+                component detail pages.
+              </small>
+              {componentWorkspaces === undefined && (
+                <>
+                  <br />
+                  <small>Loading scanned workspaces...</small>
+                </>
+              )}
+              {componentWorkspaces?.length === 0 && (
+                <>
+                  <br />
+                  <small>No scanned workspaces found yet.</small>
+                </>
+              )}
+              <br />
+              <select
+                id="tip-link-workspace"
+                value={linkWorkspaceId}
+                onChange={(event) => {
+                  setLinkWorkspaceId(event.target.value)
+                  setLinkProjectName('')
+                  setLinkComponentId('')
+                  setTipComponentMessage(null)
+                }}
+              >
+                <option value="">Select workspace</option>
+                {componentWorkspaces?.map((workspace) => (
+                  <option key={workspace.workspaceId} value={workspace.workspaceId}>
+                    {workspace.workspaceId} (v{workspace.graphVersionNumber})
+                  </option>
+                ))}
+              </select>
+            </p>
+
+            {linkWorkspaceId && selectedWorkspaceGraph === undefined && (
+              <p>Loading workspace graph snapshot...</p>
+            )}
+            {linkWorkspaceId && selectedWorkspaceGraph === null && (
+              <p>
+                No graph snapshot found for workspace <code>{linkWorkspaceId}</code>.
+              </p>
+            )}
+
+            <p>
+              <label htmlFor="tip-link-project">Project/Library</label>
+              <br />
+              <select
+                id="tip-link-project"
+                value={linkProjectName}
+                disabled={!linkWorkspaceId || !selectedWorkspaceGraph}
+                onChange={(event) => {
+                  setLinkProjectName(event.target.value)
+                  setLinkComponentId('')
+                  setTipComponentMessage(null)
+                }}
+              >
+                <option value="">Select project or library</option>
+                {selectedWorkspaceGraph?.projects.map((project) => (
+                  <option key={project.name} value={project.name}>
+                    {project.name} ({project.type}, {project.componentCount} components)
+                  </option>
+                ))}
+              </select>
+            </p>
+
+            {linkWorkspaceId && linkProjectName && selectedProjectGraph === undefined && (
+              <p>Loading components for selected project...</p>
+            )}
+            {linkWorkspaceId && linkProjectName && selectedProjectGraph === null && (
+              <p>
+                Selected project <code>{linkProjectName}</code> was not found in the
+                latest workspace graph.
+              </p>
+            )}
+
+            <p>
+              <label htmlFor="tip-link-component">Component</label>
+              <br />
+              <select
+                id="tip-link-component"
+                value={linkComponentId}
+                disabled={!linkWorkspaceId || !linkProjectName || !selectedProjectGraph}
+                onChange={(event) => {
+                  setLinkComponentId(event.target.value)
+                  setTipComponentMessage(null)
+                }}
+              >
+                <option value="">Select component</option>
+                {selectedProjectGraph?.components.map((component) => (
+                  <option key={component.id} value={component.id}>
+                    {component.name} ({component.filePath})
+                  </option>
+                ))}
+              </select>
+            </p>
+
+            <p>
+              <button
+                type="button"
+                onClick={addSelectedComponentLink}
+                disabled={!linkWorkspaceId || !linkProjectName || !linkComponentId}
+              >
+                Add component link
+              </button>{' '}
+              <Link to="/explorer">Open component explorer</Link>
+            </p>
+
+            {tipComponentMessage && <p>{tipComponentMessage}</p>}
+            {tipComponentLinks.length === 0 && (
+              <p>No component links are attached to this draft yet.</p>
+            )}
+            {tipComponentLinks.map((link) => (
+              <p key={getTipComponentLinkKey(link)}>
+                <code>
+                  {link.workspaceId}/{link.projectName}/{link.componentName}
+                </code>
+                <br />
+                <code>{link.componentFilePath}</code>
+                <br />
+                <Link
+                  to="/explorer/$workspaceId/project/$projectName"
+                  params={{
+                    workspaceId: link.workspaceId,
+                    projectName: link.projectName,
+                  }}
+                >
+                  Open project
+                </Link>{' '}
+                ·{' '}
+                <button
+                  type="button"
+                  onClick={() => removeComponentLink(link)}
+                >
+                  Remove link
+                </button>
+              </p>
+            ))}
+
+            <p>
               <label htmlFor="tip-tags">Tags (comma or newline separated)</label>
               <br />
               <textarea
@@ -563,6 +843,9 @@ function DashboardPage() {
               <p>
                 Current draft tip ID: <code>{draftTipId}</code>
               </p>
+            )}
+            {draftTipId && editorTipComponentLinks === undefined && (
+              <p>Loading existing component links for this tip...</p>
             )}
             {tipEditorMessage && <p>{tipEditorMessage}</p>}
 
@@ -929,6 +1212,9 @@ function DashboardPage() {
 
       <section>
         <h2>Navigation</h2>
+        <p>
+          <Link to="/explorer">Component explorer</Link>
+        </p>
         <p>
           <Link to="/logout">Sign out</Link>
         </p>

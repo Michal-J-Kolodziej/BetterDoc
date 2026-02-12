@@ -21,7 +21,7 @@ Last updated: 2026-02-12
   - Owns the HTML document shell and global providers.
   - Mounts `AuthKitProvider` for client auth state and `ConvexAppProvider` for Convex hooks.
 - Index route: `src/routes/index.tsx`
-  - Public landing page with links into auth flow and protected dashboard.
+  - Public landing page with links into auth flow, protected dashboard, and component explorer.
 
 ### Convex integration
 - Convex client provider: `src/lib/convex-client.tsx`
@@ -37,12 +37,12 @@ Last updated: 2026-02-12
   - `convex/http.ts`
     - HTTP endpoint: `POST /scanner/ingest` (bridges JSON payloads to `ingestScannerSnapshot`)
 - Convex RBAC/audit module: `convex/accessControl.ts`
-  - Public queries: `getAccessProfile`, `listTips`, `getTipForEditor`, `listTipRevisions`, `listAuditEvents`.
+  - Public queries: `getAccessProfile`, `listTips`, `listComponentExplorerWorkspaces`, `getComponentExplorerWorkspace`, `getComponentExplorerProject`, `getComponentExplorerComponent`, `getTipForEditor`, `listTipRevisions`, `listTipComponentLinksForEditor`, `listAuditEvents`.
   - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `saveTipDraft`, `submitTipForReview`, `returnTipToDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
   - Enforces capability checks server-side for privileged operations and audit reads.
 - RBAC constants/validators: `convex/rbac.ts`
 - Convex schema: `convex/schema.ts`
-  - Tables: `memberships`, `tips`, `tipRevisions`, `tipTagFacets`, `scanRuns`, `componentGraphHeads`, `componentGraphVersions`, `componentGraphProjects`, `componentGraphComponents`, `componentGraphDependencies`, `integrationConfigs`, `auditEvents`.
+  - Tables: `memberships`, `tips`, `tipRevisions`, `tipTagFacets`, `tipComponentLinks`, `scanRuns`, `componentGraphHeads`, `componentGraphVersions`, `componentGraphProjects`, `componentGraphComponents`, `componentGraphDependencies`, `integrationConfigs`, `auditEvents`.
 - Typed API stubs:
   - `convex/_generated/api.ts`
   - `convex/_generated/server.ts`
@@ -116,6 +116,7 @@ All four pass with valid environment variables set.
     - sequence: `revisionNumber`
     - full content/search snapshot + status + editor + timestamp
   - `tipTagFacets` stores normalized (`lowercase`) tag-to-tip rows for indexed tag filters.
+  - `tipComponentLinks` stores many-to-many tip-to-component relationships keyed by `workspaceId + projectName + componentName + componentFilePath`, scoped by tip organization.
 
 ### Indexed querying
 - `convex/schema.ts` indexes:
@@ -132,7 +133,7 @@ All four pass with valid environment variables set.
   - Generates metadata (`slug`, `title`) from the symptom field.
   - Builds denormalized `searchText` content used by the `tips.search_text` index.
 - `convex/accessControl.ts`
-  - `saveTipDraft` creates or updates draft content, enforces valid transition to `draft` (including reviewer requirement for `in_review -> draft` edits), updates tag facets, and appends a revision snapshot.
+  - `saveTipDraft` creates or updates draft content, enforces valid transition to `draft` (including reviewer requirement for `in_review -> draft` edits), updates tag facets, optionally replaces tip-component links, and appends a revision snapshot.
   - `submitTipForReview` transitions `draft -> in_review`.
   - `returnTipToDraft` transitions `in_review -> draft` (review feedback loop).
   - `publishTip` transitions `in_review -> published` and writes an audit event.
@@ -155,6 +156,7 @@ All four pass with valid environment variables set.
     - `tags`
     - `references`
   - Uses `saveTipDraft` for draft saves and shows revision history from `listTipRevisions`.
+  - Adds component-linking controls (workspace -> project/library -> component) backed by latest scanned graph queries and persists links via `saveTipDraft.componentLinks`.
   - Includes an explicit load action to populate the editor from an existing tip.
   - Adds workflow controls for submit/review return/publish/deprecate with status-aware button gating.
   - Adds a search/filter section with empty, local-validation error, and permission-denied states.
@@ -228,3 +230,45 @@ All four pass with valid environment variables set.
 
 ### Query surface
 - `getLatestSuccessfulScanRun(workspaceId)` returns the latest succeeded run metadata + linked graph version info for operational checks and downstream UI loading.
+
+## Component Explorer + Tip Linking (BD-012, BD-013)
+
+### Explorer routes
+- `src/routes/explorer.tsx` (`/explorer`)
+  - Lists latest available workspaces from succeeded scan runs.
+  - Uses `ssr: false` because the page depends on client-only Convex hooks.
+- `src/routes/explorer.$workspaceId.tsx` (`/explorer/$workspaceId`)
+  - Workspace overview with projects, libraries, and dependency edge list.
+  - Uses `ssr: false` for client-rendered graph queries.
+- `src/routes/explorer.$workspaceId.project.$projectName.tsx` (`/explorer/$workspaceId/project/$projectName`)
+  - Project detail with components and incoming/outgoing graph edges.
+  - Uses `ssr: false` for client-rendered graph queries.
+- `src/routes/explorer.$workspaceId.lib.$libraryName.tsx` (`/explorer/$workspaceId/lib/$libraryName`)
+  - Library-specific detail view (validates project type is `library`).
+  - Uses `ssr: false` for client-rendered graph queries.
+- `src/routes/explorer.$workspaceId.component.$componentId.tsx` (`/explorer/$workspaceId/component/$componentId`)
+  - Component metadata, project-level dependency context, and related published tips.
+  - Uses `ssr: false` for client-rendered graph queries.
+
+### Explorer query/mutation surface
+- `listComponentExplorerWorkspaces(actor...)`
+  - Reader-gated list of latest succeeded scan snapshots grouped by workspace.
+- `getComponentExplorerWorkspace(actor..., workspaceId)`
+  - Returns latest workspace graph metadata, enriched project/library lists, and sorted dependencies.
+- `getComponentExplorerProject(actor..., workspaceId, projectName)`
+  - Returns one project with component inventory and incoming/outgoing dependencies.
+- `getComponentExplorerComponent(actor..., workspaceId, componentId)`
+  - Returns component detail and related published tips resolved from tip-component links.
+- `listTipComponentLinksForEditor(actor..., tipId)`
+  - Reader for existing tip-component links in the dashboard editor.
+- `saveTipDraft(..., componentLinks?)`
+  - Draft save path now optionally replaces the link set for the tip.
+
+### Related published tips behavior
+- Component detail pages resolve links by exact component identity:
+  - `workspaceId`
+  - `projectName`
+  - `componentName`
+  - `componentFilePath`
+- Only tips in `published` state are shown in the related list.
+- Organization scoping is applied to both links and tip records when `actorOrganizationId` is set.
