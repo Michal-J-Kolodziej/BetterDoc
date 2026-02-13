@@ -121,6 +121,58 @@ export default defineSchema({
       'componentName',
       'componentFilePath',
     ]),
+  componentWatchSubscriptions: defineTable({
+    watcherWorkosUserId: v.string(),
+    organizationId: v.optional(v.string()),
+    workspaceId: v.string(),
+    projectName: v.string(),
+    componentName: v.string(),
+    componentFilePath: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_watcher_updated_at', ['watcherWorkosUserId', 'updatedAt'])
+    .index('by_watcher_component', [
+      'watcherWorkosUserId',
+      'workspaceId',
+      'projectName',
+      'componentName',
+      'componentFilePath',
+    ])
+    .index('by_component', [
+      'workspaceId',
+      'projectName',
+      'componentName',
+      'componentFilePath',
+    ]),
+  watchNotifications: defineTable({
+    watcherWorkosUserId: v.string(),
+    organizationId: v.optional(v.string()),
+    eventType: v.union(v.literal('tip.published'), v.literal('tip.updated')),
+    deliveryChannel: v.literal('in_app'),
+    deliveryStatus: v.union(v.literal('delivered'), v.literal('failed')),
+    tipId: v.id('tips'),
+    tipSlug: v.string(),
+    tipTitle: v.string(),
+    workspaceId: v.string(),
+    projectName: v.string(),
+    componentName: v.string(),
+    componentFilePath: v.string(),
+    triggeredByWorkosUserId: v.string(),
+    revisionNumber: v.number(),
+    isRead: v.boolean(),
+    createdAt: v.number(),
+    deliveredAt: v.number(),
+    readAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+  })
+    .index('by_watcher_created_at', ['watcherWorkosUserId', 'createdAt'])
+    .index('by_watcher_is_read_created_at', [
+      'watcherWorkosUserId',
+      'isRead',
+      'createdAt',
+    ])
+    .index('by_tip_created_at', ['tipId', 'createdAt']),
   scanRuns: defineTable({
     idempotencyKey: v.string(),
     payloadHash: v.string(),

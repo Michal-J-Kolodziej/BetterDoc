@@ -70,6 +70,18 @@ type TipComponentLinkInput = {
   componentFilePath: string
 }
 
+type WatchNotificationEventType = 'tip.published' | 'tip.updated'
+
+const watchNotificationEventTypeValidator = v.union(
+  v.literal('tip.published'),
+  v.literal('tip.updated'),
+)
+
+const watchNotificationDeliveryStatusValidator = v.union(
+  v.literal('delivered'),
+  v.literal('failed'),
+)
+
 const componentLinkFieldLimits = {
   workspaceId: 128,
   projectName: 128,
@@ -102,6 +114,37 @@ const componentExplorerComponentValidator = v.object({
   project: v.string(),
   filePath: v.string(),
   dependencies: v.array(v.string()),
+})
+
+const componentWatchSubscriptionValidator = v.object({
+  subscriptionId: v.id('componentWatchSubscriptions'),
+  workspaceId: v.string(),
+  projectName: v.string(),
+  componentName: v.string(),
+  componentFilePath: v.string(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+
+const watchNotificationViewValidator = v.object({
+  notificationId: v.id('watchNotifications'),
+  eventType: watchNotificationEventTypeValidator,
+  deliveryChannel: v.literal('in_app'),
+  deliveryStatus: watchNotificationDeliveryStatusValidator,
+  tipId: v.id('tips'),
+  tipSlug: v.string(),
+  tipTitle: v.string(),
+  workspaceId: v.string(),
+  projectName: v.string(),
+  componentName: v.string(),
+  componentFilePath: v.string(),
+  triggeredByWorkosUserId: v.string(),
+  revisionNumber: v.number(),
+  isRead: v.boolean(),
+  createdAt: v.number(),
+  deliveredAt: v.number(),
+  readAt: v.union(v.number(), v.null()),
+  errorMessage: v.union(v.string(), v.null()),
 })
 
 type DatabaseReaderLike = QueryCtx['db'] | MutationCtx['db']
@@ -261,6 +304,42 @@ function normalizeTipComponentLinks(
   }
 
   return [...dedupedLinks.values()]
+}
+
+function normalizeComponentTarget(
+  input: TipComponentLinkInput,
+): TipComponentLinkInput {
+  return {
+    workspaceId: normalizeRequiredText(
+      input.workspaceId,
+      'workspaceId',
+      componentLinkFieldLimits.workspaceId,
+    ),
+    projectName: normalizeRequiredText(
+      input.projectName,
+      'projectName',
+      componentLinkFieldLimits.projectName,
+    ),
+    componentName: normalizeRequiredText(
+      input.componentName,
+      'componentName',
+      componentLinkFieldLimits.componentName,
+    ),
+    componentFilePath: normalizeRequiredText(
+      input.componentFilePath,
+      'componentFilePath',
+      componentLinkFieldLimits.componentFilePath,
+    ),
+  }
+}
+
+function buildComponentTargetKey(input: TipComponentLinkInput): string {
+  return [
+    input.workspaceId.toLowerCase(),
+    input.projectName.toLowerCase(),
+    input.componentName.toLowerCase(),
+    input.componentFilePath.toLowerCase(),
+  ].join('::')
 }
 
 function canReadTipStatus(actorRole: AppRole, status: TipStatus): boolean {
@@ -426,6 +505,139 @@ async function replaceTipComponentLinks(
       }),
     ),
   )
+}
+
+async function fanOutComponentWatchNotifications(
+  ctx: MutationCtx,
+  args: {
+    tip: Doc<'tips'>
+    actorWorkosUserId: string
+    organizationId: string | undefined
+    eventType: WatchNotificationEventType
+    revisionNumber: number
+    now: number
+  },
+): Promise<number> {
+  const componentLinks = await ctx.db
+    .query('tipComponentLinks')
+    .withIndex('by_tip_id', (queryBuilder) =>
+      queryBuilder.eq('tipId', args.tip._id),
+    )
+    .collect()
+
+  if (componentLinks.length === 0) {
+    return 0
+  }
+
+  const uniqueComponentTargets = new Map<string, TipComponentLinkInput>()
+
+  for (const link of componentLinks) {
+    const normalizedTarget = normalizeComponentTarget({
+      workspaceId: link.workspaceId,
+      projectName: link.projectName,
+      componentName: link.componentName,
+      componentFilePath: link.componentFilePath,
+    })
+    uniqueComponentTargets.set(
+      buildComponentTargetKey(normalizedTarget),
+      normalizedTarget,
+    )
+  }
+
+  const targetEntries = [...uniqueComponentTargets.values()]
+  const subscriptionsByTarget = await Promise.all(
+    targetEntries.map(async (target) => {
+      const subscriptions = await ctx.db
+        .query('componentWatchSubscriptions')
+        .withIndex('by_component', (queryBuilder) =>
+          queryBuilder
+            .eq('workspaceId', target.workspaceId)
+            .eq('projectName', target.projectName)
+            .eq('componentName', target.componentName)
+            .eq('componentFilePath', target.componentFilePath),
+        )
+        .collect()
+
+      return {
+        target,
+        subscriptions,
+      }
+    }),
+  )
+
+  const dedupeKeys = new Set<string>()
+  const notifications = subscriptionsByTarget.flatMap(({ target, subscriptions }) =>
+    subscriptions
+      .filter((subscription) => {
+        if (subscription.watcherWorkosUserId === args.actorWorkosUserId) {
+          return false
+        }
+
+        if (args.organizationId) {
+          return subscription.organizationId === args.organizationId
+        }
+
+        return subscription.organizationId === undefined
+      })
+      .map((subscription) => ({
+        watcherWorkosUserId: subscription.watcherWorkosUserId,
+        organizationId: subscription.organizationId,
+        workspaceId: target.workspaceId,
+        projectName: target.projectName,
+        componentName: target.componentName,
+        componentFilePath: target.componentFilePath,
+      }))
+      .filter((notification) => {
+        const dedupeKey = [
+          notification.watcherWorkosUserId,
+          notification.workspaceId,
+          notification.projectName,
+          notification.componentName,
+          notification.componentFilePath,
+        ]
+          .map((value) => value.toLowerCase())
+          .join('::')
+
+        if (dedupeKeys.has(dedupeKey)) {
+          return false
+        }
+
+        dedupeKeys.add(dedupeKey)
+        return true
+      }),
+  )
+
+  if (notifications.length === 0) {
+    return 0
+  }
+
+  await Promise.all(
+    notifications.map((notification) =>
+      ctx.db.insert('watchNotifications', {
+        watcherWorkosUserId: notification.watcherWorkosUserId,
+        organizationId: notification.organizationId,
+        eventType: args.eventType,
+        deliveryChannel: 'in_app',
+        deliveryStatus: 'delivered',
+        tipId: args.tip._id,
+        tipSlug: args.tip.slug,
+        tipTitle: args.tip.title,
+        workspaceId: notification.workspaceId,
+        projectName: notification.projectName,
+        componentName: notification.componentName,
+        componentFilePath: notification.componentFilePath,
+        triggeredByWorkosUserId: args.actorWorkosUserId,
+        revisionNumber: args.revisionNumber,
+        isRead: false,
+        createdAt: args.now,
+        deliveredAt: args.now,
+        readAt: undefined,
+        errorMessage: undefined,
+      }),
+    ),
+  )
+
+  return notifications.length
 }
 
 async function getLatestSuccessfulWorkspaceGraph(
@@ -1494,6 +1706,420 @@ export const listTipComponentLinksForEditor = query({
   },
 })
 
+export const getComponentWatchStatus = query({
+  args: {
+    ...actorContextShape,
+    workspaceId: v.string(),
+    projectName: v.string(),
+    componentName: v.string(),
+    componentFilePath: v.string(),
+  },
+  returns: v.object({
+    isWatching: v.boolean(),
+    watcherCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const target = normalizeComponentTarget({
+      workspaceId: args.workspaceId,
+      projectName: args.projectName,
+      componentName: args.componentName,
+      componentFilePath: args.componentFilePath,
+    })
+
+    const [watcherSubscriptions, allComponentSubscriptions] = await Promise.all([
+      ctx.db
+        .query('componentWatchSubscriptions')
+        .withIndex('by_watcher_component', (queryBuilder) =>
+          queryBuilder
+            .eq('watcherWorkosUserId', args.actorWorkosUserId)
+            .eq('workspaceId', target.workspaceId)
+            .eq('projectName', target.projectName)
+            .eq('componentName', target.componentName)
+            .eq('componentFilePath', target.componentFilePath),
+        )
+        .collect(),
+      ctx.db
+        .query('componentWatchSubscriptions')
+        .withIndex('by_component', (queryBuilder) =>
+          queryBuilder
+            .eq('workspaceId', target.workspaceId)
+            .eq('projectName', target.projectName)
+            .eq('componentName', target.componentName)
+            .eq('componentFilePath', target.componentFilePath),
+        )
+        .collect(),
+    ])
+
+    const isWatching = watcherSubscriptions.some((subscription) => {
+      if (args.actorOrganizationId) {
+        return subscription.organizationId === args.actorOrganizationId
+      }
+
+      return subscription.organizationId === undefined
+    })
+
+    const watcherCount = new Set(
+      allComponentSubscriptions
+        .filter((subscription) => {
+          if (args.actorOrganizationId) {
+            return subscription.organizationId === args.actorOrganizationId
+          }
+
+          return subscription.organizationId === undefined
+        })
+        .map((subscription) => subscription.watcherWorkosUserId),
+    ).size
+
+    return {
+      isWatching,
+      watcherCount,
+    }
+  },
+})
+
+export const listMyComponentWatchSubscriptions = query({
+  args: {
+    ...actorContextShape,
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(componentWatchSubscriptionValidator),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const limit = Math.min(Math.max(args.limit ?? 50, 1), 120)
+    const subscriptions = await ctx.db
+      .query('componentWatchSubscriptions')
+      .withIndex('by_watcher_updated_at', (queryBuilder) =>
+        queryBuilder.eq('watcherWorkosUserId', args.actorWorkosUserId),
+      )
+      .order('desc')
+      .take(limit * 3)
+
+    const deduped = new Map<string, Doc<'componentWatchSubscriptions'>>()
+
+    for (const subscription of subscriptions) {
+      if (args.actorOrganizationId) {
+        if (subscription.organizationId !== args.actorOrganizationId) {
+          continue
+        }
+      } else if (subscription.organizationId !== undefined) {
+        continue
+      }
+
+      const key = buildComponentTargetKey({
+        workspaceId: subscription.workspaceId,
+        projectName: subscription.projectName,
+        componentName: subscription.componentName,
+        componentFilePath: subscription.componentFilePath,
+      })
+
+      if (!deduped.has(key)) {
+        deduped.set(key, subscription)
+      }
+
+      if (deduped.size >= limit) {
+        break
+      }
+    }
+
+    return [...deduped.values()]
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .map((subscription) => ({
+        subscriptionId: subscription._id,
+        workspaceId: subscription.workspaceId,
+        projectName: subscription.projectName,
+        componentName: subscription.componentName,
+        componentFilePath: subscription.componentFilePath,
+        createdAt: subscription.createdAt,
+        updatedAt: subscription.updatedAt,
+      }))
+  },
+})
+
+export const subscribeToComponentWatchlist = mutation({
+  args: {
+    ...actorContextShape,
+    workspaceId: v.string(),
+    projectName: v.string(),
+    componentName: v.string(),
+    componentFilePath: v.string(),
+  },
+  returns: v.object({
+    subscriptionId: v.id('componentWatchSubscriptions'),
+    created: v.boolean(),
+    updatedAt: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const target = normalizeComponentTarget({
+      workspaceId: args.workspaceId,
+      projectName: args.projectName,
+      componentName: args.componentName,
+      componentFilePath: args.componentFilePath,
+    })
+
+    const existingMatches = await ctx.db
+      .query('componentWatchSubscriptions')
+      .withIndex('by_watcher_component', (queryBuilder) =>
+        queryBuilder
+          .eq('watcherWorkosUserId', args.actorWorkosUserId)
+          .eq('workspaceId', target.workspaceId)
+          .eq('projectName', target.projectName)
+          .eq('componentName', target.componentName)
+          .eq('componentFilePath', target.componentFilePath),
+      )
+      .collect()
+
+    const scopedMatches = existingMatches.filter((subscription) => {
+      if (args.actorOrganizationId) {
+        return subscription.organizationId === args.actorOrganizationId
+      }
+
+      return subscription.organizationId === undefined
+    })
+
+    const now = Date.now()
+
+    if (scopedMatches.length > 0) {
+      const [existing, ...duplicates] = scopedMatches
+
+      if (duplicates.length > 0) {
+        await Promise.all(duplicates.map((subscription) => ctx.db.delete(subscription._id)))
+      }
+
+      await ctx.db.patch(existing._id, {
+        updatedAt: now,
+      })
+
+      return {
+        subscriptionId: existing._id,
+        created: false,
+        updatedAt: now,
+      }
+    }
+
+    const subscriptionId = await ctx.db.insert('componentWatchSubscriptions', {
+      watcherWorkosUserId: args.actorWorkosUserId,
+      organizationId: args.actorOrganizationId,
+      workspaceId: target.workspaceId,
+      projectName: target.projectName,
+      componentName: target.componentName,
+      componentFilePath: target.componentFilePath,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    return {
+      subscriptionId,
+      created: true,
+      updatedAt: now,
+    }
+  },
+})
+
+export const unsubscribeFromComponentWatchlist = mutation({
+  args: {
+    ...actorContextShape,
+    workspaceId: v.string(),
+    projectName: v.string(),
+    componentName: v.string(),
+    componentFilePath: v.string(),
+  },
+  returns: v.object({
+    removedCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const target = normalizeComponentTarget({
+      workspaceId: args.workspaceId,
+      projectName: args.projectName,
+      componentName: args.componentName,
+      componentFilePath: args.componentFilePath,
+    })
+
+    const matches = await ctx.db
+      .query('componentWatchSubscriptions')
+      .withIndex('by_watcher_component', (queryBuilder) =>
+        queryBuilder
+          .eq('watcherWorkosUserId', args.actorWorkosUserId)
+          .eq('workspaceId', target.workspaceId)
+          .eq('projectName', target.projectName)
+          .eq('componentName', target.componentName)
+          .eq('componentFilePath', target.componentFilePath),
+      )
+      .collect()
+
+    const scopedMatches = matches.filter((subscription) => {
+      if (args.actorOrganizationId) {
+        return subscription.organizationId === args.actorOrganizationId
+      }
+
+      return subscription.organizationId === undefined
+    })
+
+    await Promise.all(scopedMatches.map((subscription) => ctx.db.delete(subscription._id)))
+
+    return {
+      removedCount: scopedMatches.length,
+    }
+  },
+})
+
+export const listWatchNotifications = query({
+  args: {
+    ...actorContextShape,
+    unreadOnly: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(watchNotificationViewValidator),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const limit = Math.min(Math.max(args.limit ?? 40, 1), 120)
+    const notifications = args.unreadOnly
+      ? await ctx.db
+          .query('watchNotifications')
+          .withIndex('by_watcher_is_read_created_at', (queryBuilder) =>
+            queryBuilder
+              .eq('watcherWorkosUserId', args.actorWorkosUserId)
+              .eq('isRead', false),
+          )
+          .order('desc')
+          .take(limit * 3)
+      : await ctx.db
+          .query('watchNotifications')
+          .withIndex('by_watcher_created_at', (queryBuilder) =>
+            queryBuilder.eq('watcherWorkosUserId', args.actorWorkosUserId),
+          )
+          .order('desc')
+          .take(limit * 3)
+
+    return notifications
+      .filter((notification) => {
+        if (args.actorOrganizationId) {
+          return notification.organizationId === args.actorOrganizationId
+        }
+
+        return notification.organizationId === undefined
+      })
+      .slice(0, limit)
+      .map((notification) => ({
+        notificationId: notification._id,
+        eventType: notification.eventType,
+        deliveryChannel: notification.deliveryChannel,
+        deliveryStatus: notification.deliveryStatus,
+        tipId: notification.tipId,
+        tipSlug: notification.tipSlug,
+        tipTitle: notification.tipTitle,
+        workspaceId: notification.workspaceId,
+        projectName: notification.projectName,
+        componentName: notification.componentName,
+        componentFilePath: notification.componentFilePath,
+        triggeredByWorkosUserId: notification.triggeredByWorkosUserId,
+        revisionNumber: notification.revisionNumber,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+        deliveredAt: notification.deliveredAt,
+        readAt: notification.readAt ?? null,
+        errorMessage: notification.errorMessage ?? null,
+      }))
+  },
+})
+
+export const markWatchNotificationRead = mutation({
+  args: {
+    ...actorContextShape,
+    notificationId: v.id('watchNotifications'),
+  },
+  returns: v.object({
+    updated: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const notification = await ctx.db.get(args.notificationId)
+    if (!notification) {
+      throw new ConvexError('Notification not found.')
+    }
+
+    if (notification.watcherWorkosUserId !== args.actorWorkosUserId) {
+      throw new ConvexError('Notification not found for this user.')
+    }
+
+    if (args.actorOrganizationId) {
+      if (notification.organizationId !== args.actorOrganizationId) {
+        throw new ConvexError('Notification not found for this organization.')
+      }
+    } else if (notification.organizationId !== undefined) {
+      throw new ConvexError('Notification not found for this user.')
+    }
+
+    if (notification.isRead) {
+      return { updated: false }
+    }
+
+    await ctx.db.patch(notification._id, {
+      isRead: true,
+      readAt: Date.now(),
+    })
+
+    return { updated: true }
+  },
+})
+
+export const markAllWatchNotificationsRead = mutation({
+  args: {
+    ...actorContextShape,
+    limit: v.optional(v.number()),
+  },
+  returns: v.object({
+    updatedCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx.db, args.actorWorkosUserId, 'tips.read')
+
+    const limit = Math.min(Math.max(args.limit ?? 80, 1), 200)
+    const unread = await ctx.db
+      .query('watchNotifications')
+      .withIndex('by_watcher_is_read_created_at', (queryBuilder) =>
+        queryBuilder
+          .eq('watcherWorkosUserId', args.actorWorkosUserId)
+          .eq('isRead', false),
+      )
+      .order('desc')
+      .take(limit * 2)
+
+    const scopedUnread = unread
+      .filter((notification) => {
+        if (args.actorOrganizationId) {
+          return notification.organizationId === args.actorOrganizationId
+        }
+
+        return notification.organizationId === undefined
+      })
+      .slice(0, limit)
+
+    const now = Date.now()
+
+    await Promise.all(
+      scopedUnread.map((notification) =>
+        ctx.db.patch(notification._id, {
+          isRead: true,
+          readAt: now,
+        }),
+      ),
+    )
+
+    return {
+      updatedCount: scopedUnread.length,
+    }
+  },
+})
+
 export const saveTipDraft = mutation({
   args: {
     ...actorContextShape,
@@ -1719,6 +2345,8 @@ export const publishTip = mutation({
   returns: v.object({
     tipId: v.id('tips'),
     status: v.literal('published'),
+    notificationEventType: watchNotificationEventTypeValidator,
+    notificationCount: v.number(),
     revisionNumber: v.number(),
     auditEventId: v.id('auditEvents'),
   }),
@@ -1736,11 +2364,37 @@ export const publishTip = mutation({
     }
 
     assertTipOrganizationAccess(tip, args.actorOrganizationId)
+    const revisions = await ctx.db
+      .query('tipRevisions')
+      .withIndex('by_tip_id', (queryBuilder) =>
+        queryBuilder.eq('tipId', tip._id),
+      )
+      .collect()
+    const hadPublishedRevision = revisions.some(
+      (revision) => revision.status === 'published',
+    )
+    const notificationEventType: WatchNotificationEventType = hadPublishedRevision
+      ? 'tip.updated'
+      : 'tip.published'
     const now = Date.now()
     const revisionNumber = await patchTipStatusWithRevision(ctx, {
       tip,
       nextStatus: 'published',
       actorWorkosUserId: args.actorWorkosUserId,
+      now,
+    })
+    const notificationCount = await fanOutComponentWatchNotifications(ctx, {
+      tip: {
+        ...tip,
+        status: 'published',
+        currentRevision: revisionNumber,
+        updatedByWorkosUserId: args.actorWorkosUserId,
+        updatedAt: now,
+      },
+      actorWorkosUserId: args.actorWorkosUserId,
+      organizationId: tip.organizationId,
+      eventType: notificationEventType,
+      revisionNumber,
       now,
     })
 
@@ -1757,6 +2411,8 @@ export const publishTip = mutation({
     return {
       tipId: tip._id,
       status: 'published' as const,
+      notificationEventType,
+      notificationCount,
       revisionNumber,
       auditEventId,
     }

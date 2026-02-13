@@ -1,6 +1,6 @@
 # BetterDoc Codebase Reference
 
-Last updated: 2026-02-12
+Last updated: 2026-02-13
 
 ## App Foundation (BD-001)
 
@@ -37,12 +37,12 @@ Last updated: 2026-02-12
   - `convex/http.ts`
     - HTTP endpoint: `POST /scanner/ingest` (bridges JSON payloads to `ingestScannerSnapshot`)
 - Convex RBAC/audit module: `convex/accessControl.ts`
-  - Public queries: `getAccessProfile`, `listTips`, `listComponentExplorerWorkspaces`, `getComponentExplorerWorkspace`, `getComponentExplorerProject`, `getComponentExplorerComponent`, `getTipForEditor`, `listTipRevisions`, `listTipComponentLinksForEditor`, `listAuditEvents`.
-  - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `saveTipDraft`, `submitTipForReview`, `returnTipToDraft`, `publishTip`, `deprecateTip`, `configureIntegration`.
+  - Public queries: `getAccessProfile`, `listTips`, `listComponentExplorerWorkspaces`, `getComponentExplorerWorkspace`, `getComponentExplorerProject`, `getComponentExplorerComponent`, `getTipForEditor`, `listTipRevisions`, `listTipComponentLinksForEditor`, `getComponentWatchStatus`, `listMyComponentWatchSubscriptions`, `listWatchNotifications`, `listAuditEvents`.
+  - Public mutations: `bootstrapFirstAdmin`, `assignRole`, `saveTipDraft`, `submitTipForReview`, `returnTipToDraft`, `publishTip`, `deprecateTip`, `subscribeToComponentWatchlist`, `unsubscribeFromComponentWatchlist`, `markWatchNotificationRead`, `markAllWatchNotificationsRead`, `configureIntegration`.
   - Enforces capability checks server-side for privileged operations and audit reads.
 - RBAC constants/validators: `convex/rbac.ts`
 - Convex schema: `convex/schema.ts`
-  - Tables: `memberships`, `tips`, `tipRevisions`, `tipTagFacets`, `tipComponentLinks`, `scanRuns`, `componentGraphHeads`, `componentGraphVersions`, `componentGraphProjects`, `componentGraphComponents`, `componentGraphDependencies`, `integrationConfigs`, `auditEvents`.
+  - Tables: `memberships`, `tips`, `tipRevisions`, `tipTagFacets`, `tipComponentLinks`, `componentWatchSubscriptions`, `watchNotifications`, `scanRuns`, `componentGraphHeads`, `componentGraphVersions`, `componentGraphProjects`, `componentGraphComponents`, `componentGraphDependencies`, `integrationConfigs`, `auditEvents`.
 - Typed API stubs:
   - `convex/_generated/api.ts`
   - `convex/_generated/server.ts`
@@ -53,6 +53,7 @@ Last updated: 2026-02-12
 - `bun run typecheck`
 - `bun run test`
 - `bun run build`
+- `bun run smoke:http -- --base-url <deployed-url>`
 
 All four pass with valid environment variables set.
 
@@ -73,6 +74,7 @@ All four pass with valid environment variables set.
 - `src/routes/dashboard.tsx`
   - `GET /dashboard` server handler checks `context.auth()` from middleware.
   - Unauthenticated requests redirect to WorkOS sign-in.
+  - Uses `ssr: false` because dashboard relies on Convex React hooks (`useQuery`, `useMutation`) and `ConvexProvider` is mounted client-side.
   - Authenticated requests call `next()` and render dashboard component with role-aware guards.
 
 ## Authorization + Audit (BD-004, BD-005)
@@ -242,8 +244,34 @@ All four pass with valid environment variables set.
   - Reusable ingestion client used by both pipelines.
   - Reads scanner JSON snapshot from disk, attaches Azure run metadata, and posts to `POST /scanner/ingest`.
   - Supports configurable timeout/retry/backoff via environment variables and optional bearer auth header.
+- `scripts/manual-sync-azure-repo.ts`
+  - Pipeline-free alternative for policy-restricted environments.
+  - Clones Azure repo locally, runs scanner, and ingests snapshot via existing ingestion script.
+  - Supports private repos via `AZURE_DEVOPS_PAT` / `--pat`, branch override, optional clone retention, explicit workspace ID mapping, and `--workspace-subpath` for monorepos with multiple Angular workspaces.
+  - Normalizes Convex ingest host from `.convex.cloud` to `.convex.site` for HTTP action routing and defaults missing ingest path to `/scanner/ingest`.
+
+## Vercel Deployment Pipeline (BD-015)
+
+### Pipeline assets
+- `.azure-pipelines/vercel-deploy.yml`
+  - Multi-stage Azure pipeline covering:
+    - PR preview deployment + smoke checks
+    - `main` staging deployment + smoke checks
+    - manual production promotion gate (`PROMOTE_TO_PROD=true`) + smoke checks
+  - Staging/prod stages are gated by a quality-check stage (`lint`, `typecheck`, `test`, `build`).
+- `scripts/ci/vercel-deploy.sh`
+  - Reusable deploy helper wrapping `vercel pull`, `vercel build`, `vercel deploy`.
+  - Supports `preview`, `staging`, and `production` modes.
+  - Emits deployment URL for downstream smoke checks and optional alias assignment.
+- `scripts/ci/run-smoke-tests.mjs`
+  - HTTP smoke checks for `/`, `/login`, `/dashboard`, `/explorer` against deployed URLs.
 
 ## Component Explorer + Tip Linking (BD-012, BD-013)
+
+Route param safety:
+- `src/lib/workspace-route.ts`
+  - Encodes workspace IDs into base64url route tokens and decodes them on read.
+  - Prevents navigation failures when workspace IDs contain `/` (for example `media-press/hubert`).
 
 ### Explorer routes
 - `src/routes/explorer.tsx` (`/explorer`)
@@ -251,6 +279,7 @@ All four pass with valid environment variables set.
   - Uses `ssr: false` because the page depends on client-only Convex hooks.
 - `src/routes/explorer.$workspaceId.tsx` (`/explorer/$workspaceId`)
   - Workspace overview with projects, libraries, and dependency edge list.
+  - Renders nested explorer child routes (`project`, `lib`, `component`) via `<Outlet />` when subpaths are active.
   - Uses `ssr: false` for client-rendered graph queries.
 - `src/routes/explorer.$workspaceId.project.$projectName.tsx` (`/explorer/$workspaceId/project/$projectName`)
   - Project detail with components and incoming/outgoing graph edges.
@@ -259,7 +288,7 @@ All four pass with valid environment variables set.
   - Library-specific detail view (validates project type is `library`).
   - Uses `ssr: false` for client-rendered graph queries.
 - `src/routes/explorer.$workspaceId.component.$componentId.tsx` (`/explorer/$workspaceId/component/$componentId`)
-  - Component metadata, project-level dependency context, and related published tips.
+  - Component metadata, project-level dependency context, related published tips, and watchlist subscribe/unsubscribe controls.
   - Uses `ssr: false` for client-rendered graph queries.
 
 ### Explorer query/mutation surface
@@ -284,3 +313,42 @@ All four pass with valid environment variables set.
   - `componentFilePath`
 - Only tips in `published` state are shown in the related list.
 - Organization scoping is applied to both links and tip records when `actorOrganizationId` is set.
+
+## Watchlist + Notifications (BD-016)
+
+### Data model
+- `componentWatchSubscriptions`:
+  - Component-level watch registrations keyed by watcher + component identity
+    (`workspaceId`, `projectName`, `componentName`, `componentFilePath`).
+- `watchNotifications`:
+  - Per-watcher in-app notification log rows with:
+    - event type (`tip.published`, `tip.updated`)
+    - delivery metadata (`deliveryChannel`, `deliveryStatus`)
+    - component identity
+    - tip metadata (`tipId`, `tipSlug`, `tipTitle`, `revisionNumber`)
+    - read state (`isRead`, `readAt`)
+
+### API surface
+- Watch subscriptions:
+  - `getComponentWatchStatus(actor..., workspaceId, projectName, componentName, componentFilePath)`
+  - `listMyComponentWatchSubscriptions(actor..., limit?)`
+  - `subscribeToComponentWatchlist(actor..., workspaceId, projectName, componentName, componentFilePath)`
+  - `unsubscribeFromComponentWatchlist(actor..., workspaceId, projectName, componentName, componentFilePath)`
+- Notifications:
+  - `listWatchNotifications(actor..., unreadOnly?, limit?)`
+  - `markWatchNotificationRead(actor..., notificationId)`
+  - `markAllWatchNotificationsRead(actor..., limit?)`
+- Notification fanout:
+  - `publishTip` now fans out component-linked notifications to subscribed watchers and returns notification count + event type.
+
+### UI surface
+- Component detail route: `src/routes/explorer.$workspaceId.component.$componentId.tsx`
+  - Adds watch/unwatch controls and watcher count visibility.
+- Dashboard route: `src/routes/dashboard.tsx`
+  - Adds watchlist management and notification inbox (filter unread, mark read, mark all read).
+
+## Launch Hardening (BD-017)
+
+Artifacts:
+- Launch runbook: `docs/launch-runbook.md`
+- Backup/restore validation drill: `docs/backup-restore-validation.md`

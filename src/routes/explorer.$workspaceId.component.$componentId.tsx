@@ -1,9 +1,14 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
+import { useState } from 'react'
 
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
+import {
+  decodeWorkspaceRouteParam,
+  encodeWorkspaceRouteParam,
+} from '../lib/workspace-route'
 
 export const Route = createFileRoute('/explorer/$workspaceId/component/$componentId')({
   ssr: false,
@@ -14,7 +19,16 @@ function ComponentExplorerComponentPage() {
   const auth = useAuth()
   const user = auth.user
   const organizationId = auth.organizationId ?? undefined
-  const { workspaceId, componentId } = Route.useParams()
+  const [watchActionMessage, setWatchActionMessage] = useState<string | null>(null)
+  const { workspaceId: workspaceIdParam, componentId } = Route.useParams()
+  const workspaceId = decodeWorkspaceRouteParam(workspaceIdParam)
+  const workspaceRouteParam = encodeWorkspaceRouteParam(workspaceId)
+  const subscribeToComponentWatchlist = useMutation(
+    api.accessControl.subscribeToComponentWatchlist,
+  )
+  const unsubscribeFromComponentWatchlist = useMutation(
+    api.accessControl.unsubscribeFromComponentWatchlist,
+  )
   const component = useQuery(
     api.accessControl.getComponentExplorerComponent,
     user
@@ -26,6 +40,55 @@ function ComponentExplorerComponentPage() {
         }
       : 'skip',
   )
+  const watchStatus = useQuery(
+    api.accessControl.getComponentWatchStatus,
+    user && component
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          workspaceId,
+          projectName: component.component.project,
+          componentName: component.component.name,
+          componentFilePath: component.component.filePath,
+        }
+      : 'skip',
+  )
+
+  const updateWatchStatus = async (nextState: 'watch' | 'unwatch') => {
+    if (!user || !component) {
+      return
+    }
+
+    try {
+      if (nextState === 'watch') {
+        await subscribeToComponentWatchlist({
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          workspaceId,
+          projectName: component.component.project,
+          componentName: component.component.name,
+          componentFilePath: component.component.filePath,
+        })
+
+        setWatchActionMessage('Watchlist subscription saved.')
+        return
+      }
+
+      await unsubscribeFromComponentWatchlist({
+        actorWorkosUserId: user.id,
+        actorOrganizationId: organizationId,
+        workspaceId,
+        projectName: component.component.project,
+        componentName: component.component.name,
+        componentFilePath: component.component.filePath,
+      })
+
+      setWatchActionMessage('Watchlist subscription removed.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      setWatchActionMessage(`Watchlist action failed: ${message}`)
+    }
+  }
 
   return (
     <main>
@@ -140,6 +203,45 @@ function ComponentExplorerComponentPage() {
               </p>
             ))}
           </section>
+
+          <section>
+            <h2>Watchlist Notifications (BD-016)</h2>
+            <p>
+              Subscribe to receive in-app notifications when component-linked tips
+              are published or updated.
+            </p>
+            <p>
+              Watchers for this component:{' '}
+              <code>{watchStatus ? watchStatus.watcherCount : 'loading'}</code>
+            </p>
+            <p>
+              You are currently:{' '}
+              <code>
+                {watchStatus
+                  ? watchStatus.isWatching
+                    ? 'watching'
+                    : 'not watching'
+                  : 'loading'}
+              </code>
+            </p>
+            <p>
+              <button
+                type="button"
+                disabled={!watchStatus || watchStatus.isWatching}
+                onClick={() => void updateWatchStatus('watch')}
+              >
+                Watch component
+              </button>{' '}
+              <button
+                type="button"
+                disabled={!watchStatus || !watchStatus.isWatching}
+                onClick={() => void updateWatchStatus('unwatch')}
+              >
+                Unwatch component
+              </button>
+            </p>
+            {watchActionMessage && <p>{watchActionMessage}</p>}
+          </section>
         </>
       )}
 
@@ -150,7 +252,7 @@ function ComponentExplorerComponentPage() {
             <Link
               to="/explorer/$workspaceId/project/$projectName"
               params={{
-                workspaceId,
+                workspaceId: workspaceRouteParam,
                 projectName: component.component.project,
               }}
             >
@@ -159,7 +261,7 @@ function ComponentExplorerComponentPage() {
           </p>
         )}
         <p>
-          <Link to="/explorer/$workspaceId" params={{ workspaceId }}>
+          <Link to="/explorer/$workspaceId" params={{ workspaceId: workspaceRouteParam }}>
             Back to workspace
           </Link>
         </p>

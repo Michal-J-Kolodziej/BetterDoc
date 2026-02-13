@@ -1,8 +1,17 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import {
+  Link,
+  Outlet,
+  createFileRoute,
+  useRouterState,
+} from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useQuery } from 'convex/react'
 
 import { api } from '../../convex/_generated/api.js'
+import {
+  decodeWorkspaceRouteParam,
+  encodeWorkspaceRouteParam,
+} from '../lib/workspace-route'
 
 export const Route = createFileRoute('/explorer/$workspaceId')({
   ssr: false,
@@ -13,7 +22,15 @@ function ComponentExplorerWorkspacePage() {
   const auth = useAuth()
   const user = auth.user
   const organizationId = auth.organizationId ?? undefined
-  const { workspaceId } = Route.useParams()
+  const { workspaceId: workspaceIdParam } = Route.useParams()
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const isWorkspaceOverviewRoute =
+    pathname === `/explorer/${workspaceIdParam}` ||
+    pathname === `/explorer/${workspaceIdParam}/`
+  const workspaceId = decodeWorkspaceRouteParam(workspaceIdParam)
+  const workspaceRouteParam = encodeWorkspaceRouteParam(workspaceId)
   const workspace = useQuery(
     api.accessControl.getComponentExplorerWorkspace,
     user
@@ -24,6 +41,10 @@ function ComponentExplorerWorkspacePage() {
         }
       : 'skip',
   )
+
+  if (!isWorkspaceOverviewRoute) {
+    return <Outlet />
+  }
 
   return (
     <main>
@@ -92,7 +113,10 @@ function ComponentExplorerWorkspacePage() {
                 <br />
                 <Link
                   to="/explorer/$workspaceId/project/$projectName"
-                  params={{ workspaceId, projectName: project.name }}
+                  params={{
+                    workspaceId: workspaceRouteParam,
+                    projectName: project.name,
+                  }}
                 >
                   Open project view
                 </Link>
@@ -111,7 +135,10 @@ function ComponentExplorerWorkspacePage() {
                 <br />
                 <Link
                   to="/explorer/$workspaceId/lib/$libraryName"
-                  params={{ workspaceId, libraryName: library.name }}
+                  params={{
+                    workspaceId: workspaceRouteParam,
+                    libraryName: library.name,
+                  }}
                 >
                   Open library view
                 </Link>
@@ -134,14 +161,20 @@ function ComponentExplorerWorkspacePage() {
               >
                 <Link
                   to="/explorer/$workspaceId/project/$projectName"
-                  params={{ workspaceId, projectName: dependency.sourceProject }}
+                  params={{
+                    workspaceId: workspaceRouteParam,
+                    projectName: dependency.sourceProject,
+                  }}
                 >
                   {dependency.sourceProject}
                 </Link>{' '}
                 →{' '}
                 <Link
                   to="/explorer/$workspaceId/project/$projectName"
-                  params={{ workspaceId, projectName: dependency.targetProject }}
+                  params={{
+                    workspaceId: workspaceRouteParam,
+                    projectName: dependency.targetProject,
+                  }}
                 >
                   {dependency.targetProject}
                 </Link>{' '}

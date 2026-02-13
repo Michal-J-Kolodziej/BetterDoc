@@ -3,6 +3,10 @@ import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useQuery } from 'convex/react'
 
 import { api } from '../../convex/_generated/api.js'
+import {
+  decodeWorkspaceRouteParam,
+  encodeWorkspaceRouteParam,
+} from '../lib/workspace-route'
 
 export const Route = createFileRoute('/explorer/$workspaceId/lib/$libraryName')({
   ssr: false,
@@ -13,7 +17,9 @@ function ComponentExplorerLibraryPage() {
   const auth = useAuth()
   const user = auth.user
   const organizationId = auth.organizationId ?? undefined
-  const { workspaceId, libraryName } = Route.useParams()
+  const { workspaceId: workspaceIdParam, libraryName } = Route.useParams()
+  const workspaceId = decodeWorkspaceRouteParam(workspaceIdParam)
+  const workspaceRouteParam = encodeWorkspaceRouteParam(workspaceId)
   const library = useQuery(
     api.accessControl.getComponentExplorerProject,
     user
@@ -100,7 +106,10 @@ function ComponentExplorerLibraryPage() {
                 <br />
                 <Link
                   to="/explorer/$workspaceId/component/$componentId"
-                  params={{ workspaceId, componentId: component.id }}
+                  params={{
+                    workspaceId: workspaceRouteParam,
+                    componentId: component.id,
+                  }}
                 >
                   Open component detail
                 </Link>
@@ -135,14 +144,14 @@ function ComponentExplorerLibraryPage() {
       <section>
         <h2>Navigation</h2>
         <p>
-          <Link to="/explorer/$workspaceId" params={{ workspaceId }}>
+          <Link to="/explorer/$workspaceId" params={{ workspaceId: workspaceRouteParam }}>
             Back to workspace
           </Link>
         </p>
         <p>
           <Link
             to="/explorer/$workspaceId/project/$projectName"
-            params={{ workspaceId, projectName: libraryName }}
+            params={{ workspaceId: workspaceRouteParam, projectName: libraryName }}
           >
             Open as project view
           </Link>

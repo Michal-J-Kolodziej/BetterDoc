@@ -1,0 +1,221 @@
+name: betterdoc-vercel-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/**
+      - convex/**
+      - scripts/**
+      - package.json
+      - bun.lock
+      - tsconfig.json
+      - vite.config.ts
+      - .azure-pipelines/vercel-deploy.yml
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/**
+      - convex/**
+      - scripts/**
+      - package.json
+      - bun.lock
+      - tsconfig.json
+      - vite.config.ts
+      - .azure-pipelines/vercel-deploy.yml
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: betterdoc-vercel-secrets
+  - name: PROMOTE_TO_PROD
+    value: 'false'
+
+stages:
+  - stage: quality_checks
+    displayName: Quality Gates
+    jobs:
+      - job: validate
+        displayName: Lint, typecheck, tests, and build
+        timeoutInMinutes: 30
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 0
+
+          - bash: |
+              set -euo pipefail
+              curl -fsSL https://bun.sh/install | bash
+              echo "##vso[task.prependpath]$HOME/.bun/bin"
+              bun --version
+            displayName: Install Bun
+            timeoutInMinutes: 5
+            retryCountOnTaskFailure: 2
+
+          - bash: |
+              set -euo pipefail
+              bun install --frozen-lockfile
+            displayName: Install dependencies
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 2
+
+          - bash: |
+              set -euo pipefail
+              bun run lint
+            displayName: Run lint
+            timeoutInMinutes: 8
+            retryCountOnTaskFailure: 1
+
+          - bash: |
+              set -euo pipefail
+              bun run typecheck
+            displayName: Run typecheck
+            timeoutInMinutes: 8
+            retryCountOnTaskFailure: 1
+
+          - bash: |
+              set -euo pipefail
+              bun run test
+            displayName: Run unit tests
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 1
+
+          - bash: |
+              set -euo pipefail
+              bun run build
+            displayName: Run production build
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 1
+            env:
+              VITE_APP_ENV: staging
+              VITE_CONVEX_URL: https://betterdoc-ci.convex.cloud
+              VITE_CONVEX_DEPLOYMENT_DEV: dev:betterdoc-dev
+              VITE_CONVEX_DEPLOYMENT_STAGING: staging:betterdoc-staging
+              VITE_CONVEX_DEPLOYMENT_PROD: prod:betterdoc-prod
+              VITE_WORKOS_CLIENT_ID: client_ci_betterdoc
+              VITE_WORKOS_REDIRECT_URI: https://staging.betterdoc.app/api/auth/callback
+              WORKOS_API_KEY: sk_test_ci_betterdoc
+              WORKOS_CLIENT_ID: client_ci_betterdoc
+              WORKOS_REDIRECT_URI: https://staging.betterdoc.app/api/auth/callback
+              WORKOS_COOKIE_PASSWORD: ci-cookie-password-0123456789-abcdef
+              VITE_VERCEL_ENV: preview
+              VITE_VERCEL_URL: staging.betterdoc.app
+              VITE_VERCEL_PROJECT_PRODUCTION_URL: betterdoc.app
+
+  - stage: deploy_preview
+    displayName: Deploy Preview (PR)
+    dependsOn: quality_checks
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: deploy_preview_job
+        displayName: Vercel preview deploy and smoke checks
+        timeoutInMinutes: 30
+        steps:
+          - checkout: self
+            clean: true
+
+          - bash: |
+              set -euo pipefail
+              scripts/ci/vercel-deploy.sh preview "$(Build.ArtifactStagingDirectory)/preview-url.txt"
+            displayName: Deploy preview
+            timeoutInMinutes: 15
+            retryCountOnTaskFailure: 1
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
+
+          - bash: |
+              set -euo pipefail
+              preview_url="$(cat "$(Build.ArtifactStagingDirectory)/preview-url.txt")"
+              node scripts/ci/run-smoke-tests.mjs --base-url "${preview_url}"
+            displayName: Smoke test preview deployment
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 1
+
+          - publish: $(Build.ArtifactStagingDirectory)/preview-url.txt
+            artifact: vercel-preview-url
+            displayName: Publish preview URL artifact
+            condition: succeededOrFailed()
+
+  - stage: deploy_staging
+    displayName: Deploy Staging (Main)
+    dependsOn: quality_checks
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: deploy_staging_job
+        displayName: Vercel staging deploy and smoke checks
+        timeoutInMinutes: 30
+        steps:
+          - checkout: self
+            clean: true
+
+          - bash: |
+              set -euo pipefail
+              scripts/ci/vercel-deploy.sh staging "$(Build.ArtifactStagingDirectory)/staging-url.txt"
+            displayName: Deploy staging
+            timeoutInMinutes: 15
+            retryCountOnTaskFailure: 1
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
+              VERCEL_STAGING_DOMAIN: $(VERCEL_STAGING_DOMAIN)
+
+          - bash: |
+              set -euo pipefail
+              staging_url="$(cat "$(Build.ArtifactStagingDirectory)/staging-url.txt")"
+              node scripts/ci/run-smoke-tests.mjs --base-url "${staging_url}"
+            displayName: Smoke test staging deployment
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 1
+
+          - publish: $(Build.ArtifactStagingDirectory)/staging-url.txt
+            artifact: vercel-staging-url
+            displayName: Publish staging URL artifact
+            condition: succeededOrFailed()
+
+  - stage: deploy_production
+    displayName: Deploy Production (Manual Promotion)
+    dependsOn: deploy_staging
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['PROMOTE_TO_PROD'], 'true'))
+    jobs:
+      - job: deploy_production_job
+        displayName: Vercel production deploy and smoke checks
+        timeoutInMinutes: 35
+        steps:
+          - checkout: self
+            clean: true
+
+          - bash: |
+              set -euo pipefail
+              scripts/ci/vercel-deploy.sh production "$(Build.ArtifactStagingDirectory)/production-url.txt"
+            displayName: Deploy production
+            timeoutInMinutes: 20
+            retryCountOnTaskFailure: 1
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
+              VERCEL_PRODUCTION_DOMAIN: $(VERCEL_PRODUCTION_DOMAIN)
+
+          - bash: |
+              set -euo pipefail
+              production_url="$(cat "$(Build.ArtifactStagingDirectory)/production-url.txt")"
+              node scripts/ci/run-smoke-tests.mjs --base-url "${production_url}"
+            displayName: Smoke test production deployment
+            timeoutInMinutes: 10
+            retryCountOnTaskFailure: 1
+
+          - publish: $(Build.ArtifactStagingDirectory)/production-url.txt
+            artifact: vercel-production-url
+            displayName: Publish production URL artifact
+            condition: succeededOrFailed()

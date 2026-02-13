@@ -1,5 +1,58 @@
 # BetterDoc Change Log
 
+## 2026-02-13 (Explorer workspace route param fix)
+- Code paths changed:
+  - `src/lib/workspace-route.ts`
+  - `src/routes/explorer.tsx`
+  - `src/routes/explorer.$workspaceId.tsx`
+  - `src/routes/explorer.$workspaceId.project.$projectName.tsx`
+  - `src/routes/explorer.$workspaceId.lib.$libraryName.tsx`
+  - `src/routes/explorer.$workspaceId.component.$componentId.tsx`
+  - `src/routes/dashboard.tsx`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Fixed explorer navigation by rendering child routes from `src/routes/explorer.tsx` via `<Outlet />`, which was previously missing and prevented child pages from appearing after link clicks.
+  - Fixed nested workspace child navigation (`Open project view`, library/component routes) by rendering child routes from `src/routes/explorer.$workspaceId.tsx` via `<Outlet />`.
+  - Added slash-safe workspace route token encoding/decoding (`src/lib/workspace-route.ts`) so workspace IDs containing `/` route correctly in explorer links and Convex queries.
+  - Marked `/dashboard` as client-rendered (`ssr: false`) to prevent server-side Convex hook execution outside `ConvexProvider`.
+
+## 2026-02-13 (BD-014 follow-up: pipeline-free sync option)
+- Code paths changed:
+  - `scripts/manual-sync-azure-repo.ts`
+  - `package.json`
+  - `.env.example`
+- Documentation updated:
+  - `docs/operations.md`
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added a manual Azure-repo sync command (`bun run sync:azure-repo`) that clones a repo, runs the Angular scanner, and posts payloads to Convex ingestion without requiring Azure Pipeline setup.
+  - Improved manual sync operability by auto-detecting a single nested Angular workspace, requiring explicit `--workspace-subpath` only when multiple workspaces exist, and normalizing Convex ingest URLs from `.convex.cloud` to `.convex.site`.
+
+## 2026-02-13 (BD-015, BD-016, BD-017)
+- Code paths changed:
+  - `.azure-pipelines/vercel-deploy.yml`
+  - `scripts/ci/vercel-deploy.sh`
+  - `scripts/ci/run-smoke-tests.mjs`
+  - `package.json`
+  - `convex/schema.ts`
+  - `convex/accessControl.ts`
+  - `src/routes/explorer.$workspaceId.component.$componentId.tsx`
+  - `src/routes/dashboard.tsx`
+- Documentation updated:
+  - `docs/operations.md`
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/launch-runbook.md`
+  - `docs/backup-restore-validation.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added a gated Azure-to-Vercel deployment pipeline for preview/staging/prod with smoke-test enforcement and manual production promotion control.
+  - Added component watchlist subscriptions and in-app notification logging/delivery state for component-linked tip publish/update events, plus dashboard and component-page UX for subscribe/read workflows.
+  - Added launch hardening artifacts: production runbook, rollback procedure, smoke-check command path, and Convex backup/restore validation drill documentation.
+
 ## 2026-02-12 (BD-014)
 - Code paths changed:
   - `.azure-pipelines/incremental-scan.yml`

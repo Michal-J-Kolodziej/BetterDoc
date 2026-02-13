@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
 import { hasPermission, type AppRole, type Permission } from '../lib/rbac'
+import { encodeWorkspaceRouteParam } from '../lib/workspace-route'
 import {
   buildTipDraftPayload,
   createEmptyTipEditorState,
@@ -50,6 +51,7 @@ const searchFieldLimits = {
 } as const
 
 export const Route = createFileRoute('/dashboard')({
+  ssr: false,
   server: {
     handlers: {
       GET: async ({ context, next, request }) => {
@@ -127,6 +129,10 @@ function DashboardPage() {
   const [linkWorkspaceId, setLinkWorkspaceId] = useState('')
   const [linkProjectName, setLinkProjectName] = useState('')
   const [linkComponentId, setLinkComponentId] = useState('')
+  const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null)
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(null)
+  const [showUnreadNotificationsOnly, setShowUnreadNotificationsOnly] =
+    useState(false)
 
   const bootstrapFirstAdmin = useMutation(api.accessControl.bootstrapFirstAdmin)
   const assignRole = useMutation(api.accessControl.assignRole)
@@ -136,6 +142,15 @@ function DashboardPage() {
   const publishTip = useMutation(api.accessControl.publishTip)
   const deprecateTip = useMutation(api.accessControl.deprecateTip)
   const configureIntegration = useMutation(api.accessControl.configureIntegration)
+  const unsubscribeFromComponentWatchlist = useMutation(
+    api.accessControl.unsubscribeFromComponentWatchlist,
+  )
+  const markWatchNotificationRead = useMutation(
+    api.accessControl.markWatchNotificationRead,
+  )
+  const markAllWatchNotificationsRead = useMutation(
+    api.accessControl.markAllWatchNotificationsRead,
+  )
 
   const user = auth.user
   const organizationId = auth.organizationId ?? undefined
@@ -273,6 +288,29 @@ function DashboardPage() {
       : 'skip',
   )
 
+  const myWatchSubscriptions = useQuery(
+    api.accessControl.listMyComponentWatchSubscriptions,
+    user && canReadTips
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          limit: 60,
+        }
+      : 'skip',
+  )
+
+  const watchNotifications = useQuery(
+    api.accessControl.listWatchNotifications,
+    user && canReadTips
+      ? {
+          actorWorkosUserId: user.id,
+          actorOrganizationId: organizationId,
+          unreadOnly: showUnreadNotificationsOnly,
+          limit: 60,
+        }
+      : 'skip',
+  )
+
   const selectedTipStatus =
     editorTip?.status ?? tips?.find((tip) => tip.id === draftTipId)?.status ?? null
 
@@ -336,6 +374,79 @@ function DashboardPage() {
       current.filter((link) => getTipComponentLinkKey(link) !== removeKey),
     )
     setTipComponentMessage('Component link removed.')
+  }
+
+  const removeWatchSubscription = async (link: TipComponentLink) => {
+    if (!user) {
+      return
+    }
+
+    try {
+      const result = await unsubscribeFromComponentWatchlist({
+        actorWorkosUserId: user.id,
+        actorOrganizationId: organizationId,
+        workspaceId: link.workspaceId,
+        projectName: link.projectName,
+        componentName: link.componentName,
+        componentFilePath: link.componentFilePath,
+      })
+
+      if (result.removedCount === 0) {
+        setWatchlistMessage('No matching watchlist subscription was found.')
+        return
+      }
+
+      setWatchlistMessage(
+        `Watchlist subscription removed (${String(result.removedCount)} record${result.removedCount === 1 ? '' : 's'}).`,
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      setWatchlistMessage(`Failed to remove watchlist subscription: ${message}`)
+    }
+  }
+
+  const markNotificationAsRead = async (notificationId: Id<'watchNotifications'>) => {
+    if (!user) {
+      return
+    }
+
+    try {
+      const result = await markWatchNotificationRead({
+        actorWorkosUserId: user.id,
+        actorOrganizationId: organizationId,
+        notificationId,
+      })
+
+      setNotificationMessage(
+        result.updated
+          ? 'Notification marked as read.'
+          : 'Notification was already marked as read.',
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      setNotificationMessage(`Failed to mark notification as read: ${message}`)
+    }
+  }
+
+  const markAllNotificationsAsRead = async () => {
+    if (!user) {
+      return
+    }
+
+    try {
+      const result = await markAllWatchNotificationsRead({
+        actorWorkosUserId: user.id,
+        actorOrganizationId: organizationId,
+        limit: 120,
+      })
+
+      setNotificationMessage(
+        `Marked ${String(result.updatedCount)} notification${result.updatedCount === 1 ? '' : 's'} as read.`,
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      setNotificationMessage(`Failed to mark notifications: ${message}`)
+    }
   }
 
   const setEditorField = (
@@ -782,7 +893,7 @@ function DashboardPage() {
                 <Link
                   to="/explorer/$workspaceId/project/$projectName"
                   params={{
-                    workspaceId: link.workspaceId,
+                    workspaceId: encodeWorkspaceRouteParam(link.workspaceId),
                     projectName: link.projectName,
                   }}
                 >
@@ -931,19 +1042,28 @@ function DashboardPage() {
               <button
                 type="button"
                 disabled={!can('tips.publish') || !draftTipId || selectedTipStatus !== 'in_review'}
-                onClick={() =>
-                  runAction('Tip published and audit event stored.', async () => {
-                    if (!draftTipId) {
-                      throw new Error('Select a tip first.')
-                    }
+                onClick={async () => {
+                  if (!draftTipId) {
+                    setStatusMessage('Action failed: Select a tip first.')
+                    return
+                  }
 
-                    await publishTip({
+                  try {
+                    const result = await publishTip({
                       actorWorkosUserId: user.id,
                       actorOrganizationId: organizationId,
                       tipId: draftTipId,
                     })
-                  })
-                }
+
+                    setStatusMessage(
+                      `Tip published and audited. ${String(result.notificationCount)} ${result.notificationEventType} notification${result.notificationCount === 1 ? '' : 's'} logged.`,
+                    )
+                  } catch (error) {
+                    const message =
+                      error instanceof Error ? error.message : 'Unknown error'
+                    setStatusMessage(`Action failed: ${message}`)
+                  }
+                }}
               >
                 Publish tip (Reviewer+)
               </button>
@@ -1184,6 +1304,135 @@ function DashboardPage() {
                   {tip.tags.length > 0 ? ` · tags:${tip.tags.join(', ')}` : ''}
                 </p>
               ))}
+          </>
+        )}
+      </section>
+
+      <section>
+        <h2>My Watchlist (BD-016)</h2>
+        {!canReadTips && (
+          <p>
+            Permission denied. <code>tips.read</code> is required.
+          </p>
+        )}
+        {canReadTips && myWatchSubscriptions === undefined && (
+          <p>Loading watchlist subscriptions...</p>
+        )}
+        {canReadTips && myWatchSubscriptions?.length === 0 && (
+          <p>
+            You are not watching any components yet. Open a component page in the
+            explorer to subscribe.
+          </p>
+        )}
+        {canReadTips &&
+          myWatchSubscriptions?.map((subscription) => (
+            <p key={subscription.subscriptionId}>
+              <code>
+                {subscription.workspaceId}/{subscription.projectName}/
+                {subscription.componentName}
+              </code>
+              <br />
+              <code>{subscription.componentFilePath}</code>
+              <br />
+              Updated {new Date(subscription.updatedAt).toLocaleString()}
+              <br />
+              <Link
+                to="/explorer/$workspaceId/project/$projectName"
+                params={{
+                  workspaceId: encodeWorkspaceRouteParam(subscription.workspaceId),
+                  projectName: subscription.projectName,
+                }}
+              >
+                Open project
+              </Link>{' '}
+              ·{' '}
+              <button
+                type="button"
+                onClick={() =>
+                  void removeWatchSubscription({
+                    workspaceId: subscription.workspaceId,
+                    projectName: subscription.projectName,
+                    componentName: subscription.componentName,
+                    componentFilePath: subscription.componentFilePath,
+                  })
+                }
+              >
+                Remove
+              </button>
+            </p>
+          ))}
+        {watchlistMessage && <p>{watchlistMessage}</p>}
+      </section>
+
+      <section>
+        <h2>Watch Notifications (BD-016)</h2>
+        {!canReadTips && (
+          <p>
+            Permission denied. <code>tips.read</code> is required.
+          </p>
+        )}
+        {canReadTips && (
+          <>
+            <p>
+              Notifications are logged when component-linked tips are published or
+              updated.
+            </p>
+            <p>
+              <label htmlFor="notification-unread-toggle">
+                <input
+                  id="notification-unread-toggle"
+                  type="checkbox"
+                  checked={showUnreadNotificationsOnly}
+                  onChange={(event) =>
+                    setShowUnreadNotificationsOnly(event.target.checked)
+                  }
+                />{' '}
+                Show unread only
+              </label>
+            </p>
+            <p>
+              <button type="button" onClick={() => void markAllNotificationsAsRead()}>
+                Mark all as read
+              </button>
+            </p>
+            {watchNotifications === undefined && <p>Loading notifications...</p>}
+            {watchNotifications?.length === 0 && (
+              <p>No notifications match the current filter.</p>
+            )}
+            {watchNotifications?.map((notification) => (
+              <p key={notification.notificationId}>
+                [{new Date(notification.createdAt).toLocaleString()}]{' '}
+                <code>{notification.eventType}</code> · {notification.tipTitle} (
+                <code>{notification.tipSlug}</code>) · r{notification.revisionNumber}
+                <br />
+                Component{' '}
+                <code>
+                  {notification.workspaceId}/{notification.projectName}/
+                  {notification.componentName}
+                </code>
+                <br />
+                Status:{' '}
+                <code>
+                  {notification.deliveryStatus}
+                  {notification.isRead ? ', read' : ', unread'}
+                </code>
+                {!notification.isRead && (
+                  <>
+                    {' '}
+                    ·{' '}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void markNotificationAsRead(notification.notificationId)
+                      }
+                    >
+                      Mark read
+                    </button>
+                  </>
+                )}
+              </p>
+            ))}
+            {notificationMessage && <p>{notificationMessage}</p>}
           </>
         )}
       </section>

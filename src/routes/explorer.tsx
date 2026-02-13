@@ -1,8 +1,9 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useQuery } from 'convex/react'
 
 import { api } from '../../convex/_generated/api.js'
+import { encodeWorkspaceRouteParam } from '../lib/workspace-route'
 
 export const Route = createFileRoute('/explorer')({
   ssr: false,
@@ -13,6 +14,10 @@ function ComponentExplorerWorkspaceListPage() {
   const auth = useAuth()
   const user = auth.user
   const organizationId = auth.organizationId ?? undefined
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const isWorkspaceListRoute = pathname === '/explorer' || pathname === '/explorer/'
   const workspaces = useQuery(
     api.accessControl.listComponentExplorerWorkspaces,
     user
@@ -23,6 +28,10 @@ function ComponentExplorerWorkspaceListPage() {
         }
       : 'skip',
   )
+
+  if (!isWorkspaceListRoute) {
+    return <Outlet />
+  }
 
   return (
     <main>
@@ -61,7 +70,9 @@ function ComponentExplorerWorkspaceListPage() {
               <br />
               <Link
                 to="/explorer/$workspaceId"
-                params={{ workspaceId: workspace.workspaceId }}
+                params={{
+                  workspaceId: encodeWorkspaceRouteParam(workspace.workspaceId),
+                }}
               >
                 Open workspace explorer
               </Link>
