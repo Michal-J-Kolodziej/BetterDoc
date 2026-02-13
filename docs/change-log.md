@@ -1,5 +1,43 @@
 # BetterDoc Change Log
 
+## 2026-02-13 (Dark surface pass: removed white backgrounds)
+- Code paths changed:
+  - `src/styles.css`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Reworked global desktop styling tokens and component surface styles to remove white/light panel backgrounds in favor of dark green/graphite surfaces.
+  - Updated shells, cards, form controls, links, and action chips so the app now follows a fully dark visual baseline aligned with stitch-inspired references.
+
+## 2026-02-13 (Structure refactor for stitch-style desktop shells)
+- Code paths changed:
+  - `src/routes/dashboard.tsx`
+  - `src/routes/index.tsx`
+  - `src/routes/explorer.tsx`
+  - `src/routes/explorer.$workspaceId.tsx`
+  - `src/routes/explorer.$workspaceId.project.$projectName.tsx`
+  - `src/routes/explorer.$workspaceId.lib.$libraryName.tsx`
+  - `src/routes/explorer.$workspaceId.component.$componentId.tsx`
+  - `src/styles.css`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Refactored UI markup from mostly single-column `<main>/<section>/<p>` stacks into shell-based desktop structures that more closely match stitch references: sidebar navigation, top headers, content panes, and card-list rows.
+  - Added reusable class-driven shell styling for dashboard and explorer route families while preserving all existing query/mutation/auth/RBAC behaviors.
+  - Updated landing/home route structure to match the same desktop visual language and action hierarchy.
+
+## 2026-02-13 (Desktop UI styling refresh)
+- Code paths changed:
+  - `src/styles.css`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Replaced the baseline global stylesheet with a desktop-focused design system based on stitch mock references, including layered background treatment, glass-card layout, expressive typography, and motion polish.
+  - Unified visual treatment for all shared primitives (`main`, `section`, labels, links, code chips, inputs/selects/textareas, buttons, checkbox/radio states, validation messages) so dashboard, explorer, and landing routes inherit consistent styling without behavior changes.
+
 ## 2026-02-13 (Explorer workspace route param fix)
 - Code paths changed:
   - `src/lib/workspace-route.ts`

@@ -23,6 +23,32 @@ Last updated: 2026-02-13
 - Index route: `src/routes/index.tsx`
   - Public landing page with links into auth flow, protected dashboard, and component explorer.
 
+### UI Styling System (Desktop)
+- Global style source: `src/styles.css`
+  - Implements a desktop-first visual system inspired by the stitch references in `docs/designs/stitch/`.
+  - Uses a shared typography stack (`Space Grotesk`, `Manrope`, `JetBrains Mono`) plus green accent tokens to align dashboard/explorer/editor surfaces.
+  - Applies layered background treatment, glass-like page shells, card sections, and consistent control styling across all route screens without changing route logic.
+  - Adds route-level shell classes for structural layouts (`.bd-dashboard-shell`, `.bd-explorer-shell`, `.bd-dashboard-topbar`, `.bd-explorer-sidebar`, `.bd-card-list`) so the rendered HTML structure follows stitch-style patterns (sidebar navigation + top content pane + card grids) instead of single-column content stacks.
+  - Uses a dark non-white surface system across page shells, panels, cards, input controls, and action chips to keep the UI visually consistent with the dark stitch references.
+  - Includes focus/disabled states for inputs, selects, textareas, checkboxes/radios, links, buttons, and inline code chips used by dashboard and explorer content.
+  - Adds lightweight entry animations for page and section mounts to improve perceived UI responsiveness on desktop.
+
+### Route Structure Refresh (Desktop shell composition)
+- `src/routes/dashboard.tsx`
+  - Refactored top-level markup from a flat `<main>` stack into a two-pane app shell:
+    - left sidebar (`<aside>`) with section anchors and quick navigation
+    - right stage with topbar header and sectioned content canvas
+  - Existing RBAC, workflow, editor, watchlist, notification, and audit logic remains unchanged.
+- Explorer family:
+  - `src/routes/explorer.tsx`
+  - `src/routes/explorer.$workspaceId.tsx`
+  - `src/routes/explorer.$workspaceId.project.$projectName.tsx`
+  - `src/routes/explorer.$workspaceId.lib.$libraryName.tsx`
+  - `src/routes/explorer.$workspaceId.component.$componentId.tsx`
+  - Refactored each view to a sidebar + content-pane HTML layout with card-list structures for workspace/project/library/component entities.
+- `src/routes/index.tsx`
+  - Updated to a control-center style header + action rail + split panel grid to match the desktop design language used by dashboard/explorer.
+
 ### Convex integration
 - Convex client provider: `src/lib/convex-client.tsx`
   - Initializes `ConvexReactClient` using validated `VITE_CONVEX_URL`.

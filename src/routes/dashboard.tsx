@@ -525,7 +525,7 @@ function DashboardPage() {
 
   if (auth.loading || !user || !accessProfile) {
     return (
-      <main>
+      <main className="bd-loading-view">
         <h1>Authenticated Dashboard</h1>
         <p>Loading role-aware access profile...</p>
       </main>
@@ -533,14 +533,47 @@ function DashboardPage() {
   }
 
   return (
-    <main>
-      <h1>Authenticated Dashboard</h1>
-      <p>
-        Access is protected by WorkOS session checks plus capability guards
-        mapped from the signed-in user role.
-      </p>
+    <div className="bd-dashboard-shell">
+      <aside className="bd-dashboard-sidebar">
+        <div className="bd-sidebar-brand">
+          <strong>BetterDoc</strong>
+          <span>Governance + prevention tips</span>
+        </div>
+        <nav className="bd-sidebar-nav" aria-label="Dashboard sections">
+          <a href="#session-role">Session + Role</a>
+          <a href="#tip-editor">Tip Editor</a>
+          <a href="#tip-workflow">Workflow</a>
+          <a href="#tips-search">Tip Search</a>
+          <a href="#watch-notifications">Notifications</a>
+          <a href="#audit-events">Audit Events</a>
+        </nav>
+        <div className="bd-sidebar-meta">
+          <p>
+            Signed in as <code>{role}</code>
+          </p>
+          <p>
+            <Link to="/logout">Sign out</Link>
+          </p>
+        </div>
+      </aside>
 
-      <section>
+      <div className="bd-dashboard-stage">
+        <header className="bd-dashboard-topbar">
+          <div>
+            <h1>Engineering Insights Dashboard</h1>
+            <p>
+              Access is protected by WorkOS session checks plus capability guards
+              mapped from the signed-in user role.
+            </p>
+          </div>
+          <div className="bd-dashboard-topbar-actions">
+            <Link to="/explorer">Component explorer</Link>
+            <Link to="/">Home</Link>
+          </div>
+        </header>
+
+        <main className="bd-dashboard-main">
+      <section id="session-role" className="bd-panel">
         <h2>Session + Role</h2>
         <p>
           WorkOS user: <code>{user.id}</code>
@@ -553,7 +586,7 @@ function DashboardPage() {
         </p>
       </section>
 
-      <section>
+      <section id="rbac-matrix" className="bd-panel">
         <h2>RBAC Matrix</h2>
         <p>
           Reader: <code>tips.read</code>
@@ -571,7 +604,7 @@ function DashboardPage() {
         </p>
       </section>
 
-      <section>
+      <section id="tip-editor" className="bd-panel">
         <h2>Tip Editor (BD-006, BD-007)</h2>
         {!canCreateTips && (
           <p>
@@ -977,7 +1010,7 @@ function DashboardPage() {
         )}
       </section>
 
-      <section>
+      <section id="tip-workflow" className="bd-panel">
         <h2>Tip Workflow (BD-008)</h2>
         {!canCreateTips && (
           <p>
@@ -1094,7 +1127,7 @@ function DashboardPage() {
         )}
       </section>
 
-      <section>
+      <section id="privileged-actions" className="bd-panel">
         <h2>Privileged Actions (Guarded)</h2>
         <p>
           <button
@@ -1178,7 +1211,7 @@ function DashboardPage() {
         {statusMessage && <p>{statusMessage}</p>}
       </section>
 
-      <section>
+      <section id="tips-search" className="bd-panel">
         <h2>Tips Search (BD-009)</h2>
         {!canReadTips && (
           <p>
@@ -1308,7 +1341,7 @@ function DashboardPage() {
         )}
       </section>
 
-      <section>
+      <section id="my-watchlist" className="bd-panel">
         <h2>My Watchlist (BD-016)</h2>
         {!canReadTips && (
           <p>
@@ -1364,7 +1397,7 @@ function DashboardPage() {
         {watchlistMessage && <p>{watchlistMessage}</p>}
       </section>
 
-      <section>
+      <section id="watch-notifications" className="bd-panel">
         <h2>Watch Notifications (BD-016)</h2>
         {!canReadTips && (
           <p>
@@ -1437,7 +1470,7 @@ function DashboardPage() {
         )}
       </section>
 
-      <section>
+      <section id="audit-events" className="bd-panel">
         <h2>Audit Events</h2>
         {!canReadAudit && (
           <p>
@@ -1459,7 +1492,7 @@ function DashboardPage() {
           ))}
       </section>
 
-      <section>
+      <section id="navigation" className="bd-panel">
         <h2>Navigation</h2>
         <p>
           <Link to="/explorer">Component explorer</Link>
@@ -1471,6 +1504,8 @@ function DashboardPage() {
           <Link to="/">Back to home</Link>
         </p>
       </section>
-    </main>
+        </main>
+      </div>
+    </div>
   )
 }

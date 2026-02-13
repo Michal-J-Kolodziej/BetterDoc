@@ -20,50 +20,54 @@ function HomePage() {
   const health = useQuery(api.health.getStatus)
 
   return (
-    <main>
-      <h1>BetterDoc</h1>
-      <p>
-        TanStack Start, Convex, and WorkOS AuthKit are wired. Use this page to
-        start sign-in and verify auth-protected routes.
-      </p>
+    <main className="bd-home">
+      <header className="bd-page-header">
+        <div>
+          <h1>BetterDoc Control Center</h1>
+          <p>
+            Operational entry point for auth, explorer workflows, and role-aware
+            governance tools.
+          </p>
+        </div>
+        <div className="bd-page-header-actions">
+          <a href="/dashboard">Open dashboard</a>
+          <a href="/explorer">Open explorer</a>
+        </div>
+      </header>
 
-      <section>
-        <h2>Environment</h2>
-        <p>
-          Active env deploy target: <code>{activeConvexDeployment}</code>
-        </p>
-        <p>
-          Vercel env: <code>{vercelConfig.environment ?? 'unset'}</code>
-        </p>
-      </section>
+      <div className="bd-home-grid">
+        <section className="bd-panel">
+          <h2>Environment</h2>
+          <p>
+            Active env deploy target: <code>{activeConvexDeployment}</code>
+          </p>
+          <p>
+            Vercel env: <code>{vercelConfig.environment ?? 'unset'}</code>
+          </p>
+        </section>
 
-      <section>
-        <h2>WorkOS Config Point</h2>
-        <p>
-          Client ID: <code>{workosClientConfig.clientId}</code>
-        </p>
-        <p>
-          Redirect URI: <code>{workosClientConfig.redirectUri}</code>
-        </p>
-        <p>
-          <a href="/login">Sign in with WorkOS</a>
-        </p>
-        <p>
-          <a href="/dashboard">Go to protected dashboard</a>
-        </p>
-        <p>
-          <a href="/explorer">Open component explorer</a>
-        </p>
-        <p>
-          <a href="/logout">Sign out</a>
-        </p>
-      </section>
+        <section className="bd-panel">
+          <h2>WorkOS Config Point</h2>
+          <p>
+            Client ID: <code>{workosClientConfig.clientId}</code>
+          </p>
+          <p>
+            Redirect URI: <code>{workosClientConfig.redirectUri}</code>
+          </p>
+          <div className="bd-link-stack">
+            <a href="/login">Sign in with WorkOS</a>
+            <a href="/dashboard">Go to protected dashboard</a>
+            <a href="/explorer">Open component explorer</a>
+            <a href="/logout">Sign out</a>
+          </div>
+        </section>
 
-      <section>
-        <h2>Convex Health Query</h2>
-        <p>Status: {health?.status ?? 'loading'}</p>
-        <p>Backend deployment: {health?.deployment ?? 'pending'}</p>
-      </section>
+        <section className="bd-panel">
+          <h2>Convex Health Query</h2>
+          <p>Status: {health?.status ?? 'loading'}</p>
+          <p>Backend deployment: {health?.deployment ?? 'pending'}</p>
+        </section>
+      </div>
     </main>
   )
 }
