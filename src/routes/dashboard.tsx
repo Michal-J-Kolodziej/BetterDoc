@@ -1,47 +1,44 @@
-import type { ReactNode } from 'react'
-
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { getAuthkit } from '@workos/authkit-tanstack-react-start'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
-import { useState } from 'react'
+import { Filter, Plus, Search } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
-import { AppShell } from '@/components/ui/AppShell'
-import { PageTopbar } from '@/components/ui/PageTopbar'
-import { SidebarRail } from '@/components/ui/SidebarRail'
-import { DashboardTabs } from '@/features/dashboard/DashboardTabs'
-import { AuditPanel } from '@/features/dashboard/panels/AuditPanel'
-import { OverviewPanel } from '@/features/dashboard/panels/OverviewPanel'
-import { SearchPanel } from '@/features/dashboard/panels/SearchPanel'
-import { TipStudioPanel } from '@/features/dashboard/panels/TipStudioPanel'
-import { WatchlistPanel } from '@/features/dashboard/panels/WatchlistPanel'
-import { WorkflowPanel } from '@/features/dashboard/panels/WorkflowPanel'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  createEmptyTipSearchState,
-  getTipComponentLinkKey,
-  parseDashboardTab,
-  type DashboardTab,
-  dashboardTabs,
-  type TipComponentLink,
-  type TipSearchState,
-  validateTipSearchState,
-} from '@/features/dashboard/types'
-import { cn } from '@/lib/classnames'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import { Textarea } from '@/components/ui/textarea'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
+import { parseDashboardSearch, stringifySearchQuery } from '@/lib/search'
+import { uploadImageFiles } from '@/lib/uploads'
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
-import { hasPermission, type AppRole, type Permission } from '../lib/rbac'
-import { encodeWorkspaceRouteParam } from '../lib/workspace-route'
-import {
-  buildTipDraftPayload,
-  createEmptyTipEditorState,
-  type TipEditorFormState,
-  type TipEditorValidationErrors,
-} from '../lib/tip-editor'
 
 export const Route = createFileRoute('/dashboard')({
   ssr: false,
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: search.tab === undefined ? undefined : parseDashboardTab(search.tab),
+    q: typeof search.q === 'string' ? search.q : undefined,
+    team: typeof search.team === 'string' ? search.team : undefined,
   }),
   server: {
     handlers: {
@@ -49,7 +46,10 @@ export const Route = createFileRoute('/dashboard')({
         const auth = context.auth()
 
         if (!auth.user) {
-          const authkit = await getAuthkit()
+          const authkit = await import('@workos/authkit-tanstack-react-start').then((module) =>
+            module.getAuthkit(),
+          )
+
           const signInUrl = await authkit.getSignInUrl({
             returnPathname: new URL(request.url).pathname,
             redirectUri: context.redirectUri,
@@ -65,771 +65,467 @@ export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
 })
 
+function formatDate(value: number): string {
+  return new Date(value).toLocaleString()
+}
+
+function userDisplayName(user: ReturnType<typeof useAuth>['user']): string {
+  if (!user) {
+    return 'User'
+  }
+
+  const combined = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
+
+  if (combined) {
+    return combined
+  }
+
+  if (user.email) {
+    return user.email
+  }
+
+  return user.id
+}
+
 function DashboardPage() {
   const auth = useAuth()
   const navigate = Route.useNavigate()
   const search = Route.useSearch()
-  const activeTab = parseDashboardTab(search.tab)
-
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [tipEditorMessage, setTipEditorMessage] = useState<string | null>(null)
-  const [draftTipId, setDraftTipId] = useState<Id<'tips'> | null>(null)
-  const [tipEditorState, setTipEditorState] = useState<TipEditorFormState>(
-    createEmptyTipEditorState,
-  )
-  const [tipValidationErrors, setTipValidationErrors] =
-    useState<TipEditorValidationErrors>({})
-  const [tipSearchState, setTipSearchState] = useState<TipSearchState>(
-    createEmptyTipSearchState,
-  )
-  const [targetWorkosUserId, setTargetWorkosUserId] = useState('')
-  const [nextRole, setNextRole] = useState<AppRole>('Reader')
-  const [tipComponentLinks, setTipComponentLinks] = useState<TipComponentLink[]>([])
-  const [tipComponentMessage, setTipComponentMessage] = useState<string | null>(null)
-  const [linkWorkspaceId, setLinkWorkspaceId] = useState('')
-  const [linkProjectName, setLinkProjectName] = useState('')
-  const [linkComponentId, setLinkComponentId] = useState('')
-  const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null)
-  const [notificationMessage, setNotificationMessage] = useState<string | null>(null)
-  const [showUnreadNotificationsOnly, setShowUnreadNotificationsOnly] =
-    useState(false)
-
-  const bootstrapFirstAdmin = useMutation(api.accessControl.bootstrapFirstAdmin)
-  const assignRole = useMutation(api.accessControl.assignRole)
-  const saveTipDraft = useMutation(api.accessControl.saveTipDraft)
-  const submitTipForReview = useMutation(api.accessControl.submitTipForReview)
-  const returnTipToDraft = useMutation(api.accessControl.returnTipToDraft)
-  const publishTip = useMutation(api.accessControl.publishTip)
-  const deprecateTip = useMutation(api.accessControl.deprecateTip)
-  const configureIntegration = useMutation(api.accessControl.configureIntegration)
-  const unsubscribeFromComponentWatchlist = useMutation(
-    api.accessControl.unsubscribeFromComponentWatchlist,
-  )
-  const markWatchNotificationRead = useMutation(
-    api.accessControl.markWatchNotificationRead,
-  )
-  const markAllWatchNotificationsRead = useMutation(
-    api.accessControl.markAllWatchNotificationsRead,
-  )
-
   const user = auth.user
-  const organizationId = auth.organizationId ?? undefined
 
-  const accessProfile = useQuery(
-    api.accessControl.getAccessProfile,
-    user
-      ? {
-          workosUserId: user.id,
-          organizationId,
-        }
-      : 'skip',
+  const [searchInput, setSearchInput] = useState(search.q ?? '')
+  const debouncedSearchInput = useDebouncedValue(searchInput, 250)
+  const parsedSearch = useMemo(
+    () => parseDashboardSearch(debouncedSearchInput),
+    [debouncedSearchInput],
   )
 
-  const role = accessProfile?.role ?? 'Reader'
-  const canCreateTips = accessProfile
-    ? hasPermission(accessProfile.role, 'tips.create')
-    : false
-  const canReadTips = accessProfile
-    ? hasPermission(accessProfile.role, 'tips.read')
-    : false
-  const canReadAudit = accessProfile
-    ? hasPermission(accessProfile.role, 'audit.read')
-    : false
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [createTitle, setCreateTitle] = useState('')
+  const [createWhere, setCreateWhere] = useState('')
+  const [createWhen, setCreateWhen] = useState('')
+  const [createDescription, setCreateDescription] = useState('')
+  const [createTeamId, setCreateTeamId] = useState('')
+  const [createFiles, setCreateFiles] = useState<File[]>([])
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createBusy, setCreateBusy] = useState(false)
 
-  const auditEvents = useQuery(
-    api.accessControl.listAuditEvents,
-    user && canReadAudit
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          limit: 12,
-        }
-      : 'skip',
-  )
+  const upsertMe = useMutation(api.users.upsertMe)
+  const createPost = useMutation(api.posts.createPost)
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl)
+  const attachUploadedFile = useMutation(api.files.attachUploadedFile)
 
-  const tips = useQuery(
-    api.accessControl.listTips,
-    user && canCreateTips
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          limit: 120,
-        }
-      : 'skip',
-  )
+  const me = useQuery(api.users.getMe, user ? { workosUserId: user.id } : 'skip')
 
-  const tipSearchError = validateTipSearchState(tipSearchState)
-
-  const filteredTips = useQuery(
-    api.accessControl.listTips,
-    user && canReadTips && !tipSearchError
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          searchText: tipSearchState.searchText,
-          project: tipSearchState.project,
-          library: tipSearchState.library,
-          component: tipSearchState.component,
-          tag: tipSearchState.tag,
-          status:
-            tipSearchState.status === 'all'
-              ? undefined
-              : tipSearchState.status,
-          limit: 60,
-        }
-      : 'skip',
-  )
-
-  const editorTip = useQuery(
-    api.accessControl.getTipForEditor,
-    user && draftTipId && canCreateTips
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          tipId: draftTipId,
-        }
-      : 'skip',
-  )
-
-  const tipRevisions = useQuery(
-    api.accessControl.listTipRevisions,
-    user && draftTipId && canCreateTips
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          tipId: draftTipId,
-          limit: 10,
-        }
-      : 'skip',
-  )
-
-  const editorTipComponentLinks = useQuery(
-    api.accessControl.listTipComponentLinksForEditor,
-    user && draftTipId && canCreateTips
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          tipId: draftTipId,
-        }
-      : 'skip',
-  )
-
-  const componentWorkspaces = useQuery(
-    api.accessControl.listComponentExplorerWorkspaces,
-    user && canCreateTips
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          limit: 20,
-        }
-      : 'skip',
-  )
-
-  const selectedWorkspaceGraph = useQuery(
-    api.accessControl.getComponentExplorerWorkspace,
-    user && canCreateTips && linkWorkspaceId
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          workspaceId: linkWorkspaceId,
-        }
-      : 'skip',
-  )
-
-  const selectedProjectGraph = useQuery(
-    api.accessControl.getComponentExplorerProject,
-    user && canCreateTips && linkWorkspaceId && linkProjectName
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          workspaceId: linkWorkspaceId,
-          projectName: linkProjectName,
-        }
-      : 'skip',
-  )
-
-  const myWatchSubscriptions = useQuery(
-    api.accessControl.listMyComponentWatchSubscriptions,
-    user && canReadTips
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          limit: 60,
-        }
-      : 'skip',
-  )
-
-  const watchNotifications = useQuery(
-    api.accessControl.listWatchNotifications,
-    user && canReadTips
-      ? {
-          actorWorkosUserId: user.id,
-          actorOrganizationId: organizationId,
-          unreadOnly: showUnreadNotificationsOnly,
-          limit: 60,
-        }
-      : 'skip',
-  )
-
-  const selectedTipStatus =
-    editorTip?.status ?? tips?.find((tip) => tip.id === draftTipId)?.status ?? null
-
-  const can = (permission: Permission) =>
-    accessProfile ? hasPermission(role, permission) : false
-
-  const runAction = async (
-    successMessage: string,
-    action: () => Promise<void>,
-  ) => {
-    try {
-      await action()
-      setStatusMessage(successMessage)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      setStatusMessage(`Action failed: ${message}`)
-    }
-  }
-
-  const addSelectedComponentLink = () => {
-    if (!selectedProjectGraph || !linkComponentId) {
-      setTipComponentMessage(
-        'Select a workspace, project, and component before adding a link.',
-      )
+  useEffect(() => {
+    if (!user || auth.loading || me) {
       return
     }
 
-    const component = selectedProjectGraph.components.find(
-      (entry) => entry.id === linkComponentId,
-    )
-
-    if (!component) {
-      setTipComponentMessage('Selected component was not found in this project.')
-      return
-    }
-
-    const nextLink: TipComponentLink = {
-      workspaceId: linkWorkspaceId,
-      projectName: selectedProjectGraph.project.name,
-      componentName: component.name,
-      componentFilePath: component.filePath,
-    }
-
-    const nextKey = getTipComponentLinkKey(nextLink)
-    const hasDuplicate = tipComponentLinks.some(
-      (link) => getTipComponentLinkKey(link) === nextKey,
-    )
-
-    if (hasDuplicate) {
-      setTipComponentMessage('This component is already linked to the draft.')
-      return
-    }
-
-    setTipComponentLinks((current) => [...current, nextLink])
-    setTipComponentMessage('Component link added.')
-  }
-
-  const removeComponentLink = (linkToRemove: TipComponentLink) => {
-    const removeKey = getTipComponentLinkKey(linkToRemove)
-    setTipComponentLinks((current) =>
-      current.filter((link) => getTipComponentLinkKey(link) !== removeKey),
-    )
-    setTipComponentMessage('Component link removed.')
-  }
-
-  const removeWatchSubscription = async (link: TipComponentLink) => {
-    if (!user) {
-      return
-    }
-
-    try {
-      const result = await unsubscribeFromComponentWatchlist({
-        actorWorkosUserId: user.id,
-        actorOrganizationId: organizationId,
-        workspaceId: link.workspaceId,
-        projectName: link.projectName,
-        componentName: link.componentName,
-        componentFilePath: link.componentFilePath,
-      })
-
-      if (result.removedCount === 0) {
-        setWatchlistMessage('No matching watchlist subscription was found.')
-        return
-      }
-
-      setWatchlistMessage(
-        `Watchlist subscription removed (${String(result.removedCount)} record${result.removedCount === 1 ? '' : 's'}).`,
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      setWatchlistMessage(`Failed to remove watchlist subscription: ${message}`)
-    }
-  }
-
-  const markNotificationAsRead = async (notificationId: Id<'watchNotifications'>) => {
-    if (!user) {
-      return
-    }
-
-    try {
-      const result = await markWatchNotificationRead({
-        actorWorkosUserId: user.id,
-        actorOrganizationId: organizationId,
-        notificationId,
-      })
-
-      setNotificationMessage(
-        result.updated
-          ? 'Notification marked as read.'
-          : 'Notification was already marked as read.',
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      setNotificationMessage(`Failed to mark notification as read: ${message}`)
-    }
-  }
-
-  const markAllNotificationsAsRead = async () => {
-    if (!user) {
-      return
-    }
-
-    try {
-      const result = await markAllWatchNotificationsRead({
-        actorWorkosUserId: user.id,
-        actorOrganizationId: organizationId,
-        limit: 120,
-      })
-
-      setNotificationMessage(
-        `Marked ${String(result.updatedCount)} notification${result.updatedCount === 1 ? '' : 's'} as read.`,
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      setNotificationMessage(`Failed to mark notifications: ${message}`)
-    }
-  }
-
-  const setEditorField = (
-    field: keyof TipEditorFormState,
-    value: string,
-  ) => {
-    setTipEditorState((current) => ({
-      ...current,
-      [field]: value,
-    }))
-
-    setTipValidationErrors((current) => {
-      if (!current[field]) {
-        return current
-      }
-
-      const nextErrors = { ...current }
-      delete nextErrors[field]
-      return nextErrors
+    void upsertMe({
+      workosUserId: user.id,
+      name: userDisplayName(user),
     })
-  }
+  }, [auth.loading, me, upsertMe, user])
 
-  const setTipSearchField = <K extends keyof TipSearchState>(
-    field: K,
-    value: TipSearchState[K],
-  ) => {
-    setTipSearchState((current) => ({
-      ...current,
-      [field]: value,
-    }))
-  }
+  const teams = useMemo(() => me?.teams ?? [], [me?.teams])
 
-  const resetEditorToNewDraft = () => {
-    setDraftTipId(null)
-    setTipEditorState(createEmptyTipEditorState())
-    setTipValidationErrors({})
-    setTipEditorMessage(null)
-    setTipComponentLinks([])
-    setTipComponentMessage(null)
-    setLinkWorkspaceId('')
-    setLinkProjectName('')
-    setLinkComponentId('')
-  }
+  const selectedTeamFromSearch = useMemo(() => {
+    const explicit = search.team ?? parsedSearch.team ?? ''
 
-  const selectDraftTip = (nextTipId: string) => {
-    setTipEditorMessage(null)
-    setTipComponentMessage(null)
-
-    if (!nextTipId) {
-      resetEditorToNewDraft()
-      return
+    if (!explicit) {
+      return null
     }
 
-    setDraftTipId(nextTipId as Id<'tips'>)
-    setTipValidationErrors({})
-    setTipComponentLinks([])
-  }
+    const normalized = explicit.toLowerCase()
 
-  const loadSelectedTipContent = () => {
-    if (!editorTip) {
-      setTipEditorMessage('Tip content is still loading.')
-      return
-    }
-
-    setTipEditorState({
-      symptom: editorTip.symptom,
-      rootCause: editorTip.rootCause,
-      fix: editorTip.fix,
-      prevention: editorTip.prevention,
-      project: editorTip.project ?? '',
-      library: editorTip.library ?? '',
-      component: editorTip.component ?? '',
-      tags: editorTip.tags.join(', '),
-      references: editorTip.references.join('\n'),
-    })
-
-    if (editorTipComponentLinks) {
-      setTipComponentLinks(
-        editorTipComponentLinks.map((link) => ({
-          workspaceId: link.workspaceId,
-          projectName: link.projectName,
-          componentName: link.componentName,
-          componentFilePath: link.componentFilePath,
-        })),
-      )
-      setTipComponentMessage(
-        `Loaded ${String(editorTipComponentLinks.length)} linked component${editorTipComponentLinks.length === 1 ? '' : 's'}.`,
-      )
-    } else {
-      setTipComponentMessage(
-        'Tip content loaded. Component links are still loading.',
-      )
-    }
-
-    setTipValidationErrors({})
-    setTipEditorMessage('Loaded selected tip content into the editor.')
-  }
-
-  const saveEditorDraft = async () => {
-    if (!user) {
-      return
-    }
-
-    const { payload, errors } = buildTipDraftPayload(tipEditorState)
-    if (!payload) {
-      setTipValidationErrors(errors)
-      setTipEditorMessage('Fix validation errors before saving.')
-      return
-    }
-
-    try {
-      const result = await saveTipDraft({
-        actorWorkosUserId: user.id,
-        actorOrganizationId: organizationId,
-        tipId: draftTipId ?? undefined,
-        ...payload,
-        componentLinks: tipComponentLinks,
-      })
-
-      setDraftTipId(result.tipId)
-      setTipValidationErrors({})
-      setTipEditorMessage(
-        `Draft saved as revision ${result.revisionNumber} at ${new Date(result.updatedAt).toLocaleString()} with ${String(tipComponentLinks.length)} linked component${tipComponentLinks.length === 1 ? '' : 's'}.`,
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      setTipEditorMessage(`Draft save failed: ${message}`)
-    }
-  }
-
-  const setActiveTab = (tab: DashboardTab) => {
-    void navigate({
-      search: { tab },
-    })
-  }
-
-  const sidebar = (
-    <SidebarRail
-      brandMeta="Governance + prevention tips"
-      brandTitle="Engineering Insights"
-      footer={
-        <div className="space-y-2 text-sm text-slate-300">
-          <p>
-            Signed in as <code className="app-code">{role}</code>
-          </p>
-          <Link className="app-btn-secondary w-full justify-start" to="/logout">
-            Sign out
-          </Link>
-        </div>
-      }
-      navLabel="Dashboard sections"
-      navSlot={
-        <>
-          {dashboardTabs.map((tab) => (
-            <button
-              key={tab.value}
-              className={cn(
-                'app-btn-secondary w-full justify-start',
-                activeTab === tab.value &&
-                  'border-cyan-300/45 bg-cyan-300/20 text-cyan-100',
-              )}
-              onClick={() => setActiveTab(tab.value)}
-              type="button"
-            >
-              {tab.label}
-            </button>
-          ))}
-          <div className="h-px bg-white/10" />
-          <Link className="app-btn-secondary w-full justify-start" to="/explorer">
-            Component explorer
-          </Link>
-          <Link className="app-btn-secondary w-full justify-start" to="/">
-            Home
-          </Link>
-        </>
-      }
-    />
-  )
-
-  if (auth.loading || !user || !accessProfile) {
     return (
-      <AppShell
-        topbar={
-          <PageTopbar
-            description="Loading role-aware access profile and dashboard context."
-            title="Authenticated Dashboard"
-          />
+      teams.find(
+        (team) =>
+          team.slug.toLowerCase() === normalized ||
+          team.name.toLowerCase() === normalized,
+      ) ?? null
+    )
+  }, [parsedSearch.team, search.team, teams])
+
+  useEffect(() => {
+    if (!createTeamId && teams.length > 0) {
+      setCreateTeamId(teams[0].teamId)
+    }
+  }, [createTeamId, teams])
+
+  const posts = useQuery(
+    api.posts.listPosts,
+    user && me
+      ? {
+          actorWorkosUserId: user.id,
+          teamId: selectedTeamFromSearch?.teamId,
+          searchText: parsedSearch.text || undefined,
+          status: parsedSearch.status,
+          authorIid: parsedSearch.authorIid ?? undefined,
+          hasImage: parsedSearch.hasImage ? true : undefined,
+          before: parsedSearch.before ?? undefined,
+          after: parsedSearch.after ?? undefined,
+          limit: 80,
         }
-      >
-        <div className="app-panel">
-          <p className="text-sm text-slate-300">Please wait while we load your profile.</p>
-        </div>
-      </AppShell>
+      : 'skip',
+  )
+
+  const applyQuickStatus = (status: 'all' | 'active' | 'archived') => {
+    const next = {
+      ...parsedSearch,
+      status,
+    }
+    const nextQuery = stringifySearchQuery(next)
+    setSearchInput(nextQuery)
+
+    void navigate({
+      search: {
+        q: nextQuery,
+        team: search.team,
+      },
+      replace: true,
+    })
+  }
+
+  const onSearchChange = (value: string) => {
+    setSearchInput(value)
+    void navigate({
+      search: {
+        q: value,
+        team: search.team,
+      },
+      replace: true,
+    })
+  }
+
+  const openTeamFilter = (teamSlug: string | '') => {
+    void navigate({
+      search: {
+        q: searchInput,
+        team: teamSlug,
+      },
+      replace: true,
+    })
+  }
+
+  const resetCreatePostForm = () => {
+    setCreateTitle('')
+    setCreateWhere('')
+    setCreateWhen('')
+    setCreateDescription('')
+    setCreateFiles([])
+    setCreateError(null)
+  }
+
+  const handleCreatePost = async () => {
+    if (!user || !createTeamId) {
+      return
+    }
+
+    setCreateBusy(true)
+    setCreateError(null)
+
+    try {
+      let imageStorageIds: Id<'_storage'>[] = []
+
+      if (createFiles.length > 0) {
+        const uploaded = await uploadImageFiles({
+          files: createFiles,
+          actorWorkosUserId: user.id,
+          generateUploadUrl,
+          attachUploadedFile,
+        })
+        imageStorageIds = uploaded.storageIds
+      }
+
+      const result = await createPost({
+        actorWorkosUserId: user.id,
+        teamId: createTeamId as Id<'teams'>,
+        title: createTitle,
+        occurrenceWhere: createWhere,
+        occurrenceWhen: createWhen,
+        description: createDescription,
+        imageStorageIds,
+      })
+
+      setCreateDialogOpen(false)
+      resetCreatePostForm()
+
+      void navigate({
+        to: '/posts/$postId',
+        params: {
+          postId: result.postId,
+        },
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create post.'
+      setCreateError(message)
+    } finally {
+      setCreateBusy(false)
+    }
+  }
+
+  if (auth.loading || !user || !me) {
+    return (
+      <main className='mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 px-4 py-8 sm:px-6 lg:px-8'>
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading dashboard...</CardTitle>
+          </CardHeader>
+        </Card>
+      </main>
     )
   }
 
-  const tabContent: Record<DashboardTab, ReactNode> = {
-    overview: (
-      <OverviewPanel
-        canCreateTips={canCreateTips}
-        canReadAudit={canReadAudit}
-        canReadTips={canReadTips}
-        organizationId={organizationId}
-        role={role}
-        userId={user.id}
-        watchSubscriptionCount={myWatchSubscriptions?.length ?? 0}
-      />
-    ),
-    'tip-studio': (
-      <TipStudioPanel
-        canCreateTips={canCreateTips}
-        canLoadSelectedTip={Boolean(draftTipId && editorTip)}
-        componentWorkspaces={componentWorkspaces}
-        draftTipId={draftTipId}
-        editorTip={editorTip}
-        editorTipComponentLinks={editorTipComponentLinks}
-        linkComponentId={linkComponentId}
-        linkProjectName={linkProjectName}
-        linkWorkspaceId={linkWorkspaceId}
-        onAddSelectedComponentLink={addSelectedComponentLink}
-        onLoadSelectedTipContent={loadSelectedTipContent}
-        onRemoveComponentLink={removeComponentLink}
-        onResetToNewDraft={resetEditorToNewDraft}
-        onSaveDraft={saveEditorDraft}
-        onSelectDraftTip={selectDraftTip}
-        onSetEditorField={setEditorField}
-        onSetLinkComponentId={(value) => {
-          setLinkComponentId(value)
-          setTipComponentMessage(null)
-        }}
-        onSetLinkProjectName={(value) => {
-          setLinkProjectName(value)
-          setLinkComponentId('')
-          setTipComponentMessage(null)
-        }}
-        onSetLinkWorkspaceId={(value) => {
-          setLinkWorkspaceId(value)
-          setLinkProjectName('')
-          setLinkComponentId('')
-          setTipComponentMessage(null)
-        }}
-        selectedProjectGraph={selectedProjectGraph}
-        selectedWorkspaceGraph={selectedWorkspaceGraph}
-        tipComponentLinks={tipComponentLinks}
-        tipComponentMessage={tipComponentMessage}
-        tipEditorMessage={tipEditorMessage}
-        tipEditorState={tipEditorState}
-        tipRevisions={tipRevisions}
-        tipValidationErrors={tipValidationErrors}
-        tips={
-          tips?.map((tip) => ({
-            id: tip.id,
-            title: tip.title,
-            status: tip.status,
-            currentRevision: tip.currentRevision,
-          })) ?? []
-        }
-        workspaceToRouteParam={encodeWorkspaceRouteParam}
-      />
-    ),
-    workflow: (
-      <WorkflowPanel
-        canAssignRoles={can('roles.assign')}
-        canConfigureIntegration={can('integration.configure')}
-        canCreateTips={canCreateTips}
-        canDeprecateTips={can('tips.deprecate')}
-        canPublishTips={can('tips.publish')}
-        draftTipId={draftTipId}
-        nextRole={nextRole}
-        onAssignRole={() =>
-          void runAction('Role assignment saved and audited.', async () => {
-            await assignRole({
-              actorWorkosUserId: user.id,
-              actorOrganizationId: organizationId,
-              targetWorkosUserId,
-              role: nextRole,
-            })
-          })
-        }
-        onBootstrapFirstAdmin={() =>
-          void runAction('Bootstrap completed: current user is now Admin.', async () => {
-            await bootstrapFirstAdmin({
-              actorWorkosUserId: user.id,
-              actorOrganizationId: organizationId,
-            })
-          })
-        }
-        onConfigureIntegration={() =>
-          void runAction(
-            'Integration config updated and audit event stored.',
-            async () => {
-              await configureIntegration({
-                actorWorkosUserId: user.id,
-                actorOrganizationId: organizationId,
-                key: 'azure-devops',
-                enabled: true,
-              })
-            },
-          )
-        }
-        onDeprecateTip={() =>
-          void runAction('Tip deprecated and audit event stored.', async () => {
-            if (!draftTipId) {
-              throw new Error('Select a tip first.')
-            }
-
-            await deprecateTip({
-              actorWorkosUserId: user.id,
-              actorOrganizationId: organizationId,
-              tipId: draftTipId,
-            })
-          })
-        }
-        onPublishTip={() =>
-          void (async () => {
-            if (!draftTipId) {
-              setStatusMessage('Action failed: Select a tip first.')
-              return
-            }
-
-            try {
-              const result = await publishTip({
-                actorWorkosUserId: user.id,
-                actorOrganizationId: organizationId,
-                tipId: draftTipId,
-              })
-
-              setStatusMessage(
-                `Tip published and audited. ${String(result.notificationCount)} ${result.notificationEventType} notification${result.notificationCount === 1 ? '' : 's'} logged.`,
-              )
-            } catch (error) {
-              const message =
-                error instanceof Error ? error.message : 'Unknown error'
-              setStatusMessage(`Action failed: ${message}`)
-            }
-          })()
-        }
-        onReturnTipToDraft={() =>
-          void runAction('Tip returned to draft for edits.', async () => {
-            if (!draftTipId) {
-              throw new Error('Select a tip first.')
-            }
-
-            await returnTipToDraft({
-              actorWorkosUserId: user.id,
-              actorOrganizationId: organizationId,
-              tipId: draftTipId,
-            })
-          })
-        }
-        onSetNextRole={setNextRole}
-        onSetTargetWorkosUserId={setTargetWorkosUserId}
-        onSubmitForReview={() =>
-          void runAction('Tip moved to in_review.', async () => {
-            if (!draftTipId) {
-              throw new Error('Save a draft tip first.')
-            }
-
-            await submitTipForReview({
-              actorWorkosUserId: user.id,
-              actorOrganizationId: organizationId,
-              tipId: draftTipId,
-            })
-          })
-        }
-        selectedTipStatus={selectedTipStatus}
-        statusMessage={statusMessage}
-        targetWorkosUserId={targetWorkosUserId}
-      />
-    ),
-    search: (
-      <SearchPanel
-        canReadTips={canReadTips}
-        onClearFilters={() => setTipSearchState(createEmptyTipSearchState())}
-        onSetTipSearchField={setTipSearchField}
-        results={filteredTips}
-        searchError={tipSearchError}
-        tipSearchState={tipSearchState}
-      />
-    ),
-    watchlist: (
-      <WatchlistPanel
-        canReadTips={canReadTips}
-        encodeWorkspaceId={encodeWorkspaceRouteParam}
-        notificationMessage={notificationMessage}
-        notifications={watchNotifications}
-        onMarkAllNotificationsAsRead={() => void markAllNotificationsAsRead()}
-        onMarkNotificationAsRead={(id) =>
-          void markNotificationAsRead(id as Id<'watchNotifications'>)
-        }
-        onRemoveWatchSubscription={(link) => void removeWatchSubscription(link)}
-        onSetShowUnreadOnly={setShowUnreadNotificationsOnly}
-        showUnreadOnly={showUnreadNotificationsOnly}
-        subscriptions={myWatchSubscriptions}
-        watchlistMessage={watchlistMessage}
-      />
-    ),
-    audit: <AuditPanel canReadAudit={canReadAudit} events={auditEvents} />,
-  }
+  const hasTeams = teams.length > 0
 
   return (
-    <AppShell
-      mobileRail={sidebar}
-      sidebar={sidebar}
-      topbar={
-        <PageTopbar
-          actions={
-            <>
-              <Link className="app-btn-secondary" to="/explorer">
-                Component explorer
-              </Link>
-              <Link className="app-btn-secondary" to="/">
-                Home
-              </Link>
-            </>
-          }
-          description="Access is protected by WorkOS session checks plus capability guards mapped from your current role."
-          title="Engineering Insights Dashboard"
-        />
-      }
-    >
-      <DashboardTabs onChange={setActiveTab} value={activeTab} />
-      {tabContent[activeTab]}
-    </AppShell>
+    <main className='mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8'>
+      <header className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+        <div className='space-y-1'>
+          <h1 className='text-2xl font-semibold tracking-tight'>Dashboard</h1>
+          <p className='text-sm text-muted-foreground'>
+            Search active and archived team posts from one place.
+          </p>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Button variant='outline' asChild>
+            <Link to='/teams'>Teams</Link>
+          </Button>
+          <Button variant='outline' asChild>
+            <Link to='/profile'>Profile</Link>
+          </Button>
+          <Button variant='ghost' asChild>
+            <Link to='/logout'>Logout</Link>
+          </Button>
+        </div>
+      </header>
+
+      <Card>
+        <CardContent className='space-y-3 p-4'>
+          <div className='relative'>
+            <Search className='pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
+            <Input
+              value={searchInput}
+              className='pl-9'
+              placeholder='Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX'
+              onChange={(event) => onSearchChange(event.target.value)}
+            />
+          </div>
+
+          <div className='flex flex-wrap items-center gap-2'>
+            <Button variant={parsedSearch.status === 'all' ? 'default' : 'secondary'} size='sm' onClick={() => applyQuickStatus('all')}>
+              All
+            </Button>
+            <Button variant={parsedSearch.status === 'active' ? 'default' : 'secondary'} size='sm' onClick={() => applyQuickStatus('active')}>
+              Active
+            </Button>
+            <Button variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'} size='sm' onClick={() => applyQuickStatus('archived')}>
+              Archived
+            </Button>
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button size='sm' variant='outline'>
+                  <Filter className='h-4 w-4' />
+                  Team Filter
+                </Button>
+              </SheetTrigger>
+              <SheetContent side='right'>
+                <SheetHeader>
+                  <SheetTitle>Team Filter</SheetTitle>
+                  <SheetDescription>
+                    Limit dashboard results to one team.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className='mt-6 flex flex-col gap-2'>
+                  <Button
+                    variant={!search.team ? 'default' : 'secondary'}
+                    onClick={() => openTeamFilter('')}
+                  >
+                    All Teams
+                  </Button>
+                  {teams.map((team) => (
+                    <Button
+                      key={team.teamId}
+                      variant={search.team === team.slug ? 'default' : 'secondary'}
+                      onClick={() => openTeamFilter(team.slug)}
+                    >
+                      {team.name}
+                    </Button>
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <div className='ml-auto'>
+              <Dialog
+                open={createDialogOpen}
+                onOpenChange={(open) => {
+                  setCreateDialogOpen(open)
+                  if (!open) {
+                    resetCreatePostForm()
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button disabled={!hasTeams}>
+                    <Plus className='h-4 w-4' />
+                    New Post
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className='sm:max-w-xl'>
+                  <DialogHeader>
+                    <DialogTitle>Create Post</DialogTitle>
+                    <DialogDescription>
+                      Add a concise issue post to a team board.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className='grid gap-3 py-1'>
+                    <Select value={createTeamId} onValueChange={setCreateTeamId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select a team' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team.teamId} value={team.teamId}>
+                            {team.name} ({team.role})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Input
+                      placeholder='Short title'
+                      value={createTitle}
+                      maxLength={120}
+                      onChange={(event) => setCreateTitle(event.target.value)}
+                    />
+                    <Input
+                      placeholder='Where the issue occurs'
+                      value={createWhere}
+                      maxLength={140}
+                      onChange={(event) => setCreateWhere(event.target.value)}
+                    />
+                    <Input
+                      placeholder='When it occurs'
+                      value={createWhen}
+                      maxLength={140}
+                      onChange={(event) => setCreateWhen(event.target.value)}
+                    />
+                    <Textarea
+                      placeholder='Issue description'
+                      value={createDescription}
+                      maxLength={5000}
+                      rows={6}
+                      onChange={(event) => setCreateDescription(event.target.value)}
+                    />
+                    <Input
+                      type='file'
+                      multiple
+                      accept='image/jpeg,image/png,image/webp'
+                      onChange={(event) => setCreateFiles(Array.from(event.target.files ?? []))}
+                    />
+                    {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant='outline' onClick={() => setCreateDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button disabled={createBusy || !createTeamId} onClick={handleCreatePost}>
+                      {createBusy ? 'Creating...' : 'Create Post'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+
+          {parsedSearch.errors.length > 0 ? (
+            <div className='rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive'>
+              {parsedSearch.errors.join(' ')}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {!hasTeams ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create your first team</CardTitle>
+            <CardDescription>
+              You need a team before you can create or discuss posts.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link to='/teams'>Open Team Management</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <section className='grid gap-3'>
+        {(posts ?? []).map((post) => (
+          <Card key={post.postId} className='transition hover:border-primary/50'>
+            <CardContent className='flex flex-col gap-3 p-4'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <Badge variant={post.status === 'active' ? 'default' : 'secondary'}>
+                  {post.status}
+                </Badge>
+                <Badge variant='outline'>{post.teamName}</Badge>
+                <span className='ml-auto text-xs text-muted-foreground'>
+                  Updated {formatDate(post.updatedAt)}
+                </span>
+              </div>
+
+              <div className='space-y-1'>
+                <Link
+                  className='text-lg font-semibold tracking-tight hover:text-primary'
+                  params={{ postId: post.postId }}
+                  to='/posts/$postId'
+                >
+                  {post.title}
+                </Link>
+                <p className='text-sm text-muted-foreground'>{post.descriptionPreview}</p>
+              </div>
+
+              <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
+                <span>Where: {post.occurrenceWhere}</span>
+                <span>When: {post.occurrenceWhen}</span>
+              </div>
+
+              <div className='flex flex-wrap items-center gap-3 text-sm'>
+                <div className='flex items-center gap-2'>
+                  <Avatar className='h-7 w-7'>
+                    <AvatarImage src={undefined} alt={post.createdByName} />
+                    <AvatarFallback>{post.createdByName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span>
+                    {post.createdByName} ({post.createdByIid})
+                  </span>
+                </div>
+                <span className='text-muted-foreground'>{post.commentCount} comments</span>
+                <span className='text-muted-foreground'>{post.imageCount} images</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {posts && posts.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>No posts found</CardTitle>
+              <CardDescription>
+                Try broadening your search or create the first post for this team.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : null}
+      </section>
+    </main>
   )
 }

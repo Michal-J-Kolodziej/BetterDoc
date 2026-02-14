@@ -8,13 +8,16 @@
  * @module
  */
 
-import type * as accessControl from "../accessControl.js";
+import type * as auth from "../auth.js";
+import type * as comments from "../comments.js";
+import type * as files from "../files.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
-import type * as rbac from "../rbac.js";
-import type * as scanIngestion from "../scanIngestion.js";
-import type * as scanIngestionInternal from "../scanIngestionInternal.js";
-import type * as tipDraft from "../tipDraft.js";
+import type * as model from "../model.js";
+import type * as postSearch from "../postSearch.js";
+import type * as posts from "../posts.js";
+import type * as teams from "../teams.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -23,13 +26,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  accessControl: typeof accessControl;
+  auth: typeof auth;
+  comments: typeof comments;
+  files: typeof files;
   health: typeof health;
   http: typeof http;
-  rbac: typeof rbac;
-  scanIngestion: typeof scanIngestion;
-  scanIngestionInternal: typeof scanIngestionInternal;
-  tipDraft: typeof tipDraft;
+  model: typeof model;
+  postSearch: typeof postSearch;
+  posts: typeof posts;
+  teams: typeof teams;
+  users: typeof users;
 }>;
 
 /**

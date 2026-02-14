@@ -1,10 +1,5 @@
 import type { PropsWithChildren } from 'react'
-import {
-  HeadContent,
-  Outlet,
-  Scripts,
-  createRootRoute,
-} from '@tanstack/react-router'
+import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
 import { AuthKitProvider } from '@workos/authkit-tanstack-react-start/client'
 
 import { ConvexAppProvider } from '../lib/convex-client'
@@ -21,7 +16,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'BetterDoc',
+        title: 'BetterDoc V2',
       },
     ],
   }),
@@ -42,11 +37,11 @@ function RootComponent() {
 
 function RootDocument({ children }: PropsWithChildren) {
   return (
-    <html lang="en">
+    <html lang='en'>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className='min-h-screen bg-background text-foreground antialiased'>
         {children}
         <Scripts />
       </body>

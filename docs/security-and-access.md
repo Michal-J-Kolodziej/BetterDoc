@@ -1,128 +1,91 @@
 # BetterDoc Security And Access
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
-## Current state
-- WorkOS AuthKit SSO is implemented for login, callback, logout, and protected-route enforcement.
-- Session handling is performed server-side via `authkitMiddleware()` in `src/start.ts`.
-- Middleware redirect override in `src/start.ts` is sourced from `VITE_WORKOS_REDIRECT_URI` (public env) to avoid loading `src/config/env.server.ts` in client runtime.
-- RBAC is implemented with app roles (`Reader`, `Contributor`, `Reviewer`, `Admin`) and capability checks in Convex queries/mutations plus frontend guards.
-- Privileged actions write immutable audit entries to `auditEvents`.
-- Component watchlist subscriptions and notification inbox reads are permission-gated with `tips.read` and tenant-scoped by organization.
+## Current Security Model
+- Authentication: WorkOS AuthKit SSO.
+- Session middleware: `authkitMiddleware()` in `src/start.ts`.
+- Authorization: team membership + team role checks in Convex function handlers.
+- Visibility boundary: posts/comments are only visible to members of the assigned team.
 
-## WorkOS configuration points
-- Public WorkOS settings (client-visible):
-  - `VITE_WORKOS_CLIENT_ID`
-  - `VITE_WORKOS_REDIRECT_URI`
-- Server-side AuthKit settings:
-  - `WORKOS_API_KEY`
-  - `WORKOS_CLIENT_ID`
-  - `WORKOS_REDIRECT_URI`
-  - `WORKOS_COOKIE_PASSWORD`
-  - `WORKOS_COOKIE_NAME` (optional)
-  - `WORKOS_COOKIE_MAX_AGE` (optional)
-  - `WORKOS_COOKIE_DOMAIN` (optional)
-  - `WORKOS_COOKIE_SAME_SITE` (optional)
-- Config modules:
-  - Client config: `src/config/platform.ts` (`workosClientConfig`)
-  - Server config: `src/config/workos.server.ts` (`workosServerConfig`)
+## WorkOS Configuration
+### Public client env
+- `VITE_WORKOS_CLIENT_ID`
+- `VITE_WORKOS_REDIRECT_URI`
 
-## Environment validation controls
-- Validation logic: `src/config/env.shared.ts`
-- Server validation entry: `src/config/env.server.ts`
-- Validation command: `bun run env:validate`
+### Server env
+- `WORKOS_API_KEY`
+- `WORKOS_CLIENT_ID`
+- `WORKOS_REDIRECT_URI`
+- `WORKOS_COOKIE_PASSWORD`
+- Optional cookie controls:
+  - `WORKOS_COOKIE_NAME`
+  - `WORKOS_COOKIE_MAX_AGE`
+  - `WORKOS_COOKIE_DOMAIN`
+  - `WORKOS_COOKIE_SAME_SITE`
 
-Enforced rules:
-- `VITE_APP_ENV` must be one of `dev`, `staging`, `prod`.
-- In `staging`/`prod`, `VITE_WORKOS_REDIRECT_URI` must use `https://`.
-- In `staging`/`prod`, `WORKOS_REDIRECT_URI` must use `https://`.
-- `WORKOS_COOKIE_PASSWORD` must be at least 32 characters.
-- `WORKOS_CLIENT_ID` must match `VITE_WORKOS_CLIENT_ID`.
-- `WORKOS_REDIRECT_URI` must match `VITE_WORKOS_REDIRECT_URI`.
-- In `staging`, if set, `VITE_VERCEL_ENV` must be `preview`.
-- In `prod`, if set, `VITE_VERCEL_ENV` must be `production`.
-- `WORKOS_API_KEY` is required in all environments.
-
-## Auth flow summary
+## Auth Flow
 1. User opens `/login`.
-2. Server handler redirects to WorkOS AuthKit authorization URL.
-3. WorkOS redirects to `/api/auth/callback` with an authorization code.
-4. `handleCallbackRoute()` validates the code and sets encrypted session cookie headers.
-5. Protected route `/dashboard` checks `context.auth()`:
-   - No user: redirect to WorkOS sign-in.
-   - User exists: render protected page and fetch RBAC access profile from Convex.
-6. `/logout` terminates WorkOS session and clears local cookie.
+2. App redirects to WorkOS sign-in.
+3. WorkOS redirects to `/api/auth/callback`.
+4. AuthKit stores encrypted session cookie.
+5. Protected routes (`/dashboard`, `/posts/$postId`, `/teams`, `/profile`) verify `context.auth()`.
+6. `/logout` clears session and signs out through WorkOS.
 
-## RBAC model (BD-004)
+## Team Role Model (V2)
+Roles:
+- `admin`
+- `teamleader`
+- `senior`
+- `mid`
+- `junior`
 
-Role-capability matrix:
-- `Reader`: `tips.read`
-- `Contributor`: `tips.read`, `tips.create`
-- `Reviewer`: `tips.read`, `tips.create`, `tips.publish`, `tips.deprecate`, `audit.read`
-- `Admin`: Reviewer capabilities + `roles.assign`, `integration.configure`
+Permission summary:
+- Any team member (`admin/teamleader/senior/mid/junior`):
+  - read team posts/comments
+  - create posts/comments
+- Post edit:
+  - post creator only
+- Post archive/unarchive:
+  - post creator OR `teamleader` OR `admin`
+- Team management:
+  - invites/role assignment/member removal by `teamleader` and `admin`
+  - `teamleader` cannot assign or manage `admin`
+- Comment edit:
+  - comment author only
+- Comment delete:
+  - comment author OR `teamleader` OR `admin`
 
-Convex enforcement:
-- Role source: `memberships` table keyed by `workosUserId`.
-- Guard helpers:
-  - `convex/rbac.ts`: matrix and `hasPermission()`.
-  - `convex/accessControl.ts`: `requirePermission()` used in privileged queries/mutations.
-- Query guards:
-  - `listAuditEvents` requires `audit.read`.
-  - `listTips` requires `tips.read` and additionally restricts `Reader` to published tips only.
-  - `getTipForEditor` requires `tips.create` (draft authoring access).
-  - `listTipRevisions` requires `tips.create` (draft revision history access).
-  - `getComponentWatchStatus`, `listMyComponentWatchSubscriptions`, and `listWatchNotifications` require `tips.read`.
-- Mutation guards:
-  - `assignRole` requires `roles.assign`.
-  - `saveTipDraft` requires `tips.create` and additionally enforces reviewer permission (`tips.publish`) when editing an `in_review` tip back to `draft`.
-  - `submitTipForReview` requires `tips.create`.
-  - `returnTipToDraft` requires `tips.publish`.
-  - `publishTip` requires `tips.publish` and only allows `in_review -> published`.
-  - `deprecateTip` requires `tips.deprecate` and only allows `published -> deprecated`.
-  - `configureIntegration` requires `integration.configure`.
-  - `subscribeToComponentWatchlist`, `unsubscribeFromComponentWatchlist`, `markWatchNotificationRead`, and `markAllWatchNotificationsRead` require `tips.read`.
-  - Tip mutations enforce organization-scoped access via `assertTipOrganizationAccess()` before modifying an existing tip.
-  - Workflow transitions are server-validated via `assertStatusTransition()` in `convex/accessControl.ts` (`draft -> in_review -> published -> deprecated`, plus `in_review -> draft` for reviewer feedback).
+## Enforcement Locations
+- Shared guards:
+  - `convex/auth.ts`
+- Team/domain handlers:
+  - `convex/teams.ts`
+  - `convex/posts.ts`
+  - `convex/comments.ts`
+- Frontend hides actions opportunistically, but server-side Convex checks are authoritative.
 
-Frontend guards:
-- Dashboard UI (`src/routes/dashboard.tsx`) uses `src/lib/rbac.ts` to disable privileged controls when the signed-in role lacks capability.
+## File Upload Security
+- Upload URL issuance: `files.generateUploadUrl`.
+- Attachment validation: `files.attachUploadedFile`.
+- MIME allowlist:
+  - `image/jpeg`
+  - `image/png`
+  - `image/webp`
+- File size limit: `10MB` per file.
+- Count limits:
+  - Post images: max 6
+  - Comment images: max 4
 
-## Watchlist notification access (BD-016)
+## Environment Validation
+Implemented in `src/config/env.shared.ts` and run by `bun run env:validate`.
 
-- Subscription scope:
-  - Watch subscriptions are stored per component identity (`workspaceId`, `projectName`, `componentName`, `componentFilePath`) and filtered by `organizationId` when present.
-- Notification scope:
-  - `watchNotifications` rows are written per watcher and organization context.
-  - Users can only read/update notification rows where `watcherWorkosUserId` matches the current actor.
-- Delivery model:
-  - Notification delivery channel is currently `in_app` only.
-  - Delivery state (`delivered`/`failed`) and read state (`isRead`, `readAt`) are persisted for auditability and troubleshooting.
+Key checks include:
+- `VITE_APP_ENV` must be `dev|staging|prod`
+- HTTPS redirect URIs required in staging/prod
+- `WORKOS_COOKIE_PASSWORD` minimum length
+- `WORKOS_CLIENT_ID` and `WORKOS_REDIRECT_URI` must match their `VITE_` counterparts
 
-## Audit model (BD-005)
-
-Privileged actions that append immutable audit rows:
-- `tip.publish`
-- `tip.deprecate`
-- `role.assign`
-- `integration.configure`
-
-Audit record shape (`auditEvents`):
-- `actorWorkosUserId`
-- `actorRole`
-- `organizationId`
-- `action`
-- `targetType`
-- `targetId`
-- `summary`
-- `createdAt`
-
-Immutability constraints:
-- Audit rows are only written via `insertAuditEvent()` in `convex/accessControl.ts`.
-- No public mutation exists to patch or delete `auditEvents`.
-
-## Cookie security
-- Cookies are HTTP-only (managed by AuthKit session storage).
-- `SameSite` defaults to `lax`, override via `WORKOS_COOKIE_SAME_SITE`.
-- `Secure` is derived from `WORKOS_REDIRECT_URI` protocol:
-  - `https://` -> `Secure=true`
-  - `http://` -> `Secure=false` (dev only)
+## Notes
+- Legacy RBAC/audit/watchlist/component-explorer access model was removed as part of the V2 redesign.
+- No Azure pipeline trust or scanner ingestion permissions are part of current app security boundaries.
