@@ -1,5 +1,50 @@
 # BetterDoc Change Log
 
+## 2026-02-14 (V2 ground-up redesign: posts + teams + comments)
+- Code paths changed:
+  - `convex/schema.ts`
+  - `convex/model.ts`
+  - `convex/auth.ts`
+  - `convex/users.ts`
+  - `convex/teams.ts`
+  - `convex/posts.ts`
+  - `convex/comments.ts`
+  - `convex/files.ts`
+  - `convex/http.ts`
+  - `src/routes/__root.tsx`
+  - `src/routes/index.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/routes/teams.tsx`
+  - `src/routes/profile.tsx`
+  - `src/styles.css`
+  - `src/components/ui/*` (Shadcn component set)
+  - `src/lib/search.ts`
+  - `src/lib/uploads.ts`
+  - `src/lib/use-debounced-value.ts`
+  - `src/features/app-types.ts`
+  - `package.json`
+- Code paths removed:
+  - `.azure-pipelines/*`
+  - `convex/accessControl.ts`
+  - `convex/rbac.ts`
+  - `convex/scanIngestion*.ts`
+  - `convex/tipDraft.ts`
+  - `src/routes/explorer*`
+  - `src/features/explorer/*`
+  - `src/features/dashboard/*` (legacy tabbed tips dashboard)
+  - `scripts/angular-scanner.ts`
+  - `scripts/manual-sync-azure-repo.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/operations.md`
+  - `docs/change-log.md`
+- Impact:
+  - Replaced the previous tips/explorer/scanner product with BetterDoc V2: team-scoped posts, comments, image attachments, profile IID, team invites/role management, post archive/unarchive, and dashboard search filters.
+  - Migrated UI primitives to Shadcn + Tailwind and removed legacy custom shell component system.
+  - Removed Azure and Angular scanner operational/deployment surface from active codebase.
+
 ## 2026-02-13 (Tailwind UX redesign + tabbed dashboard shell)
 - Code paths changed:
   - `package.json`

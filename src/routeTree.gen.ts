@@ -9,17 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeamsRouteImport } from './routes/teams'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ExplorerWorkspaceIdRouteImport } from './routes/explorer.$workspaceId'
+import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
 import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
-import { Route as ExplorerWorkspaceIdComponentComponentIdRouteImport } from './routes/explorer.$workspaceId.component.$componentId'
-import { Route as ExplorerWorkspaceIdProjectProjectNameRouteImport } from './routes/explorer.$workspaceId.project.$projectName'
-import { Route as ExplorerWorkspaceIdLibLibraryNameRouteImport } from './routes/explorer.$workspaceId.lib.$libraryName'
 
+const TeamsRoute = TeamsRouteImport.update({
+  id: '/teams',
+  path: '/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
@@ -28,11 +36,6 @@ const LogoutRoute = LogoutRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExplorerRoute = ExplorerRouteImport.update({
-  id: '/explorer',
-  path: '/explorer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -45,122 +48,108 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ExplorerWorkspaceIdRoute = ExplorerWorkspaceIdRouteImport.update({
-  id: '/$workspaceId',
-  path: '/$workspaceId',
-  getParentRoute: () => ExplorerRoute,
+const PostsPostIdRoute = PostsPostIdRouteImport.update({
+  id: '/posts/$postId',
+  path: '/posts/$postId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
   id: '/api/auth/callback',
   path: '/api/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ExplorerWorkspaceIdComponentComponentIdRoute =
-  ExplorerWorkspaceIdComponentComponentIdRouteImport.update({
-    id: '/component/$componentId',
-    path: '/component/$componentId',
-    getParentRoute: () => ExplorerWorkspaceIdRoute,
-  } as any)
-const ExplorerWorkspaceIdProjectProjectNameRoute =
-  ExplorerWorkspaceIdProjectProjectNameRouteImport.update({
-    id: '/project/$projectName',
-    path: '/project/$projectName',
-    getParentRoute: () => ExplorerWorkspaceIdRoute,
-  } as any)
-const ExplorerWorkspaceIdLibLibraryNameRoute =
-  ExplorerWorkspaceIdLibLibraryNameRouteImport.update({
-    id: '/lib/$libraryName',
-    path: '/lib/$libraryName',
-    getParentRoute: () => ExplorerWorkspaceIdRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/explorer': typeof ExplorerRouteWithChildren
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/explorer/$workspaceId': typeof ExplorerWorkspaceIdRouteWithChildren
+  '/profile': typeof ProfileRoute
+  '/teams': typeof TeamsRoute
+  '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
-  '/explorer/$workspaceId/lib/$libraryName': typeof ExplorerWorkspaceIdLibLibraryNameRoute
-  '/explorer/$workspaceId/project/$projectName': typeof ExplorerWorkspaceIdProjectProjectNameRoute
-  '/explorer/$workspaceId/component/$componentId': typeof ExplorerWorkspaceIdComponentComponentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/explorer': typeof ExplorerRouteWithChildren
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/explorer/$workspaceId': typeof ExplorerWorkspaceIdRouteWithChildren
+  '/profile': typeof ProfileRoute
+  '/teams': typeof TeamsRoute
+  '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
-  '/explorer/$workspaceId/lib/$libraryName': typeof ExplorerWorkspaceIdLibLibraryNameRoute
-  '/explorer/$workspaceId/project/$projectName': typeof ExplorerWorkspaceIdProjectProjectNameRoute
-  '/explorer/$workspaceId/component/$componentId': typeof ExplorerWorkspaceIdComponentComponentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/explorer': typeof ExplorerRouteWithChildren
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/explorer/$workspaceId': typeof ExplorerWorkspaceIdRouteWithChildren
+  '/profile': typeof ProfileRoute
+  '/teams': typeof TeamsRoute
+  '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
-  '/explorer/$workspaceId/lib/$libraryName': typeof ExplorerWorkspaceIdLibLibraryNameRoute
-  '/explorer/$workspaceId/project/$projectName': typeof ExplorerWorkspaceIdProjectProjectNameRoute
-  '/explorer/$workspaceId/component/$componentId': typeof ExplorerWorkspaceIdComponentComponentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/explorer'
     | '/login'
     | '/logout'
-    | '/explorer/$workspaceId'
+    | '/profile'
+    | '/teams'
+    | '/posts/$postId'
     | '/api/auth/callback'
-    | '/explorer/$workspaceId/lib/$libraryName'
-    | '/explorer/$workspaceId/project/$projectName'
-    | '/explorer/$workspaceId/component/$componentId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
-    | '/explorer'
     | '/login'
     | '/logout'
-    | '/explorer/$workspaceId'
+    | '/profile'
+    | '/teams'
+    | '/posts/$postId'
     | '/api/auth/callback'
-    | '/explorer/$workspaceId/lib/$libraryName'
-    | '/explorer/$workspaceId/project/$projectName'
-    | '/explorer/$workspaceId/component/$componentId'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/explorer'
     | '/login'
     | '/logout'
-    | '/explorer/$workspaceId'
+    | '/profile'
+    | '/teams'
+    | '/posts/$postId'
     | '/api/auth/callback'
-    | '/explorer/$workspaceId/lib/$libraryName'
-    | '/explorer/$workspaceId/project/$projectName'
-    | '/explorer/$workspaceId/component/$componentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
-  ExplorerRoute: typeof ExplorerRouteWithChildren
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  ProfileRoute: typeof ProfileRoute
+  TeamsRoute: typeof TeamsRoute
+  PostsPostIdRoute: typeof PostsPostIdRoute
   ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/teams': {
+      id: '/teams'
+      path: '/teams'
+      fullPath: '/teams'
+      preLoaderRoute: typeof TeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/logout': {
       id: '/logout'
       path: '/logout'
@@ -173,13 +162,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/explorer': {
-      id: '/explorer'
-      path: '/explorer'
-      fullPath: '/explorer'
-      preLoaderRoute: typeof ExplorerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -196,12 +178,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/explorer/$workspaceId': {
-      id: '/explorer/$workspaceId'
-      path: '/$workspaceId'
-      fullPath: '/explorer/$workspaceId'
-      preLoaderRoute: typeof ExplorerWorkspaceIdRouteImport
-      parentRoute: typeof ExplorerRoute
+    '/posts/$postId': {
+      id: '/posts/$postId'
+      path: '/posts/$postId'
+      fullPath: '/posts/$postId'
+      preLoaderRoute: typeof PostsPostIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/callback': {
       id: '/api/auth/callback'
@@ -210,66 +192,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/explorer/$workspaceId/component/$componentId': {
-      id: '/explorer/$workspaceId/component/$componentId'
-      path: '/component/$componentId'
-      fullPath: '/explorer/$workspaceId/component/$componentId'
-      preLoaderRoute: typeof ExplorerWorkspaceIdComponentComponentIdRouteImport
-      parentRoute: typeof ExplorerWorkspaceIdRoute
-    }
-    '/explorer/$workspaceId/project/$projectName': {
-      id: '/explorer/$workspaceId/project/$projectName'
-      path: '/project/$projectName'
-      fullPath: '/explorer/$workspaceId/project/$projectName'
-      preLoaderRoute: typeof ExplorerWorkspaceIdProjectProjectNameRouteImport
-      parentRoute: typeof ExplorerWorkspaceIdRoute
-    }
-    '/explorer/$workspaceId/lib/$libraryName': {
-      id: '/explorer/$workspaceId/lib/$libraryName'
-      path: '/lib/$libraryName'
-      fullPath: '/explorer/$workspaceId/lib/$libraryName'
-      preLoaderRoute: typeof ExplorerWorkspaceIdLibLibraryNameRouteImport
-      parentRoute: typeof ExplorerWorkspaceIdRoute
-    }
   }
 }
-
-interface ExplorerWorkspaceIdRouteChildren {
-  ExplorerWorkspaceIdLibLibraryNameRoute: typeof ExplorerWorkspaceIdLibLibraryNameRoute
-  ExplorerWorkspaceIdProjectProjectNameRoute: typeof ExplorerWorkspaceIdProjectProjectNameRoute
-  ExplorerWorkspaceIdComponentComponentIdRoute: typeof ExplorerWorkspaceIdComponentComponentIdRoute
-}
-
-const ExplorerWorkspaceIdRouteChildren: ExplorerWorkspaceIdRouteChildren = {
-  ExplorerWorkspaceIdLibLibraryNameRoute:
-    ExplorerWorkspaceIdLibLibraryNameRoute,
-  ExplorerWorkspaceIdProjectProjectNameRoute:
-    ExplorerWorkspaceIdProjectProjectNameRoute,
-  ExplorerWorkspaceIdComponentComponentIdRoute:
-    ExplorerWorkspaceIdComponentComponentIdRoute,
-}
-
-const ExplorerWorkspaceIdRouteWithChildren =
-  ExplorerWorkspaceIdRoute._addFileChildren(ExplorerWorkspaceIdRouteChildren)
-
-interface ExplorerRouteChildren {
-  ExplorerWorkspaceIdRoute: typeof ExplorerWorkspaceIdRouteWithChildren
-}
-
-const ExplorerRouteChildren: ExplorerRouteChildren = {
-  ExplorerWorkspaceIdRoute: ExplorerWorkspaceIdRouteWithChildren,
-}
-
-const ExplorerRouteWithChildren = ExplorerRoute._addFileChildren(
-  ExplorerRouteChildren,
-)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
-  ExplorerRoute: ExplorerRouteWithChildren,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  ProfileRoute: ProfileRoute,
+  TeamsRoute: TeamsRoute,
+  PostsPostIdRoute: PostsPostIdRoute,
   ApiAuthCallbackRoute: ApiAuthCallbackRoute,
 }
 export const routeTree = rootRouteImport

@@ -2,292 +2,96 @@ import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
 import {
-  appRoleValidator,
-  privilegedActionValidator,
-} from './rbac'
+  inviteStatusValidator,
+  postStatusValidator,
+  teamRoleValidator,
+} from './model'
 
 export default defineSchema({
-  memberships: defineTable({
+  users: defineTable({
     workosUserId: v.string(),
-    organizationId: v.optional(v.string()),
-    role: appRoleValidator,
-    assignedByWorkosUserId: v.optional(v.string()),
+    iid: v.string(),
+    name: v.string(),
+    avatarStorageId: v.optional(v.id('_storage')),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index('by_workos_user_id', ['workosUserId']),
-  tips: defineTable({
+  })
+    .index('by_workos_user_id', ['workosUserId'])
+    .index('by_iid', ['iid']),
+
+  teams: defineTable({
+    name: v.string(),
     slug: v.string(),
-    title: v.string(),
-    symptom: v.string(),
-    rootCause: v.string(),
-    fix: v.string(),
-    prevention: v.string(),
-    project: v.optional(v.string()),
-    library: v.optional(v.string()),
-    component: v.optional(v.string()),
-    tags: v.array(v.string()),
-    references: v.array(v.string()),
-    searchText: v.optional(v.string()),
-    status: v.union(
-      v.literal('draft'),
-      v.literal('in_review'),
-      v.literal('published'),
-      v.literal('deprecated'),
-    ),
-    organizationId: v.optional(v.string()),
-    createdByWorkosUserId: v.string(),
+    createdByUserId: v.id('users'),
     createdAt: v.number(),
-    currentRevision: v.number(),
-    updatedByWorkosUserId: v.string(),
     updatedAt: v.number(),
   })
     .index('by_slug', ['slug'])
-    .index('by_updated_at', ['updatedAt'])
-    .index('by_org_updated_at', ['organizationId', 'updatedAt'])
-    .index('by_org_status_updated_at', ['organizationId', 'status', 'updatedAt'])
-    .index('by_org_project_updated_at', ['organizationId', 'project', 'updatedAt'])
-    .index('by_org_library_updated_at', ['organizationId', 'library', 'updatedAt'])
-    .index('by_org_component_updated_at', ['organizationId', 'component', 'updatedAt'])
+    .index('by_created_by', ['createdByUserId']),
+
+  teamMemberships: defineTable({
+    teamId: v.id('teams'),
+    userId: v.id('users'),
+    role: teamRoleValidator,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_team', ['teamId'])
+    .index('by_user', ['userId'])
+    .index('by_team_user', ['teamId', 'userId']),
+
+  teamInvites: defineTable({
+    teamId: v.id('teams'),
+    invitedByUserId: v.id('users'),
+    invitedUserId: v.id('users'),
+    role: teamRoleValidator,
+    status: inviteStatusValidator,
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+    expiresAt: v.number(),
+  })
+    .index('by_invited_user_status', ['invitedUserId', 'status'])
+    .index('by_team_status', ['teamId', 'status'])
+    .index('by_team_invited_user', ['teamId', 'invitedUserId']),
+
+  posts: defineTable({
+    teamId: v.id('teams'),
+    title: v.string(),
+    occurrenceWhere: v.string(),
+    occurrenceWhen: v.string(),
+    description: v.string(),
+    imageStorageIds: v.array(v.id('_storage')),
+    status: postStatusValidator,
+    createdByUserId: v.id('users'),
+    updatedByUserId: v.id('users'),
+    commentCount: v.number(),
+    lastActivityAt: v.number(),
+    archivedAt: v.optional(v.number()),
+    archivedByUserId: v.optional(v.id('users')),
+    searchText: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_team_last_activity', ['teamId', 'lastActivityAt'])
+    .index('by_team_status_last_activity', ['teamId', 'status', 'lastActivityAt'])
+    .index('by_creator_updated', ['createdByUserId', 'updatedAt'])
     .searchIndex('search_text', {
       searchField: 'searchText',
-      filterFields: ['organizationId', 'status', 'project', 'library', 'component'],
+      filterFields: ['teamId', 'status', 'createdByUserId'],
     }),
-  tipRevisions: defineTable({
-    tipId: v.id('tips'),
-    revisionNumber: v.number(),
-    title: v.string(),
-    slug: v.string(),
-    symptom: v.string(),
-    rootCause: v.string(),
-    fix: v.string(),
-    prevention: v.string(),
-    project: v.optional(v.string()),
-    library: v.optional(v.string()),
-    component: v.optional(v.string()),
-    tags: v.array(v.string()),
-    references: v.array(v.string()),
-    searchText: v.optional(v.string()),
-    status: v.union(
-      v.literal('draft'),
-      v.literal('in_review'),
-      v.literal('published'),
-      v.literal('deprecated'),
-    ),
-    organizationId: v.optional(v.string()),
-    editedByWorkosUserId: v.string(),
-    createdAt: v.number(),
-  })
-    .index('by_tip_id', ['tipId'])
-    .index('by_tip_id_revision_number', ['tipId', 'revisionNumber']),
-  tipTagFacets: defineTable({
-    tipId: v.id('tips'),
-    tag: v.string(),
-    status: v.union(
-      v.literal('draft'),
-      v.literal('in_review'),
-      v.literal('published'),
-      v.literal('deprecated'),
-    ),
-    organizationId: v.optional(v.string()),
-    updatedAt: v.number(),
-  })
-    .index('by_tip_id', ['tipId'])
-    .index('by_tag_updated_at', ['tag', 'updatedAt'])
-    .index('by_tag_status_updated_at', ['tag', 'status', 'updatedAt'])
-    .index('by_org_tag_updated_at', ['organizationId', 'tag', 'updatedAt'])
-    .index('by_org_tag_status_updated_at', [
-      'organizationId',
-      'tag',
-      'status',
-      'updatedAt',
-    ]),
-  tipComponentLinks: defineTable({
-    tipId: v.id('tips'),
-    workspaceId: v.string(),
-    projectName: v.string(),
-    componentName: v.string(),
-    componentFilePath: v.string(),
-    organizationId: v.optional(v.string()),
-    linkedByWorkosUserId: v.string(),
+
+  comments: defineTable({
+    postId: v.id('posts'),
+    teamId: v.id('teams'),
+    body: v.string(),
+    imageStorageIds: v.array(v.id('_storage')),
+    createdByUserId: v.id('users'),
+    editedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+    deletedByUserId: v.optional(v.id('users')),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index('by_tip_id', ['tipId'])
-    .index('by_workspace', ['workspaceId'])
-    .index('by_workspace_project', ['workspaceId', 'projectName'])
-    .index('by_workspace_component_file', [
-      'workspaceId',
-      'projectName',
-      'componentName',
-      'componentFilePath',
-    ]),
-  componentWatchSubscriptions: defineTable({
-    watcherWorkosUserId: v.string(),
-    organizationId: v.optional(v.string()),
-    workspaceId: v.string(),
-    projectName: v.string(),
-    componentName: v.string(),
-    componentFilePath: v.string(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_watcher_updated_at', ['watcherWorkosUserId', 'updatedAt'])
-    .index('by_watcher_component', [
-      'watcherWorkosUserId',
-      'workspaceId',
-      'projectName',
-      'componentName',
-      'componentFilePath',
-    ])
-    .index('by_component', [
-      'workspaceId',
-      'projectName',
-      'componentName',
-      'componentFilePath',
-    ]),
-  watchNotifications: defineTable({
-    watcherWorkosUserId: v.string(),
-    organizationId: v.optional(v.string()),
-    eventType: v.union(v.literal('tip.published'), v.literal('tip.updated')),
-    deliveryChannel: v.literal('in_app'),
-    deliveryStatus: v.union(v.literal('delivered'), v.literal('failed')),
-    tipId: v.id('tips'),
-    tipSlug: v.string(),
-    tipTitle: v.string(),
-    workspaceId: v.string(),
-    projectName: v.string(),
-    componentName: v.string(),
-    componentFilePath: v.string(),
-    triggeredByWorkosUserId: v.string(),
-    revisionNumber: v.number(),
-    isRead: v.boolean(),
-    createdAt: v.number(),
-    deliveredAt: v.number(),
-    readAt: v.optional(v.number()),
-    errorMessage: v.optional(v.string()),
-  })
-    .index('by_watcher_created_at', ['watcherWorkosUserId', 'createdAt'])
-    .index('by_watcher_is_read_created_at', [
-      'watcherWorkosUserId',
-      'isRead',
-      'createdAt',
-    ])
-    .index('by_tip_created_at', ['tipId', 'createdAt']),
-  scanRuns: defineTable({
-    idempotencyKey: v.string(),
-    payloadHash: v.string(),
-    workspaceId: v.string(),
-    scannerName: v.string(),
-    scannerVersion: v.optional(v.string()),
-    source: v.union(
-      v.literal('manual'),
-      v.literal('pipeline'),
-      v.literal('scheduled'),
-    ),
-    status: v.union(
-      v.literal('processing'),
-      v.literal('succeeded'),
-      v.literal('failed'),
-    ),
-    attemptCount: v.number(),
-    graphVersionId: v.optional(v.id('componentGraphVersions')),
-    graphVersionNumber: v.optional(v.number()),
-    projectCount: v.number(),
-    libraryCount: v.number(),
-    componentCount: v.number(),
-    dependencyCount: v.number(),
-    metadata: v.optional(
-      v.object({
-        branch: v.optional(v.string()),
-        commitSha: v.optional(v.string()),
-        runId: v.optional(v.string()),
-      }),
-    ),
-    errorCode: v.optional(v.string()),
-    errorMessage: v.optional(v.string()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    startedAt: v.number(),
-    completedAt: v.number(),
-  })
-    .index('by_idempotency_key', ['idempotencyKey'])
-    .index('by_workspace_status_started_at', ['workspaceId', 'status', 'startedAt'])
-    .index('by_status_completed_at', ['status', 'completedAt']),
-  componentGraphHeads: defineTable({
-    workspaceId: v.string(),
-    latestVersion: v.number(),
-    updatedAt: v.number(),
-  }).index('by_workspace_id', ['workspaceId']),
-  componentGraphVersions: defineTable({
-    workspaceId: v.string(),
-    version: v.number(),
-    scanRunId: v.id('scanRuns'),
-    payloadHash: v.string(),
-    schemaVersion: v.number(),
-    workspaceConfigPath: v.string(),
-    projectCount: v.number(),
-    libraryCount: v.number(),
-    componentCount: v.number(),
-    dependencyCount: v.number(),
-    createdAt: v.number(),
-  })
-    .index('by_workspace_version', ['workspaceId', 'version'])
-    .index('by_scan_run_id', ['scanRunId'])
-    .index('by_workspace_created_at', ['workspaceId', 'createdAt']),
-  componentGraphProjects: defineTable({
-    versionId: v.id('componentGraphVersions'),
-    name: v.string(),
-    type: v.union(v.literal('application'), v.literal('library')),
-    rootPath: v.string(),
-    sourceRootPath: v.union(v.string(), v.null()),
-    configFilePath: v.string(),
-    dependencies: v.array(v.string()),
-  })
-    .index('by_version_id', ['versionId'])
-    .index('by_version_name', ['versionId', 'name']),
-  componentGraphComponents: defineTable({
-    versionId: v.id('componentGraphVersions'),
-    name: v.string(),
-    className: v.union(v.string(), v.null()),
-    selector: v.union(v.string(), v.null()),
-    standalone: v.union(v.boolean(), v.null()),
-    project: v.string(),
-    filePath: v.string(),
-    dependencies: v.array(v.string()),
-  })
-    .index('by_version_id', ['versionId'])
-    .index('by_version_project', ['versionId', 'project']),
-  componentGraphDependencies: defineTable({
-    versionId: v.id('componentGraphVersions'),
-    sourceProject: v.string(),
-    targetProject: v.string(),
-    viaFiles: v.array(v.string()),
-  })
-    .index('by_version_id', ['versionId'])
-    .index('by_version_edge', ['versionId', 'sourceProject', 'targetProject']),
-  integrationConfigs: defineTable({
-    key: v.string(),
-    enabled: v.boolean(),
-    organizationId: v.optional(v.string()),
-    configVersion: v.number(),
-    updatedByWorkosUserId: v.string(),
-    updatedAt: v.number(),
-  }).index('by_key', ['key']),
-  auditEvents: defineTable({
-    actorWorkosUserId: v.string(),
-    actorRole: appRoleValidator,
-    organizationId: v.optional(v.string()),
-    action: privilegedActionValidator,
-    targetType: v.union(
-      v.literal('tip'),
-      v.literal('membership'),
-      v.literal('integration'),
-    ),
-    targetId: v.string(),
-    summary: v.string(),
-    createdAt: v.number(),
-  })
-    .index('by_created_at', ['createdAt'])
-    .index('by_actor', ['actorWorkosUserId'])
-    .index('by_target', ['targetType', 'targetId']),
+    .index('by_post_created_at', ['postId', 'createdAt'])
+    .index('by_post_updated_at', ['postId', 'updatedAt']),
 })
