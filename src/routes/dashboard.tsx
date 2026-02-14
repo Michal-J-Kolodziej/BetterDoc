@@ -1,10 +1,10 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
-import { Filter, Plus, Search } from 'lucide-react'
+import { Plus, Search, Shield } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,19 +18,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { parseDashboardSearch, stringifySearchQuery } from '@/lib/search'
 import { uploadImageFiles } from '@/lib/uploads'
+import { userDisplayName } from '@/utils/user-display'
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
 
@@ -67,24 +61,6 @@ export const Route = createFileRoute('/dashboard')({
 
 function formatDate(value: number): string {
   return new Date(value).toLocaleString()
-}
-
-function userDisplayName(user: ReturnType<typeof useAuth>['user']): string {
-  if (!user) {
-    return 'User'
-  }
-
-  const combined = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-
-  if (combined) {
-    return combined
-  }
-
-  if (user.email) {
-    return user.email
-  }
-
-  return user.id
 }
 
 function DashboardPage() {
@@ -203,7 +179,7 @@ function DashboardPage() {
     void navigate({
       search: {
         q: searchInput,
-        team: teamSlug,
+        team: teamSlug || undefined,
       },
       replace: true,
     })
@@ -268,8 +244,8 @@ function DashboardPage() {
 
   if (auth.loading || !user || !me) {
     return (
-      <main className='mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 px-4 py-8 sm:px-6 lg:px-8'>
-        <Card>
+      <main className='app-shell'>
+        <Card className='noir-reveal'>
           <CardHeader>
             <CardTitle>Loading dashboard...</CardTitle>
           </CardHeader>
@@ -279,113 +255,56 @@ function DashboardPage() {
   }
 
   const hasTeams = teams.length > 0
+  const currentUserLabel = userDisplayName(user)
 
   return (
-    <main className='mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8'>
-      <header className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-        <div className='space-y-1'>
-          <h1 className='text-2xl font-semibold tracking-tight'>Dashboard</h1>
-          <p className='text-sm text-muted-foreground'>
-            Search active and archived team posts from one place.
-          </p>
-        </div>
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' asChild>
-            <Link to='/teams'>Teams</Link>
-          </Button>
-          <Button variant='outline' asChild>
-            <Link to='/profile'>Profile</Link>
-          </Button>
-          <Button variant='ghost' asChild>
-            <Link to='/logout'>Logout</Link>
-          </Button>
-        </div>
-      </header>
+    <AppSidebarShell
+      activeNav='dashboard'
+      sectionLabel='Team Board'
+      title='Dashboard'
+      description='Search active and archived team posts from one place.'
+      userLabel={currentUserLabel}
+      userEmail={user.email ?? undefined}
+    >
+      <Card className='noir-reveal'>
+        <CardContent className='space-y-4 p-5'>
+          <div className='flex items-center gap-3'>
+            <div className='relative flex-1'>
+              <Search className='pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
+              <Input
+                value={searchInput}
+                className='pl-9'
+                placeholder='Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX'
+                onChange={(event) => onSearchChange(event.target.value)}
+              />
+            </div>
 
-      <Card>
-        <CardContent className='space-y-3 p-4'>
-          <div className='relative'>
-            <Search className='pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
-            <Input
-              value={searchInput}
-              className='pl-9'
-              placeholder='Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX'
-              onChange={(event) => onSearchChange(event.target.value)}
-            />
-          </div>
-
-          <div className='flex flex-wrap items-center gap-2'>
-            <Button variant={parsedSearch.status === 'all' ? 'default' : 'secondary'} size='sm' onClick={() => applyQuickStatus('all')}>
-              All
-            </Button>
-            <Button variant={parsedSearch.status === 'active' ? 'default' : 'secondary'} size='sm' onClick={() => applyQuickStatus('active')}>
-              Active
-            </Button>
-            <Button variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'} size='sm' onClick={() => applyQuickStatus('archived')}>
-              Archived
-            </Button>
-
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button size='sm' variant='outline'>
-                  <Filter className='h-4 w-4' />
-                  Team Filter
+            <Dialog
+              open={createDialogOpen}
+              onOpenChange={(open) => {
+                setCreateDialogOpen(open)
+                if (!open) {
+                  resetCreatePostForm()
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button disabled={!hasTeams}>
+                  <Plus className='h-4 w-4' />
+                  New post
                 </Button>
-              </SheetTrigger>
-              <SheetContent side='right'>
-                <SheetHeader>
-                  <SheetTitle>Team Filter</SheetTitle>
-                  <SheetDescription>
-                    Limit dashboard results to one team.
-                  </SheetDescription>
-                </SheetHeader>
-                <div className='mt-6 flex flex-col gap-2'>
-                  <Button
-                    variant={!search.team ? 'default' : 'secondary'}
-                    onClick={() => openTeamFilter('')}
-                  >
-                    All Teams
-                  </Button>
-                  {teams.map((team) => (
-                    <Button
-                      key={team.teamId}
-                      variant={search.team === team.slug ? 'default' : 'secondary'}
-                      onClick={() => openTeamFilter(team.slug)}
-                    >
-                      {team.name}
-                    </Button>
-                  ))}
-                </div>
-              </SheetContent>
-            </Sheet>
+              </DialogTrigger>
+              <DialogContent className='max-w-2xl'>
+                <DialogHeader>
+                  <DialogTitle>Create Post</DialogTitle>
+                  <DialogDescription>Add a concise issue post to a team board.</DialogDescription>
+                </DialogHeader>
 
-            <div className='ml-auto'>
-              <Dialog
-                open={createDialogOpen}
-                onOpenChange={(open) => {
-                  setCreateDialogOpen(open)
-                  if (!open) {
-                    resetCreatePostForm()
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button disabled={!hasTeams}>
-                    <Plus className='h-4 w-4' />
-                    New Post
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className='sm:max-w-xl'>
-                  <DialogHeader>
-                    <DialogTitle>Create Post</DialogTitle>
-                    <DialogDescription>
-                      Add a concise issue post to a team board.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className='grid gap-3 py-1'>
+                <div className='grid gap-3 py-1'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='create-team'>Team</Label>
                     <Select value={createTeamId} onValueChange={setCreateTeamId}>
-                      <SelectTrigger>
+                      <SelectTrigger id='create-team'>
                         <SelectValue placeholder='Select a team' />
                       </SelectTrigger>
                       <SelectContent>
@@ -396,56 +315,126 @@ function DashboardPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
 
+                  <div className='grid gap-2'>
+                    <Label htmlFor='create-title'>Title</Label>
                     <Input
+                      id='create-title'
                       placeholder='Short title'
                       value={createTitle}
                       maxLength={120}
                       onChange={(event) => setCreateTitle(event.target.value)}
                     />
-                    <Input
-                      placeholder='Where the issue occurs'
-                      value={createWhere}
-                      maxLength={140}
-                      onChange={(event) => setCreateWhere(event.target.value)}
-                    />
-                    <Input
-                      placeholder='When it occurs'
-                      value={createWhen}
-                      maxLength={140}
-                      onChange={(event) => setCreateWhen(event.target.value)}
-                    />
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-2'>
+                    <div className='grid gap-2'>
+                      <Label htmlFor='create-where'>Where</Label>
+                      <Input
+                        id='create-where'
+                        placeholder='Where the issue occurs'
+                        value={createWhere}
+                        maxLength={140}
+                        onChange={(event) => setCreateWhere(event.target.value)}
+                      />
+                    </div>
+                    <div className='grid gap-2'>
+                      <Label htmlFor='create-when'>When</Label>
+                      <Input
+                        id='create-when'
+                        placeholder='When it occurs'
+                        value={createWhen}
+                        maxLength={140}
+                        onChange={(event) => setCreateWhen(event.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className='grid gap-2'>
+                    <Label htmlFor='create-description'>Description</Label>
                     <Textarea
+                      id='create-description'
                       placeholder='Issue description'
                       value={createDescription}
                       maxLength={5000}
                       rows={6}
                       onChange={(event) => setCreateDescription(event.target.value)}
                     />
+                  </div>
+
+                  <div className='grid gap-2'>
+                    <Label htmlFor='create-files'>Attachments</Label>
                     <Input
+                      id='create-files'
                       type='file'
                       multiple
                       accept='image/jpeg,image/png,image/webp'
                       onChange={(event) => setCreateFiles(Array.from(event.target.files ?? []))}
                     />
-                    {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
                   </div>
 
-                  <DialogFooter>
-                    <Button variant='outline' onClick={() => setCreateDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button disabled={createBusy || !createTeamId} onClick={handleCreatePost}>
-                      {createBusy ? 'Creating...' : 'Create Post'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
+                </div>
+
+                <DialogFooter>
+                  <Button variant='outline' onClick={() => setCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button disabled={createBusy || !createTeamId} onClick={handleCreatePost}>
+                    {createBusy ? 'Creating...' : 'Create post'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className='flex flex-wrap items-center gap-2'>
+            <Button
+              variant={parsedSearch.status === 'all' ? 'default' : 'secondary'}
+              size='sm'
+              onClick={() => applyQuickStatus('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={parsedSearch.status === 'active' ? 'default' : 'secondary'}
+              size='sm'
+              onClick={() => applyQuickStatus('active')}
+            >
+              Active
+            </Button>
+            <Button
+              variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'}
+              size='sm'
+              onClick={() => applyQuickStatus('archived')}
+            >
+              Archived
+            </Button>
+
+            <div className='ml-auto flex min-w-[220px] items-center gap-2'>
+              <Shield className='h-4 w-4 text-muted-foreground' />
+              <Select
+                value={selectedTeamFromSearch?.slug ?? '__all__'}
+                onValueChange={(value) => openTeamFilter(value === '__all__' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='All teams' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='__all__'>All teams</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.teamId} value={team.slug}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           {parsedSearch.errors.length > 0 ? (
-            <div className='rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive'>
+            <div className='rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive'>
               {parsedSearch.errors.join(' ')}
             </div>
           ) : null}
@@ -453,12 +442,10 @@ function DashboardPage() {
       </Card>
 
       {!hasTeams ? (
-        <Card>
+        <Card className='noir-reveal'>
           <CardHeader>
             <CardTitle>Create your first team</CardTitle>
-            <CardDescription>
-              You need a team before you can create or discuss posts.
-            </CardDescription>
+            <CardDescription>You need a team before you can create or discuss posts.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
@@ -468,55 +455,49 @@ function DashboardPage() {
         </Card>
       ) : null}
 
-      <section className='grid gap-3'>
+      <section className='grid gap-2'>
         {(posts ?? []).map((post) => (
-          <Card key={post.postId} className='transition hover:border-primary/50'>
-            <CardContent className='flex flex-col gap-3 p-4'>
-              <div className='flex flex-wrap items-center gap-2'>
-                <Badge variant={post.status === 'active' ? 'default' : 'secondary'}>
-                  {post.status}
-                </Badge>
-                <Badge variant='outline'>{post.teamName}</Badge>
-                <span className='ml-auto text-xs text-muted-foreground'>
-                  Updated {formatDate(post.updatedAt)}
-                </span>
-              </div>
+          <Card key={post.postId} className='noir-reveal overflow-hidden border-border/75 transition-colors hover:border-primary/45'>
+            <CardContent className='p-0'>
+              <article className='grid gap-3 px-4 py-3'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <Badge variant={post.status === 'active' ? 'default' : 'secondary'}>{post.status}</Badge>
+                  <Badge variant='outline'>{post.teamName}</Badge>
+                  <span className='ml-auto text-xs text-muted-foreground'>
+                    Updated {formatDate(post.updatedAt)}
+                  </span>
+                </div>
 
-              <div className='space-y-1'>
-                <Link
-                  className='text-lg font-semibold tracking-tight hover:text-primary'
-                  params={{ postId: post.postId }}
-                  to='/posts/$postId'
-                >
-                  {post.title}
-                </Link>
-                <p className='text-sm text-muted-foreground'>{post.descriptionPreview}</p>
-              </div>
+                <div className='space-y-1'>
+                  <Link
+                    className='inline-flex text-base font-semibold text-foreground transition-colors hover:text-primary'
+                    params={{ postId: post.postId }}
+                    to='/posts/$postId'
+                  >
+                    {post.title}
+                  </Link>
+                  <p className='text-sm leading-6 text-muted-foreground'>{post.descriptionPreview}</p>
+                </div>
 
-              <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-                <span>Where: {post.occurrenceWhere}</span>
-                <span>When: {post.occurrenceWhen}</span>
-              </div>
+                <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
+                  <span className='rounded bg-secondary/70 px-2 py-1'>Where: {post.occurrenceWhere}</span>
+                  <span className='rounded bg-secondary/70 px-2 py-1'>When: {post.occurrenceWhen}</span>
+                </div>
 
-              <div className='flex flex-wrap items-center gap-3 text-sm'>
-                <div className='flex items-center gap-2'>
-                  <Avatar className='h-7 w-7'>
-                    <AvatarImage src={undefined} alt={post.createdByName} />
-                    <AvatarFallback>{post.createdByName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
                   <span>
                     {post.createdByName} ({post.createdByIid})
                   </span>
+                  <span>{post.commentCount} comments</span>
+                  <span>{post.imageCount} images</span>
                 </div>
-                <span className='text-muted-foreground'>{post.commentCount} comments</span>
-                <span className='text-muted-foreground'>{post.imageCount} images</span>
-              </div>
+              </article>
             </CardContent>
           </Card>
         ))}
 
         {posts && posts.length === 0 ? (
-          <Card>
+          <Card className='noir-reveal'>
             <CardHeader>
               <CardTitle>No posts found</CardTitle>
               <CardDescription>
@@ -526,6 +507,6 @@ function DashboardPage() {
           </Card>
         ) : null}
       </section>
-    </main>
+    </AppSidebarShell>
   )
 }

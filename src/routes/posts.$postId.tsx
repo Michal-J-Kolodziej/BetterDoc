@@ -1,16 +1,19 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
 import { PencilLine, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { uploadImageFiles } from '@/lib/uploads'
+import { userDisplayName } from '@/utils/user-display'
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
 
@@ -278,8 +281,8 @@ function PostDetailPage() {
 
   if (auth.loading || !user || !postDetail) {
     return (
-      <main className='mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 px-4 py-8 sm:px-6 lg:px-8'>
-        <Card>
+      <main className='app-shell'>
+        <Card className='noir-reveal'>
           <CardHeader>
             <CardTitle>Loading post...</CardTitle>
           </CardHeader>
@@ -289,47 +292,33 @@ function PostDetailPage() {
   }
 
   return (
-    <main className='mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8'>
-      <div className='flex items-center gap-2'>
-        <Button asChild variant='outline'>
-          <Link search={{ q: undefined, team: undefined }} to='/dashboard'>
-            Back to dashboard
-          </Link>
-        </Button>
-        <Badge variant='secondary'>{postDetail.teamName}</Badge>
-        <Badge>{postDetail.status}</Badge>
-      </div>
+    <AppSidebarShell
+      activeNav='dashboard'
+      sectionLabel='Incident Thread'
+      title='Post Detail'
+      description='Post details, timeline, and team discussion in one place.'
+      userLabel={userDisplayName(user)}
+      userEmail={user.email ?? undefined}
+    >
+      <Card className='noir-reveal'>
+        <CardHeader className='space-y-3'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <Badge variant='outline'>{postDetail.teamName}</Badge>
+            <Badge variant={postDetail.status === 'active' ? 'default' : 'secondary'}>{postDetail.status}</Badge>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{postDetail.title}</CardTitle>
-          <CardDescription>
-            Where: {postDetail.occurrenceWhere} | When: {postDetail.occurrenceWhen}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.description}</p>
-
-          {postImages.length > 0 ? (
-            <div className='grid gap-2 sm:grid-cols-2'>
-              {postImages.map((url) => (
-                <img key={url} src={url} alt='Post attachment' className='h-48 w-full rounded-md border object-cover' />
-              ))}
-            </div>
-          ) : null}
-
-          <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
-            <span>Author: {postDetail.createdByName}</span>
-            <span>IID: {postDetail.createdByIid}</span>
-            <span>Created: {formatDate(postDetail.createdAt)}</span>
-            <span>Updated: {formatDate(postDetail.updatedAt)}</span>
+          <div>
+            <CardTitle>{postDetail.title}</CardTitle>
+            <CardDescription>
+              Where: {postDetail.occurrenceWhere} | When: {postDetail.occurrenceWhen}
+            </CardDescription>
           </div>
 
           <div className='flex flex-wrap items-center gap-2'>
             {postDetail.canEdit ? (
               <Button size='sm' variant='secondary' onClick={beginPostEdit}>
                 <PencilLine className='h-4 w-4' />
-                Edit Post
+                Edit post
               </Button>
             ) : null}
             {postDetail.canArchive ? (
@@ -343,21 +332,73 @@ function PostDetailPage() {
               </Button>
             ) : null}
           </div>
+        </CardHeader>
+
+        <CardContent className='space-y-4'>
+          <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.description}</p>
+
+          {postImages.length > 0 ? (
+            <div className='grid grid-cols-2 gap-2'>
+              {postImages.map((url) => (
+                <img
+                  key={url}
+                  src={url}
+                  alt='Post attachment'
+                  className='h-48 w-full rounded-lg border border-border/70 object-cover'
+                />
+              ))}
+            </div>
+          ) : null}
+
+          <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
+            <span className='rounded bg-secondary/70 px-2 py-1'>Author: {postDetail.createdByName}</span>
+            <span className='rounded bg-secondary/70 px-2 py-1'>IID: {postDetail.createdByIid}</span>
+            <span className='rounded bg-secondary/70 px-2 py-1'>Created: {formatDate(postDetail.createdAt)}</span>
+            <span className='rounded bg-secondary/70 px-2 py-1'>Updated: {formatDate(postDetail.updatedAt)}</span>
+          </div>
 
           {editingPost ? (
-            <div className='rounded-md border p-3'>
-              <div className='grid gap-2'>
-                <Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
-                <Input value={editWhere} onChange={(event) => setEditWhere(event.target.value)} />
-                <Input value={editWhen} onChange={(event) => setEditWhen(event.target.value)} />
-                <Textarea value={editDescription} rows={6} onChange={(event) => setEditDescription(event.target.value)} />
-                <Input
-                  type='file'
-                  multiple
-                  accept='image/jpeg,image/png,image/webp'
-                  onChange={(event) => setEditFiles(Array.from(event.target.files ?? []))}
-                />
+            <div className='rounded-lg border border-border/80 bg-background/45 p-4'>
+              <div className='grid gap-3'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='edit-title'>Title</Label>
+                  <Input id='edit-title' value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
+                </div>
+
+                <div className='grid grid-cols-2 gap-2'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='edit-where'>Where</Label>
+                    <Input id='edit-where' value={editWhere} onChange={(event) => setEditWhere(event.target.value)} />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='edit-when'>When</Label>
+                    <Input id='edit-when' value={editWhen} onChange={(event) => setEditWhen(event.target.value)} />
+                  </div>
+                </div>
+
+                <div className='grid gap-2'>
+                  <Label htmlFor='edit-description'>Description</Label>
+                  <Textarea
+                    id='edit-description'
+                    value={editDescription}
+                    rows={6}
+                    onChange={(event) => setEditDescription(event.target.value)}
+                  />
+                </div>
+
+                <div className='grid gap-2'>
+                  <Label htmlFor='edit-files'>Add images</Label>
+                  <Input
+                    id='edit-files'
+                    type='file'
+                    multiple
+                    accept='image/jpeg,image/png,image/webp'
+                    onChange={(event) => setEditFiles(Array.from(event.target.files ?? []))}
+                  />
+                </div>
+
                 {editError ? <p className='text-sm text-destructive'>{editError}</p> : null}
+
                 <div className='flex items-center gap-2'>
                   <Button disabled={editBusy} onClick={handlePostEditSave}>
                     {editBusy ? 'Saving...' : 'Save'}
@@ -372,43 +413,56 @@ function PostDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className='noir-reveal'>
         <CardHeader>
           <CardTitle>Discussion ({postDetail.commentCount})</CardTitle>
           <CardDescription>Team-only comments and screenshots.</CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
-          <div className='space-y-2 rounded-md border p-3'>
-            <Textarea
-              value={commentBody}
-              rows={4}
-              placeholder='Add a comment'
-              disabled={postDetail.status === 'archived'}
-              onChange={(event) => setCommentBody(event.target.value)}
-            />
-            <Input
-              type='file'
-              multiple
-              accept='image/jpeg,image/png,image/webp'
-              disabled={postDetail.status === 'archived'}
-              onChange={(event) => setCommentFiles(Array.from(event.target.files ?? []))}
-            />
-            {commentError ? <p className='text-sm text-destructive'>{commentError}</p> : null}
-            <Button disabled={commentBusy || postDetail.status === 'archived'} onClick={handleCreateComment}>
-              {commentBusy ? 'Posting...' : 'Post Comment'}
-            </Button>
-          </div>
+          <section className='rounded-lg border border-border/80 bg-background/45 p-4'>
+            <div className='grid gap-3'>
+              <div className='grid gap-2'>
+                <Label htmlFor='comment-body'>Comment</Label>
+                <Textarea
+                  id='comment-body'
+                  value={commentBody}
+                  rows={4}
+                  placeholder='Add a comment'
+                  disabled={postDetail.status === 'archived'}
+                  onChange={(event) => setCommentBody(event.target.value)}
+                />
+              </div>
 
-          <div className='space-y-3'>
+              <div className='grid gap-2'>
+                <Label htmlFor='comment-files'>Attachments</Label>
+                <Input
+                  id='comment-files'
+                  type='file'
+                  multiple
+                  accept='image/jpeg,image/png,image/webp'
+                  disabled={postDetail.status === 'archived'}
+                  onChange={(event) => setCommentFiles(Array.from(event.target.files ?? []))}
+                />
+              </div>
+
+              {commentError ? <p className='text-sm text-destructive'>{commentError}</p> : null}
+
+              <Button disabled={commentBusy || postDetail.status === 'archived'} onClick={handleCreateComment}>
+                {commentBusy ? 'Posting...' : 'Post comment'}
+              </Button>
+            </div>
+          </section>
+
+          <section className='grid gap-3'>
             {postDetail.comments.map((comment) => (
-              <Card key={comment.commentId}>
+              <Card key={comment.commentId} className='border-border/75'>
                 <CardContent className='space-y-3 p-4'>
                   <div className='flex items-center gap-2'>
                     <Avatar className='h-7 w-7'>
                       <AvatarImage src={undefined} alt={comment.createdByName} />
                       <AvatarFallback>{comment.createdByName.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <span className='text-sm font-medium'>{comment.createdByName}</span>
+                    <span className='text-sm font-medium text-foreground'>{comment.createdByName}</span>
                     <span className='text-xs text-muted-foreground'>({comment.createdByIid})</span>
                     <span className='ml-auto text-xs text-muted-foreground'>{formatDate(comment.createdAt)}</span>
                   </div>
@@ -443,13 +497,13 @@ function PostDetailPage() {
                       <p className='whitespace-pre-wrap text-sm leading-6'>{comment.body}</p>
 
                       {comment.imageUrls.length > 0 ? (
-                        <div className='grid gap-2 sm:grid-cols-2'>
+                        <div className='grid grid-cols-2 gap-2'>
                           {comment.imageUrls.map((url) => (
                             <img
                               key={url}
                               src={url}
                               alt='Comment attachment'
-                              className='h-40 w-full rounded-md border object-cover'
+                              className='h-40 w-full rounded-lg border border-border/70 object-cover'
                             />
                           ))}
                         </div>
@@ -490,9 +544,9 @@ function PostDetailPage() {
                 </CardContent>
               </Card>
             ) : null}
-          </div>
+          </section>
         </CardContent>
       </Card>
-    </main>
+    </AppSidebarShell>
   )
 }

@@ -41,7 +41,7 @@ function RootDocument({ children }: PropsWithChildren) {
       <head>
         <HeadContent />
       </head>
-      <body className='min-h-screen bg-background text-foreground antialiased'>
+      <body className='min-h-screen bg-background text-foreground antialiased selection:bg-primary/30 selection:text-foreground'>
         {children}
         <Scripts />
       </body>

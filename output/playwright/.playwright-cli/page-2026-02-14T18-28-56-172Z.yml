@@ -1,0 +1,69 @@
+- generic:
+  - main:
+    - generic:
+      - generic:
+        - paragraph: Team Board
+        - heading [level=1]: Dashboard
+        - paragraph: Search active and archived team posts from one place.
+      - button [expanded]:
+        - generic:
+          - generic: MI
+        - generic: Michał Kołodziej
+        - img
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - img
+            - textbox:
+              - /placeholder: "Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX"
+          - button:
+            - img
+            - text: New post
+        - generic:
+          - button: All
+          - button: Active
+          - button: Archived
+          - generic:
+            - img
+            - combobox:
+              - generic: All teams
+              - img
+    - generic:
+      - generic:
+        - generic:
+          - article:
+            - generic:
+              - generic: active
+              - generic: TEstTeam
+              - generic: Updated 14/02/2026, 18:48:14
+            - generic:
+              - link:
+                - /url: /posts/m579wn4h2155e6kf1hp960w8w98151kq
+                - text: Asd
+              - paragraph: asddd
+            - generic:
+              - generic: "Where: asd"
+              - generic: "When: asd"
+            - generic:
+              - generic:
+                - generic:
+                  - generic: MI
+                - generic: Michał Kołodziej (BD-2HM3ULHU)
+              - generic: 2 comments
+              - generic: 0 images
+  - menu "MI Michał Kołodziej" [active] [ref=e55]:
+    - generic [ref=e56]:
+      - paragraph [ref=e57]: Signed in as
+      - paragraph [ref=e58]: michal.j.kolodziej@gmail.com
+    - separator [ref=e59]
+    - menuitem "Teams" [ref=e60]:
+      - img [ref=e61]
+      - text: Teams
+    - menuitem "Profile" [ref=e65]:
+      - img [ref=e66]
+      - text: Profile
+    - separator [ref=e69]
+    - menuitem "Logout" [ref=e70]:
+      - img [ref=e71]
+      - text: Logout

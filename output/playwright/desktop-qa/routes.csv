@@ -1,0 +1,5 @@
+page,requested_url,final_url
+home,http://localhost:3000/,http://localhost:3000/"
+dashboard,http://localhost:3000/dashboard,https://witty-paradox-52-staging.authkit.app/?client_id=client_01KH93JNTZ8XSSTX5WD3TP5CX9&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback&state=eyJyZXR1cm5QYXRobmFtZSI6Ii9kYXNoYm9hcmQifQ%3D%3D&authorization_session_id=01KHEP4C11HHP784A7B0M1J1FX"
+teams,http://localhost:3000/teams,https://witty-paradox-52-staging.authkit.app/?client_id=client_01KH93JNTZ8XSSTX5WD3TP5CX9&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback&state=eyJyZXR1cm5QYXRobmFtZSI6Ii90ZWFtcyJ9&authorization_session_id=01KHEP4M5M68PA414DHJT5S5J8"
+profile,http://localhost:3000/profile,https://witty-paradox-52-staging.authkit.app/?client_id=client_01KH93JNTZ8XSSTX5WD3TP5CX9&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback&state=eyJyZXR1cm5QYXRobmFtZSI6Ii9wcm9maWxlIn0%3D&authorization_session_id=01KHEP4S8AG9KWP4EB4PM923A2"

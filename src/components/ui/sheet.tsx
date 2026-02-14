@@ -15,7 +15,10 @@ const SheetOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
-    className={cn('fixed inset-0 z-50 bg-black/80', className)}
+    className={cn(
+      'fixed inset-0 z-50 bg-background/82 backdrop-blur-sm transition-opacity duration-150 ease-out data-[state=closed]:opacity-0 data-[state=open]:opacity-100',
+      className,
+    )}
     {...props}
     ref={ref}
   />
@@ -23,14 +26,16 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-  'fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out',
+  'fixed z-50 flex flex-col gap-4 border-border/90 bg-popover/96 p-5 shadow-[0_20px_60px_hsl(220_60%_1%/0.45)] backdrop-blur-md transition-transform duration-180 ease-out sm:p-6',
   {
     variants: {
       side: {
-        top: 'inset-x-0 top-0 border-b',
-        bottom: 'inset-x-0 bottom-0 border-t',
-        left: 'inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm',
-        right: 'inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
+        top: 'inset-x-0 top-0 border-b data-[state=closed]:-translate-y-full data-[state=open]:translate-y-0',
+        bottom:
+          'inset-x-0 bottom-0 border-t data-[state=closed]:translate-y-full data-[state=open]:translate-y-0',
+        left: 'inset-y-0 left-0 h-full w-[88%] border-r sm:max-w-sm data-[state=closed]:-translate-x-full data-[state=open]:translate-x-0',
+        right:
+          'inset-y-0 right-0 h-full w-[88%] border-l sm:max-w-sm data-[state=closed]:translate-x-full data-[state=open]:translate-x-0',
       },
     },
     defaultVariants: {
@@ -51,7 +56,7 @@ const SheetContent = React.forwardRef<
     <SheetOverlay />
     <DialogPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
       {children}
-      <DialogPrimitive.Close className='absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'>
+      <DialogPrimitive.Close className='absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-secondary/80 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/60'>
         <X className='h-4 w-4' />
         <span className='sr-only'>Close</span>
       </DialogPrimitive.Close>
@@ -61,12 +66,12 @@ const SheetContent = React.forwardRef<
 SheetContent.displayName = DialogPrimitive.Content.displayName
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col space-y-2 text-center sm:text-left', className)} {...props} />
+  <div className={cn('flex flex-col space-y-2 text-left', className)} {...props} />
 )
 SheetHeader.displayName = 'SheetHeader'
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)} {...props} />
+  <div className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2', className)} {...props} />
 )
 SheetFooter.displayName = 'SheetFooter'
 

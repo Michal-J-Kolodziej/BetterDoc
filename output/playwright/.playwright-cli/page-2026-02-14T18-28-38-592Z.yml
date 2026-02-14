@@ -1,0 +1,45 @@
+- main [ref=e2]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - paragraph [ref=e8]: Team Board
+      - heading "Dashboard" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Search active and archived team posts from one place.
+    - button "MI Michał Kołodziej" [ref=e11]:
+      - generic [ref=e13]: MI
+      - generic [ref=e14]: Michał Kołodziej
+      - img [ref=e15]
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - img
+        - 'textbox "Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX" [ref=e21]'
+      - button "New post" [ref=e22]:
+        - img [ref=e23]
+        - text: New post
+    - generic [ref=e24]:
+      - button "All" [ref=e25]
+      - button "Active" [ref=e26]
+      - button "Archived" [ref=e27]
+      - generic [ref=e28]:
+        - img [ref=e29]
+        - combobox [ref=e31]:
+          - generic: All teams
+          - img [ref=e32]
+  - article [ref=e37]:
+    - generic [ref=e38]:
+      - generic [ref=e39]: active
+      - generic [ref=e40]: TEstTeam
+      - generic [ref=e41]: Updated 14/02/2026, 18:48:14
+    - generic [ref=e42]:
+      - link "Asd" [ref=e43] [cursor=pointer]:
+        - /url: /posts/m579wn4h2155e6kf1hp960w8w98151kq
+      - paragraph [ref=e44]: asddd
+    - generic [ref=e45]:
+      - generic [ref=e46]: "Where: asd"
+      - generic [ref=e47]: "When: asd"
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e51]: MI
+        - generic [ref=e52]: Michał Kołodziej (BD-2HM3ULHU)
+      - generic [ref=e53]: 2 comments
+      - generic [ref=e54]: 0 images

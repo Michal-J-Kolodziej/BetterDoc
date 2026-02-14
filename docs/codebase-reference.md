@@ -20,7 +20,7 @@ Last updated: 2026-02-14
 
 ## Route Surface (V2)
 - `src/routes/index.tsx`
-  - Public landing page with sign-in CTA.
+  - Public dark hero landing page with primary sign-in CTA and dashboard shortcut.
 - `src/routes/login.tsx`
   - WorkOS redirect entrypoint.
 - `src/routes/api/auth/callback.tsx`
@@ -29,19 +29,33 @@ Last updated: 2026-02-14
   - WorkOS sign-out + session clear.
 - `src/routes/dashboard.tsx`
   - Protected post board dashboard.
+  - Uses shared protected desktop shell with persistent left sidebar nav.
   - Search bar supports free text and qualifiers (`team:`, `status:`, `author:`, `has:image`, `before:`, `after:`).
+  - Inline status chips + inline team selector in main content controls.
   - Create-post dialog with image upload.
 - `src/routes/posts.$postId.tsx`
   - Protected post detail view.
-  - Post edit/archive/unarchive plus discussion thread and comment CRUD.
+  - Uses shared protected desktop shell; sidebar highlights Dashboard nav.
+  - Post edit/archive/unarchive plus compact discussion composer and comment CRUD.
 - `src/routes/teams.tsx`
-  - Protected team management, IID invites, role assignment, member removal, invite responses.
+  - Uses shared protected desktop shell with persistent left nav.
+  - Team management with split create/invite + member management surfaces.
+  - IID invites, role assignment, member removal, invite responses.
 - `src/routes/profile.tsx`
-  - Protected profile editor (name/avatar) and IID copy.
+  - Uses shared protected desktop shell with persistent left nav.
+  - Profile editor with identity panel, avatar upload, and IID copy.
 
 ## UI System (Shadcn + Tailwind)
 - Global styling/tokens: `src/styles.css`
+  - Noir Grid dark-only theme tokens (charcoal base, cyan/lime accents, compact spacing).
+  - Google font stack: `Space Grotesk` + `IBM Plex Mono`.
+  - Layered background treatment (dual radial glow + subtle grid overlay).
+  - Motion baseline (`180ms` reveal) with strict reduced-motion override.
+  - Desktop-only layout utilities (`app-desktop-shell`, `app-sidebar`, `app-main`, `app-content-stack`) with fixed columns and horizontal overflow on narrow viewports.
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
+- Shared protected route shell:
+  - `src/components/layout/app-sidebar-shell.tsx`
+  - Provides fixed desktop two-column shell with persistent left navigation (`Dashboard`, `Teams`, `Profile`, `Logout`) and account footer block.
 - Shadcn component primitives in `src/components/ui`:
   - `avatar.tsx`
   - `badge.tsx`

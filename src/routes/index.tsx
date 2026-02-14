@@ -1,7 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export const Route = createFileRoute('/')({
   ssr: false,
@@ -10,25 +9,43 @@ export const Route = createFileRoute('/')({
 
 function HomePage() {
   return (
-    <main className='mx-auto flex min-h-screen w-full max-w-4xl items-center px-4 py-12 sm:px-6 lg:px-8'>
-      <Card className='w-full border-border/80 bg-card/90 backdrop-blur'>
-        <CardHeader className='space-y-2'>
-          <CardTitle className='text-3xl'>BetterDoc</CardTitle>
-          <CardDescription>
-            Team issue board for fast post-and-discuss workflows with image support and searchable history.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='flex flex-col gap-3 sm:flex-row'>
-          <Button asChild>
+    <main className='app-shell'>
+      <section className='noir-panel noir-reveal px-10 py-11'>
+        <p className='noir-kicker'>Noir Grid Workspace</p>
+        <h1 className='mt-3 text-5xl font-semibold text-foreground'>BetterDoc</h1>
+        <p className='mt-4 max-w-2xl text-base leading-6 text-muted-foreground'>
+          Minimal incident knowledge flow for teams. Capture a problem once, discuss with context,
+          and keep a searchable history that stays readable under pressure.
+        </p>
+
+        <div className='mt-7 flex flex-wrap items-center gap-3'>
+          <Button asChild size='lg'>
             <Link to='/login'>Sign in with WorkOS</Link>
           </Button>
-          <Button asChild variant='secondary'>
+          <Button asChild variant='outline' size='lg'>
             <Link search={{ q: undefined, team: undefined }} to='/dashboard'>
-              Open Dashboard
+              Open dashboard
             </Link>
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className='noir-divider my-7' />
+
+        <div className='grid grid-cols-3 gap-3 text-xs text-muted-foreground'>
+          <div className='rounded-lg border border-border/80 bg-secondary/45 p-3'>
+            <p className='noir-kicker mb-2'>Capture</p>
+            <p>Post issue context with images in under a minute.</p>
+          </div>
+          <div className='rounded-lg border border-border/80 bg-secondary/45 p-3'>
+            <p className='noir-kicker mb-2'>Discuss</p>
+            <p>Threaded team comments with clear ownership and timing.</p>
+          </div>
+          <div className='rounded-lg border border-border/80 bg-secondary/45 p-3'>
+            <p className='noir-kicker mb-2'>Search</p>
+            <p>Use qualifiers to find similar incidents quickly.</p>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }

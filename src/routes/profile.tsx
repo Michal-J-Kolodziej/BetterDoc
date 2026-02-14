@@ -1,13 +1,15 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
 import { Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { userDisplayName } from '@/utils/user-display'
 import { uploadImageFiles } from '@/lib/uploads'
 import { api } from '../../convex/_generated/api.js'
@@ -120,8 +122,8 @@ function ProfilePage() {
 
   if (auth.loading || !user || !me) {
     return (
-      <main className='mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-4 px-4 py-8 sm:px-6 lg:px-8'>
-        <Card>
+      <main className='app-shell'>
+        <Card className='noir-reveal'>
           <CardHeader>
             <CardTitle>Loading profile...</CardTitle>
           </CardHeader>
@@ -131,64 +133,62 @@ function ProfilePage() {
   }
 
   return (
-    <main className='mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8'>
-      <div className='flex items-center gap-2'>
-        <Button asChild variant='outline'>
-          <Link search={{ q: undefined, team: undefined }} to='/dashboard'>
-            Back to dashboard
-          </Link>
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Manage your name, avatar, and shareable IID.</CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex items-center gap-4'>
-            <Avatar className='h-16 w-16'>
+    <AppSidebarShell
+      activeNav='profile'
+      sectionLabel='Account'
+      title='Profile'
+      description='Manage your name, avatar, and shareable IID.'
+      userLabel={userDisplayName(user)}
+      userEmail={user.email ?? undefined}
+    >
+      <Card className='noir-reveal'>
+        <CardContent className='grid grid-cols-[auto_1fr] gap-6 p-6'>
+          <div className='space-y-3'>
+            <Avatar className='h-20 w-20'>
               <AvatarImage src={me.avatarUrl ?? undefined} alt={me.name} />
               <AvatarFallback>{me.name.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <div>
-              <p className='text-sm text-muted-foreground'>Your IID</p>
-              <div className='mt-1 flex items-center gap-2'>
-                <code className='rounded bg-muted px-2 py-1 text-sm'>{me.iid}</code>
+            <p className='text-sm font-medium text-foreground'>{me.name}</p>
+            <p className='text-xs text-muted-foreground'>WorkOS user: {user.id}</p>
+          </div>
+
+          <div className='space-y-4'>
+            <div className='rounded-lg border border-border/80 bg-background/45 p-4'>
+              <p className='noir-kicker mb-2'>Your IID</p>
+              <div className='flex flex-wrap items-center gap-2'>
+                <code className='rounded-md bg-secondary/70 px-2 py-1 text-sm'>{me.iid}</code>
                 <Button variant='secondary' size='sm' onClick={copyIID}>
                   <Copy className='h-4 w-4' />
                   Copy
                 </Button>
               </div>
             </div>
+
+            <div className='grid gap-3'>
+              <div className='grid gap-2'>
+                <Label htmlFor='profile-name'>Name</Label>
+                <Input id='profile-name' value={name} onChange={(event) => setName(event.target.value)} />
+              </div>
+
+              <div className='grid gap-2'>
+                <Label htmlFor='profile-avatar'>Avatar (optional)</Label>
+                <Input
+                  id='profile-avatar'
+                  type='file'
+                  accept='image/jpeg,image/png,image/webp'
+                  onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)}
+                />
+              </div>
+
+              {statusMessage ? <p className='text-sm text-muted-foreground'>{statusMessage}</p> : null}
+
+              <Button disabled={busy} onClick={saveProfile}>
+                {busy ? 'Saving...' : 'Save profile'}
+              </Button>
+            </div>
           </div>
-
-          <div className='grid gap-2'>
-            <label className='text-sm font-medium' htmlFor='profile-name'>
-              Name
-            </label>
-            <Input id='profile-name' value={name} onChange={(event) => setName(event.target.value)} />
-          </div>
-
-          <div className='grid gap-2'>
-            <label className='text-sm font-medium' htmlFor='profile-avatar'>
-              Avatar (optional)
-            </label>
-            <Input
-              id='profile-avatar'
-              type='file'
-              accept='image/jpeg,image/png,image/webp'
-              onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)}
-            />
-          </div>
-
-          {statusMessage ? <p className='text-sm text-muted-foreground'>{statusMessage}</p> : null}
-
-          <Button disabled={busy} onClick={saveProfile}>
-            {busy ? 'Saving...' : 'Save profile'}
-          </Button>
         </CardContent>
       </Card>
-    </main>
+    </AppSidebarShell>
   )
 }

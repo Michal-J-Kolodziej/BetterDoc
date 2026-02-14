@@ -1,0 +1,6 @@
+page,requested_url,final_url
+dashboard,http://localhost:3000/dashboard,http://localhost:3000/dashboard
+teams,http://localhost:3000/teams,http://localhost:3000/teams
+profile,http://localhost:3000/profile,http://localhost:3000/profile
+home,http://localhost:3000/,http://localhost:3000/
+post_detail,,NOT_FOUND_NO_POST_LINK

@@ -1,0 +1,90 @@
+- generic:
+  - main:
+    - generic:
+      - generic:
+        - paragraph: Team Board
+        - heading [level=1]: Dashboard
+        - paragraph: Search active and archived team posts from one place.
+      - button:
+        - generic:
+          - generic: MI
+        - generic: Michał Kołodziej
+        - img
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - img
+            - textbox:
+              - /placeholder: "Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX"
+          - button [expanded]:
+            - img
+            - text: New post
+        - generic:
+          - button: All
+          - button: Active
+          - button: Archived
+          - generic:
+            - img
+            - combobox:
+              - generic: All teams
+              - img
+    - generic:
+      - generic:
+        - generic:
+          - article:
+            - generic:
+              - generic: active
+              - generic: TEstTeam
+              - generic: Updated 14/02/2026, 18:48:14
+            - generic:
+              - link:
+                - /url: /posts/m579wn4h2155e6kf1hp960w8w98151kq
+                - text: Asd
+              - paragraph: asddd
+            - generic:
+              - generic: "Where: asd"
+              - generic: "When: asd"
+            - generic:
+              - generic:
+                - generic:
+                  - generic: MI
+                - generic: Michał Kołodziej (BD-2HM3ULHU)
+              - generic: 2 comments
+              - generic: 0 images
+  - dialog "Create Post" [ref=e75]:
+    - generic [ref=e76]:
+      - heading "Create Post" [level=2] [ref=e77]
+      - paragraph [ref=e78]: Add a concise issue post to a team board.
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - generic [ref=e81]: Team
+        - combobox "Team" [active] [ref=e82]:
+          - generic: TEstTeam (admin)
+          - img [ref=e83]
+      - generic [ref=e85]:
+        - generic [ref=e86]: Title
+        - textbox "Title" [ref=e87]:
+          - /placeholder: Short title
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - generic [ref=e90]: Where
+          - textbox "Where" [ref=e91]:
+            - /placeholder: Where the issue occurs
+        - generic [ref=e92]:
+          - generic [ref=e93]: When
+          - textbox "When" [ref=e94]:
+            - /placeholder: When it occurs
+      - generic [ref=e95]:
+        - generic [ref=e96]: Description
+        - textbox "Description" [ref=e97]:
+          - /placeholder: Issue description
+      - generic [ref=e98]:
+        - generic [ref=e99]: Attachments
+        - button "Attachments" [ref=e100]
+    - generic [ref=e101]:
+      - button "Cancel" [ref=e102]
+      - button "Create post" [ref=e103]
+    - button "Close" [ref=e104]:
+      - img [ref=e105]
+      - generic [ref=e108]: Close

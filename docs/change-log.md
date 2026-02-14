@@ -1,5 +1,54 @@
 # BetterDoc Change Log
 
+## 2026-02-14 (Desktop shell pass: persistent left sidebar + non-responsive layout)
+- Code paths changed:
+  - `src/components/layout/app-sidebar-shell.tsx`
+  - `src/styles.css`
+  - `src/routes/index.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/routes/teams.tsx`
+  - `src/routes/profile.tsx`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Replaced protected-route per-page headers with a shared desktop shell containing a persistent left sidebar navigation (`Dashboard`, `Teams`, `Profile`, `Logout`) and account footer block.
+  - Removed responsive route/layout variants and switched the app to a hard desktop column model with fixed sidebar/content regions.
+  - Kept all existing auth, Convex query/mutation, permissions, and route behavior unchanged while changing only UI structure/styling.
+
+## 2026-02-14 (Noir Grid redesign: dark minimal UI pass)
+- Code paths changed:
+  - `src/styles.css`
+  - `src/components/ui/avatar.tsx`
+  - `src/components/ui/badge.tsx`
+  - `src/components/ui/button.tsx`
+  - `src/components/ui/card.tsx`
+  - `src/components/ui/command.tsx`
+  - `src/components/ui/dialog.tsx`
+  - `src/components/ui/dropdown-menu.tsx`
+  - `src/components/ui/input.tsx`
+  - `src/components/ui/label.tsx`
+  - `src/components/ui/scroll-area.tsx`
+  - `src/components/ui/select.tsx`
+  - `src/components/ui/separator.tsx`
+  - `src/components/ui/sheet.tsx`
+  - `src/components/ui/skeleton.tsx`
+  - `src/components/ui/textarea.tsx`
+  - `src/routes/__root.tsx`
+  - `src/routes/index.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/routes/teams.tsx`
+  - `src/routes/profile.tsx`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Replaced the previous dark styling with a Noir Grid visual system: charcoal surfaces, cyan/lime accent treatment, compact spacing, layered background texture, and reduced-motion-safe reveal timing.
+  - Restyled all shared Shadcn primitives to use the same surface, border, focus, and motion language without changing component APIs.
+  - Updated route shells for landing, dashboard, post detail, teams, and profile with cleaner hierarchy and minor UX polish (inline dashboard team selector and account dropdown).
+
 ## 2026-02-14 (V2 ground-up redesign: posts + teams + comments)
 - Code paths changed:
   - `convex/schema.ts`
