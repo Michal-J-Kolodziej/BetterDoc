@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -243,11 +242,7 @@ function TeamsPage() {
   if (auth.loading || !user || !me) {
     return (
       <main className='app-shell'>
-        <Card className='noir-reveal'>
-          <CardHeader>
-            <CardTitle>Loading teams...</CardTitle>
-          </CardHeader>
-        </Card>
+        <p className='text-sm text-muted-foreground'>Loading teams...</p>
       </main>
     )
   }
@@ -263,41 +258,40 @@ function TeamsPage() {
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
-      <section className='grid grid-cols-2 gap-3'>
-        <Card className='noir-reveal'>
-          <CardHeader>
-            <CardTitle>Create Team</CardTitle>
-            <CardDescription>You become admin of teams you create.</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <div className='grid gap-2'>
-              <Label htmlFor='team-name'>Team name</Label>
-              <Input
-                id='team-name'
-                value={createName}
-                maxLength={80}
-                placeholder='Platform'
-                onChange={(event) => setCreateName(event.target.value)}
-              />
-            </div>
-            {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
-            <Button disabled={createBusy} onClick={handleCreateTeam}>
-              {createBusy ? 'Creating...' : 'Create team'}
-            </Button>
-          </CardContent>
-        </Card>
+      <section className='grid grid-cols-2 gap-5'>
+        <section className='tape-surface noir-reveal space-y-3 p-5'>
+          <div>
+            <p className='text-lg font-semibold text-foreground'>Create Team</p>
+            <p className='mt-1 text-sm text-muted-foreground'>You become admin of teams you create.</p>
+          </div>
+          <div className='grid gap-2'>
+            <Label htmlFor='team-name'>Team name</Label>
+            <Input
+              id='team-name'
+              value={createName}
+              maxLength={80}
+              placeholder='Platform'
+              onChange={(event) => setCreateName(event.target.value)}
+            />
+          </div>
+          {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
+          <Button disabled={createBusy} onClick={handleCreateTeam}>
+            {createBusy ? 'Creating...' : 'Create team'}
+          </Button>
+        </section>
 
-        <Card className='noir-reveal'>
-          <CardHeader>
-            <CardTitle>My Invites</CardTitle>
-            <CardDescription>Pending and recent team invites.</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            {(invites ?? []).length === 0 ? (
-              <p className='text-sm text-muted-foreground'>No invites.</p>
-            ) : (
-              (invites ?? []).map((invite) => (
-                <div key={invite.inviteId} className='rounded-lg border border-border/80 bg-background/45 p-3'>
+        <section className='tape-surface noir-reveal space-y-3 p-5'>
+          <div>
+            <p className='text-lg font-semibold text-foreground'>My Invites</p>
+            <p className='mt-1 text-sm text-muted-foreground'>Pending and recent team invites.</p>
+          </div>
+
+          {(invites ?? []).length === 0 ? (
+            <p className='text-sm text-muted-foreground'>No invites.</p>
+          ) : (
+            <div className='tape-list'>
+              {(invites ?? []).map((invite) => (
+                <article key={invite.inviteId} className='tape-list-row py-3'>
                   <div className='flex flex-wrap items-center gap-2'>
                     <p className='text-sm font-medium'>{invite.teamName}</p>
                     <Badge variant='outline'>{invite.status}</Badge>
@@ -311,50 +305,47 @@ function TeamsPage() {
                       <Button size='sm' onClick={() => handleAcceptInvite(invite.inviteId)}>
                         Accept
                       </Button>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => handleDeclineInvite(invite.inviteId)}
-                      >
+                      <Button size='sm' variant='outline' onClick={() => handleDeclineInvite(invite.inviteId)}>
                         Decline
                       </Button>
                     </div>
                   ) : null}
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </section>
 
-      <Card className='noir-reveal'>
-        <CardHeader>
-          <CardTitle>My Teams</CardTitle>
-          <CardDescription>Select a team to manage members and invites.</CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex flex-wrap gap-2'>
-            {(myTeams ?? []).map((team) => (
-              <Button
-                key={team.teamId}
-                variant={selectedTeamId === team.teamId ? 'default' : 'secondary'}
-                onClick={() => setSelectedTeamId(team.teamId)}
-              >
-                {team.name} ({team.role})
-              </Button>
-            ))}
-          </div>
+      <section className='tape-surface noir-reveal space-y-4 p-5'>
+        <div>
+          <p className='text-lg font-semibold text-foreground'>My Teams</p>
+          <p className='mt-1 text-sm text-muted-foreground'>Select a team to manage members and invites.</p>
+        </div>
 
-          <Separator />
+        <div className='flex flex-wrap gap-2'>
+          {(myTeams ?? []).map((team) => (
+            <Button
+              key={team.teamId}
+              variant={selectedTeamId === team.teamId ? 'default' : 'secondary'}
+              onClick={() => setSelectedTeamId(team.teamId)}
+            >
+              {team.name} ({team.role})
+            </Button>
+          ))}
+        </div>
 
-          {selectedTeam ? (
-            <div className='grid grid-cols-[1.3fr_1fr] gap-4'>
-              <section className='space-y-3'>
-                <h2 className='noir-kicker'>Members in {selectedTeam.name}</h2>
-                {memberActionError ? <p className='text-sm text-destructive'>{memberActionError}</p> : null}
+        <Separator />
 
+        {selectedTeam ? (
+          <div className='grid grid-cols-[1.3fr_1fr] gap-5'>
+            <section className='space-y-3'>
+              <h2 className='noir-kicker'>Members in {selectedTeam.name}</h2>
+              {memberActionError ? <p className='text-sm text-destructive'>{memberActionError}</p> : null}
+
+              <div className='tape-list'>
                 {(members ?? []).map((member) => (
-                  <div key={member.userId} className='rounded-lg border border-border/80 bg-background/45 p-3'>
+                  <article key={member.userId} className='tape-list-row py-3'>
                     <div className='flex flex-wrap items-center gap-2'>
                       <span className='text-sm font-medium'>
                         {member.name} ({member.iid})
@@ -392,66 +383,60 @@ function TeamsPage() {
                         </Button>
                       </div>
                     ) : null}
-                  </div>
+                  </article>
                 ))}
-              </section>
+              </div>
+            </section>
 
-              <section className='space-y-3'>
-                <h2 className='noir-kicker'>Invite by IID</h2>
+            <section className='space-y-3'>
+              <h2 className='noir-kicker'>Invite by IID</h2>
 
-                {manager ? (
-                  <div className='rounded-lg border border-border/80 bg-background/45 p-4'>
-                    <div className='grid gap-3'>
-                      <div className='grid gap-2'>
-                        <Label htmlFor='invite-iid'>User IID</Label>
-                        <Input
-                          id='invite-iid'
-                          value={inviteIid}
-                          placeholder='BD-XXXXXX'
-                          onChange={(event) => setInviteIid(event.target.value.toUpperCase())}
-                        />
-                      </div>
-
-                      <div className='grid gap-2'>
-                        <Label htmlFor='invite-role'>Role</Label>
-                        <Select
-                          value={inviteRole}
-                          onValueChange={(value) => setInviteRole(value as TeamRole)}
-                        >
-                          <SelectTrigger id='invite-role'>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='teamleader'>teamleader</SelectItem>
-                            <SelectItem value='senior'>senior</SelectItem>
-                            <SelectItem value='mid'>mid</SelectItem>
-                            <SelectItem value='junior'>junior</SelectItem>
-                            {selectedTeam.role === 'admin' ? (
-                              <SelectItem value='admin'>admin</SelectItem>
-                            ) : null}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {inviteError ? <p className='text-sm text-destructive'>{inviteError}</p> : null}
-
-                      <Button disabled={inviteBusy} onClick={handleInvite}>
-                        {inviteBusy ? 'Sending...' : 'Send invite'}
-                      </Button>
-                    </div>
+              {manager ? (
+                <div className='space-y-3 bg-secondary/35 p-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='invite-iid'>User IID</Label>
+                    <Input
+                      id='invite-iid'
+                      value={inviteIid}
+                      placeholder='BD-XXXXXX'
+                      onChange={(event) => setInviteIid(event.target.value.toUpperCase())}
+                    />
                   </div>
-                ) : (
-                  <p className='text-sm text-muted-foreground'>
-                    Only admins and teamleaders can invite users.
-                  </p>
-                )}
-              </section>
-            </div>
-          ) : (
-            <p className='text-sm text-muted-foreground'>You are not in any team yet.</p>
-          )}
-        </CardContent>
-      </Card>
+
+                  <div className='grid gap-2'>
+                    <Label htmlFor='invite-role'>Role</Label>
+                    <Select
+                      value={inviteRole}
+                      onValueChange={(value) => setInviteRole(value as TeamRole)}
+                    >
+                      <SelectTrigger id='invite-role'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='teamleader'>teamleader</SelectItem>
+                        <SelectItem value='senior'>senior</SelectItem>
+                        <SelectItem value='mid'>mid</SelectItem>
+                        <SelectItem value='junior'>junior</SelectItem>
+                        {selectedTeam.role === 'admin' ? <SelectItem value='admin'>admin</SelectItem> : null}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {inviteError ? <p className='text-sm text-destructive'>{inviteError}</p> : null}
+
+                  <Button disabled={inviteBusy} onClick={handleInvite}>
+                    {inviteBusy ? 'Sending...' : 'Send invite'}
+                  </Button>
+                </div>
+              ) : (
+                <p className='text-sm text-muted-foreground'>Only admins and teamleaders can invite users.</p>
+              )}
+            </section>
+          </div>
+        ) : (
+          <p className='text-sm text-muted-foreground'>You are not in any team yet.</p>
+        )}
+      </section>
     </AppSidebarShell>
   )
 }

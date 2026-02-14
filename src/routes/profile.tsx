@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react'
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { userDisplayName } from '@/utils/user-display'
@@ -123,11 +122,7 @@ function ProfilePage() {
   if (auth.loading || !user || !me) {
     return (
       <main className='app-shell'>
-        <Card className='noir-reveal'>
-          <CardHeader>
-            <CardTitle>Loading profile...</CardTitle>
-          </CardHeader>
-        </Card>
+        <p className='text-sm text-muted-foreground'>Loading profile...</p>
       </main>
     )
   }
@@ -141,54 +136,52 @@ function ProfilePage() {
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
-      <Card className='noir-reveal'>
-        <CardContent className='grid grid-cols-[auto_1fr] gap-6 p-6'>
-          <div className='space-y-3'>
-            <Avatar className='h-20 w-20'>
-              <AvatarImage src={me.avatarUrl ?? undefined} alt={me.name} />
-              <AvatarFallback>{me.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <p className='text-sm font-medium text-foreground'>{me.name}</p>
-            <p className='text-xs text-muted-foreground'>WorkOS user: {user.id}</p>
-          </div>
+      <section className='tape-surface noir-reveal grid grid-cols-[auto_1fr] gap-8 p-6'>
+        <div className='space-y-3'>
+          <Avatar className='h-20 w-20'>
+            <AvatarImage src={me.avatarUrl ?? undefined} alt={me.name} />
+            <AvatarFallback>{me.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <p className='text-sm font-medium text-foreground'>{me.name}</p>
+          <p className='text-xs text-muted-foreground'>WorkOS user: {user.id}</p>
+        </div>
 
-          <div className='space-y-4'>
-            <div className='rounded-lg border border-border/80 bg-background/45 p-4'>
-              <p className='noir-kicker mb-2'>Your IID</p>
-              <div className='flex flex-wrap items-center gap-2'>
-                <code className='rounded-md bg-secondary/70 px-2 py-1 text-sm'>{me.iid}</code>
-                <Button variant='secondary' size='sm' onClick={copyIID}>
-                  <Copy className='h-4 w-4' />
-                  Copy
-                </Button>
-              </div>
-            </div>
-
-            <div className='grid gap-3'>
-              <div className='grid gap-2'>
-                <Label htmlFor='profile-name'>Name</Label>
-                <Input id='profile-name' value={name} onChange={(event) => setName(event.target.value)} />
-              </div>
-
-              <div className='grid gap-2'>
-                <Label htmlFor='profile-avatar'>Avatar (optional)</Label>
-                <Input
-                  id='profile-avatar'
-                  type='file'
-                  accept='image/jpeg,image/png,image/webp'
-                  onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)}
-                />
-              </div>
-
-              {statusMessage ? <p className='text-sm text-muted-foreground'>{statusMessage}</p> : null}
-
-              <Button disabled={busy} onClick={saveProfile}>
-                {busy ? 'Saving...' : 'Save profile'}
+        <div className='space-y-5'>
+          <div className='border-b border-border/45 pb-4'>
+            <p className='noir-kicker mb-2'>Your IID</p>
+            <div className='flex flex-wrap items-center gap-2'>
+              <code className='rounded-sm bg-secondary/62 px-2 py-1 text-sm'>{me.iid}</code>
+              <Button variant='secondary' size='sm' onClick={copyIID}>
+                <Copy className='h-4 w-4' />
+                Copy
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className='grid gap-3'>
+            <div className='grid gap-2'>
+              <Label htmlFor='profile-name'>Name</Label>
+              <Input id='profile-name' value={name} onChange={(event) => setName(event.target.value)} />
+            </div>
+
+            <div className='grid gap-2'>
+              <Label htmlFor='profile-avatar'>Avatar (optional)</Label>
+              <Input
+                id='profile-avatar'
+                type='file'
+                accept='image/jpeg,image/png,image/webp'
+                onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)}
+              />
+            </div>
+
+            {statusMessage ? <p className='text-sm text-muted-foreground'>{statusMessage}</p> : null}
+
+            <Button disabled={busy} onClick={saveProfile}>
+              {busy ? 'Saving...' : 'Save profile'}
+            </Button>
+          </div>
+        </div>
+      </section>
     </AppSidebarShell>
   )
 }

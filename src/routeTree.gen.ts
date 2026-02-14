@@ -16,6 +16,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
+import { Route as DashboardV5RouteImport } from './routes/dashboard_.v5'
+import { Route as DashboardV4RouteImport } from './routes/dashboard_.v4'
+import { Route as DashboardV3RouteImport } from './routes/dashboard_.v3'
+import { Route as DashboardV2RouteImport } from './routes/dashboard_.v2'
+import { Route as DashboardV1RouteImport } from './routes/dashboard_.v1'
 import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
 
 const TeamsRoute = TeamsRouteImport.update({
@@ -53,6 +58,31 @@ const PostsPostIdRoute = PostsPostIdRouteImport.update({
   path: '/posts/$postId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardV5Route = DashboardV5RouteImport.update({
+  id: '/dashboard_/v5',
+  path: '/dashboard/v5',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardV4Route = DashboardV4RouteImport.update({
+  id: '/dashboard_/v4',
+  path: '/dashboard/v4',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardV3Route = DashboardV3RouteImport.update({
+  id: '/dashboard_/v3',
+  path: '/dashboard/v3',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardV2Route = DashboardV2RouteImport.update({
+  id: '/dashboard_/v2',
+  path: '/dashboard/v2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardV1Route = DashboardV1RouteImport.update({
+  id: '/dashboard_/v1',
+  path: '/dashboard/v1',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
   id: '/api/auth/callback',
   path: '/api/auth/callback',
@@ -66,6 +96,11 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/profile': typeof ProfileRoute
   '/teams': typeof TeamsRoute
+  '/dashboard/v1': typeof DashboardV1Route
+  '/dashboard/v2': typeof DashboardV2Route
+  '/dashboard/v3': typeof DashboardV3Route
+  '/dashboard/v4': typeof DashboardV4Route
+  '/dashboard/v5': typeof DashboardV5Route
   '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
@@ -76,6 +111,11 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/profile': typeof ProfileRoute
   '/teams': typeof TeamsRoute
+  '/dashboard/v1': typeof DashboardV1Route
+  '/dashboard/v2': typeof DashboardV2Route
+  '/dashboard/v3': typeof DashboardV3Route
+  '/dashboard/v4': typeof DashboardV4Route
+  '/dashboard/v5': typeof DashboardV5Route
   '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
@@ -87,6 +127,11 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/profile': typeof ProfileRoute
   '/teams': typeof TeamsRoute
+  '/dashboard_/v1': typeof DashboardV1Route
+  '/dashboard_/v2': typeof DashboardV2Route
+  '/dashboard_/v3': typeof DashboardV3Route
+  '/dashboard_/v4': typeof DashboardV4Route
+  '/dashboard_/v5': typeof DashboardV5Route
   '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
@@ -99,6 +144,11 @@ export interface FileRouteTypes {
     | '/logout'
     | '/profile'
     | '/teams'
+    | '/dashboard/v1'
+    | '/dashboard/v2'
+    | '/dashboard/v3'
+    | '/dashboard/v4'
+    | '/dashboard/v5'
     | '/posts/$postId'
     | '/api/auth/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +159,11 @@ export interface FileRouteTypes {
     | '/logout'
     | '/profile'
     | '/teams'
+    | '/dashboard/v1'
+    | '/dashboard/v2'
+    | '/dashboard/v3'
+    | '/dashboard/v4'
+    | '/dashboard/v5'
     | '/posts/$postId'
     | '/api/auth/callback'
   id:
@@ -119,6 +174,11 @@ export interface FileRouteTypes {
     | '/logout'
     | '/profile'
     | '/teams'
+    | '/dashboard_/v1'
+    | '/dashboard_/v2'
+    | '/dashboard_/v3'
+    | '/dashboard_/v4'
+    | '/dashboard_/v5'
     | '/posts/$postId'
     | '/api/auth/callback'
   fileRoutesById: FileRoutesById
@@ -130,6 +190,11 @@ export interface RootRouteChildren {
   LogoutRoute: typeof LogoutRoute
   ProfileRoute: typeof ProfileRoute
   TeamsRoute: typeof TeamsRoute
+  DashboardV1Route: typeof DashboardV1Route
+  DashboardV2Route: typeof DashboardV2Route
+  DashboardV3Route: typeof DashboardV3Route
+  DashboardV4Route: typeof DashboardV4Route
+  DashboardV5Route: typeof DashboardV5Route
   PostsPostIdRoute: typeof PostsPostIdRoute
   ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
 }
@@ -185,6 +250,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsPostIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard_/v5': {
+      id: '/dashboard_/v5'
+      path: '/dashboard/v5'
+      fullPath: '/dashboard/v5'
+      preLoaderRoute: typeof DashboardV5RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard_/v4': {
+      id: '/dashboard_/v4'
+      path: '/dashboard/v4'
+      fullPath: '/dashboard/v4'
+      preLoaderRoute: typeof DashboardV4RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard_/v3': {
+      id: '/dashboard_/v3'
+      path: '/dashboard/v3'
+      fullPath: '/dashboard/v3'
+      preLoaderRoute: typeof DashboardV3RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard_/v2': {
+      id: '/dashboard_/v2'
+      path: '/dashboard/v2'
+      fullPath: '/dashboard/v2'
+      preLoaderRoute: typeof DashboardV2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard_/v1': {
+      id: '/dashboard_/v1'
+      path: '/dashboard/v1'
+      fullPath: '/dashboard/v1'
+      preLoaderRoute: typeof DashboardV1RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/callback': {
       id: '/api/auth/callback'
       path: '/api/auth/callback'
@@ -202,6 +302,11 @@ const rootRouteChildren: RootRouteChildren = {
   LogoutRoute: LogoutRoute,
   ProfileRoute: ProfileRoute,
   TeamsRoute: TeamsRoute,
+  DashboardV1Route: DashboardV1Route,
+  DashboardV2Route: DashboardV2Route,
+  DashboardV3Route: DashboardV3Route,
+  DashboardV4Route: DashboardV4Route,
+  DashboardV5Route: DashboardV5Route,
   PostsPostIdRoute: PostsPostIdRoute,
   ApiAuthCallbackRoute: ApiAuthCallbackRoute,
 }

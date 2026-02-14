@@ -1,5 +1,49 @@
 # BetterDoc Change Log
 
+## 2026-02-14 (V1 tape-feed redesign rollout across app)
+- Code paths changed:
+  - `src/styles.css`
+  - `src/components/layout/app-sidebar-shell.tsx`
+  - `src/components/ui/button.tsx`
+  - `src/components/ui/card.tsx`
+  - `src/components/ui/input.tsx`
+  - `src/components/ui/textarea.tsx`
+  - `src/components/ui/select.tsx`
+  - `src/components/ui/dialog.tsx`
+  - `src/components/ui/dropdown-menu.tsx`
+  - `src/components/ui/badge.tsx`
+  - `src/routes/index.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/routes/teams.tsx`
+  - `src/routes/profile.tsx`
+  - `src/routeTree.gen.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Rolled the app from glow/panel-heavy styling to the dashboard V1-inspired tape-feed language: flatter surfaces, separator-driven layout, and reduced border/chrome density.
+  - Updated all major user-facing routes (home, dashboard, post detail, teams, profile) to use compact section blocks and list rows instead of stacked card windows.
+  - Restyled shared UI primitives so buttons, form controls, menus, dialog, and badges keep the same behavior but render with low-glow, desktop-focused visual consistency.
+
+## 2026-02-14 (Dashboard redesign review variants: v1-v5)
+- Code paths changed:
+  - `src/features/dashboard-variants/page.tsx`
+  - `src/routes/dashboard_.v1.tsx`
+  - `src/routes/dashboard_.v2.tsx`
+  - `src/routes/dashboard_.v3.tsx`
+  - `src/routes/dashboard_.v4.tsx`
+  - `src/routes/dashboard_.v5.tsx`
+  - `src/routeTree.gen.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added five desktop dashboard redesign previews at `/dashboard/v1`, `/dashboard/v2`, `/dashboard/v3`, `/dashboard/v4`, and `/dashboard/v5` for side-by-side style review.
+  - Each variant reuses live dashboard post data while reducing visual chrome (fewer framed panels and lighter separator-first structure).
+  - Variant previews avoid glow-heavy call-to-action styling and keep existing post-detail navigation behavior intact.
+  - Replaced a dynamic variant route with static non-nested variant routes to stop a TanStack route-tree generation loop that was causing continuous reloads in dev on dashboard paths.
+
 ## 2026-02-14 (Desktop shell pass: persistent left sidebar + non-responsive layout)
 - Code paths changed:
   - `src/components/layout/app-sidebar-shell.tsx`

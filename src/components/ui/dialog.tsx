@@ -16,7 +16,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'fixed inset-0 z-50 bg-background/82 backdrop-blur-sm transition-opacity duration-150 ease-out data-[state=closed]:opacity-0 data-[state=open]:opacity-100',
+      'fixed inset-0 z-50 bg-background/78 transition-opacity duration-150 ease-out data-[state=closed]:opacity-0 data-[state=open]:opacity-100',
       className,
     )}
     {...props}
@@ -33,7 +33,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-[min(96vw,42rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[calc(var(--radius)+0.15rem)] border border-border/90 bg-card/96 p-5 shadow-[0_28px_80px_hsl(220_60%_1%/0.52)] backdrop-blur-md transition-[opacity,transform] duration-180 ease-out data-[state=closed]:translate-y-[calc(-50%+6px)] data-[state=closed]:scale-[0.985] data-[state=closed]:opacity-0 data-[state=open]:translate-y-[-50%] data-[state=open]:scale-100 data-[state=open]:opacity-100 sm:p-6',
+        'fixed left-[50%] top-[50%] z-50 grid w-[min(96vw,42rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[calc(var(--radius)-0.1rem)] border border-border/75 bg-card/94 p-5 shadow-none transition-[opacity,transform] duration-180 ease-out data-[state=closed]:translate-y-[calc(-50%+6px)] data-[state=closed]:scale-[0.985] data-[state=closed]:opacity-0 data-[state=open]:translate-y-[-50%] data-[state=open]:scale-100 data-[state=open]:opacity-100',
         className,
       )}
       {...props}

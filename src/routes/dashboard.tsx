@@ -7,7 +7,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -245,11 +244,7 @@ function DashboardPage() {
   if (auth.loading || !user || !me) {
     return (
       <main className='app-shell'>
-        <Card className='noir-reveal'>
-          <CardHeader>
-            <CardTitle>Loading dashboard...</CardTitle>
-          </CardHeader>
-        </Card>
+        <p className='text-sm text-muted-foreground'>Loading dashboard...</p>
       </main>
     )
   }
@@ -266,245 +261,225 @@ function DashboardPage() {
       userLabel={currentUserLabel}
       userEmail={user.email ?? undefined}
     >
-      <Card className='noir-reveal'>
-        <CardContent className='space-y-4 p-5'>
-          <div className='flex items-center gap-3'>
-            <div className='relative flex-1'>
-              <Search className='pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
-              <Input
-                value={searchInput}
-                className='pl-9'
-                placeholder='Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX'
-                onChange={(event) => onSearchChange(event.target.value)}
-              />
-            </div>
+      <section className='noir-reveal space-y-4 border-b border-border/50 pb-5'>
+        <div className='flex items-center gap-3'>
+          <div className='relative flex-1'>
+            <Search className='pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
+            <Input
+              value={searchInput}
+              className='pl-9'
+              placeholder='Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX'
+              onChange={(event) => onSearchChange(event.target.value)}
+            />
+          </div>
 
-            <Dialog
-              open={createDialogOpen}
-              onOpenChange={(open) => {
-                setCreateDialogOpen(open)
-                if (!open) {
-                  resetCreatePostForm()
-                }
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button disabled={!hasTeams}>
-                  <Plus className='h-4 w-4' />
-                  New post
-                </Button>
-              </DialogTrigger>
-              <DialogContent className='max-w-2xl'>
-                <DialogHeader>
-                  <DialogTitle>Create Post</DialogTitle>
-                  <DialogDescription>Add a concise issue post to a team board.</DialogDescription>
-                </DialogHeader>
+          <Dialog
+            open={createDialogOpen}
+            onOpenChange={(open) => {
+              setCreateDialogOpen(open)
+              if (!open) {
+                resetCreatePostForm()
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button disabled={!hasTeams}>
+                <Plus className='h-4 w-4' />
+                New post
+              </Button>
+            </DialogTrigger>
+            <DialogContent className='max-w-2xl'>
+              <DialogHeader>
+                <DialogTitle>Create Post</DialogTitle>
+                <DialogDescription>Add a concise issue post to a team board.</DialogDescription>
+              </DialogHeader>
 
-                <div className='grid gap-3 py-1'>
-                  <div className='grid gap-2'>
-                    <Label htmlFor='create-team'>Team</Label>
-                    <Select value={createTeamId} onValueChange={setCreateTeamId}>
-                      <SelectTrigger id='create-team'>
-                        <SelectValue placeholder='Select a team' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team.teamId} value={team.teamId}>
-                            {team.name} ({team.role})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className='grid gap-2'>
-                    <Label htmlFor='create-title'>Title</Label>
-                    <Input
-                      id='create-title'
-                      placeholder='Short title'
-                      value={createTitle}
-                      maxLength={120}
-                      onChange={(event) => setCreateTitle(event.target.value)}
-                    />
-                  </div>
-
-                  <div className='grid grid-cols-2 gap-2'>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='create-where'>Where</Label>
-                      <Input
-                        id='create-where'
-                        placeholder='Where the issue occurs'
-                        value={createWhere}
-                        maxLength={140}
-                        onChange={(event) => setCreateWhere(event.target.value)}
-                      />
-                    </div>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='create-when'>When</Label>
-                      <Input
-                        id='create-when'
-                        placeholder='When it occurs'
-                        value={createWhen}
-                        maxLength={140}
-                        onChange={(event) => setCreateWhen(event.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className='grid gap-2'>
-                    <Label htmlFor='create-description'>Description</Label>
-                    <Textarea
-                      id='create-description'
-                      placeholder='Issue description'
-                      value={createDescription}
-                      maxLength={5000}
-                      rows={6}
-                      onChange={(event) => setCreateDescription(event.target.value)}
-                    />
-                  </div>
-
-                  <div className='grid gap-2'>
-                    <Label htmlFor='create-files'>Attachments</Label>
-                    <Input
-                      id='create-files'
-                      type='file'
-                      multiple
-                      accept='image/jpeg,image/png,image/webp'
-                      onChange={(event) => setCreateFiles(Array.from(event.target.files ?? []))}
-                    />
-                  </div>
-
-                  {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
+              <div className='grid gap-3 py-1'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='create-team'>Team</Label>
+                  <Select value={createTeamId} onValueChange={setCreateTeamId}>
+                    <SelectTrigger id='create-team'>
+                      <SelectValue placeholder='Select a team' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.teamId} value={team.teamId}>
+                          {team.name} ({team.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <DialogFooter>
-                  <Button variant='outline' onClick={() => setCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button disabled={createBusy || !createTeamId} onClick={handleCreatePost}>
-                    {createBusy ? 'Creating...' : 'Create post'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                <div className='grid gap-2'>
+                  <Label htmlFor='create-title'>Title</Label>
+                  <Input
+                    id='create-title'
+                    placeholder='Short title'
+                    value={createTitle}
+                    maxLength={120}
+                    onChange={(event) => setCreateTitle(event.target.value)}
+                  />
+                </div>
+
+                <div className='grid grid-cols-2 gap-2'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='create-where'>Where</Label>
+                    <Input
+                      id='create-where'
+                      placeholder='Where the issue occurs'
+                      value={createWhere}
+                      maxLength={140}
+                      onChange={(event) => setCreateWhere(event.target.value)}
+                    />
+                  </div>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='create-when'>When</Label>
+                    <Input
+                      id='create-when'
+                      placeholder='When it occurs'
+                      value={createWhen}
+                      maxLength={140}
+                      onChange={(event) => setCreateWhen(event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className='grid gap-2'>
+                  <Label htmlFor='create-description'>Description</Label>
+                  <Textarea
+                    id='create-description'
+                    placeholder='Issue description'
+                    value={createDescription}
+                    maxLength={5000}
+                    rows={6}
+                    onChange={(event) => setCreateDescription(event.target.value)}
+                  />
+                </div>
+
+                <div className='grid gap-2'>
+                  <Label htmlFor='create-files'>Attachments</Label>
+                  <Input
+                    id='create-files'
+                    type='file'
+                    multiple
+                    accept='image/jpeg,image/png,image/webp'
+                    onChange={(event) => setCreateFiles(Array.from(event.target.files ?? []))}
+                  />
+                </div>
+
+                {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
+              </div>
+
+              <DialogFooter>
+                <Button variant='outline' onClick={() => setCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button disabled={createBusy || !createTeamId} onClick={handleCreatePost}>
+                  {createBusy ? 'Creating...' : 'Create post'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className='flex flex-wrap items-center gap-2'>
+          <Button
+            variant={parsedSearch.status === 'all' ? 'default' : 'secondary'}
+            size='sm'
+            onClick={() => applyQuickStatus('all')}
+          >
+            All
+          </Button>
+          <Button
+            variant={parsedSearch.status === 'active' ? 'default' : 'secondary'}
+            size='sm'
+            onClick={() => applyQuickStatus('active')}
+          >
+            Active
+          </Button>
+          <Button
+            variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'}
+            size='sm'
+            onClick={() => applyQuickStatus('archived')}
+          >
+            Archived
+          </Button>
+
+          <div className='ml-auto flex min-w-[220px] items-center gap-2'>
+            <Shield className='h-4 w-4 text-muted-foreground' />
+            <Select
+              value={selectedTeamFromSearch?.slug ?? '__all__'}
+              onValueChange={(value) => openTeamFilter(value === '__all__' ? '' : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder='All teams' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='__all__'>All teams</SelectItem>
+                {teams.map((team) => (
+                  <SelectItem key={team.teamId} value={team.slug}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        </div>
 
-          <div className='flex flex-wrap items-center gap-2'>
-            <Button
-              variant={parsedSearch.status === 'all' ? 'default' : 'secondary'}
-              size='sm'
-              onClick={() => applyQuickStatus('all')}
-            >
-              All
-            </Button>
-            <Button
-              variant={parsedSearch.status === 'active' ? 'default' : 'secondary'}
-              size='sm'
-              onClick={() => applyQuickStatus('active')}
-            >
-              Active
-            </Button>
-            <Button
-              variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'}
-              size='sm'
-              onClick={() => applyQuickStatus('archived')}
-            >
-              Archived
-            </Button>
-
-            <div className='ml-auto flex min-w-[220px] items-center gap-2'>
-              <Shield className='h-4 w-4 text-muted-foreground' />
-              <Select
-                value={selectedTeamFromSearch?.slug ?? '__all__'}
-                onValueChange={(value) => openTeamFilter(value === '__all__' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='All teams' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='__all__'>All teams</SelectItem>
-                  {teams.map((team) => (
-                    <SelectItem key={team.teamId} value={team.slug}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        {parsedSearch.errors.length > 0 ? (
+          <div className='rounded-sm bg-destructive/12 px-3 py-2 text-sm text-destructive'>
+            {parsedSearch.errors.join(' ')}
           </div>
-
-          {parsedSearch.errors.length > 0 ? (
-            <div className='rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive'>
-              {parsedSearch.errors.join(' ')}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+        ) : null}
+      </section>
 
       {!hasTeams ? (
-        <Card className='noir-reveal'>
-          <CardHeader>
-            <CardTitle>Create your first team</CardTitle>
-            <CardDescription>You need a team before you can create or discuss posts.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link to='/teams'>Open Team Management</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <section className='noir-reveal tape-surface px-5 py-4'>
+          <p className='text-base font-semibold text-foreground'>Create your first team</p>
+          <p className='mt-1 text-sm text-muted-foreground'>
+            You need a team before you can create or discuss posts.
+          </p>
+          <Button asChild className='mt-4'>
+            <Link to='/teams'>Open Team Management</Link>
+          </Button>
+        </section>
       ) : null}
 
-      <section className='grid gap-2'>
+      <section className='tape-list noir-reveal'>
         {(posts ?? []).map((post) => (
-          <Card key={post.postId} className='noir-reveal overflow-hidden border-border/75 transition-colors hover:border-primary/45'>
-            <CardContent className='p-0'>
-              <article className='grid gap-3 px-4 py-3'>
-                <div className='flex flex-wrap items-center gap-2'>
-                  <Badge variant={post.status === 'active' ? 'default' : 'secondary'}>{post.status}</Badge>
-                  <Badge variant='outline'>{post.teamName}</Badge>
-                  <span className='ml-auto text-xs text-muted-foreground'>
-                    Updated {formatDate(post.updatedAt)}
-                  </span>
-                </div>
+          <article key={post.postId} className='tape-list-row grid gap-3 px-4 py-4'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <Badge variant={post.status === 'active' ? 'default' : 'secondary'}>{post.status}</Badge>
+              <Badge variant='outline'>{post.teamName}</Badge>
+              <span className='ml-auto tape-meta'>Updated {formatDate(post.updatedAt)}</span>
+            </div>
 
-                <div className='space-y-1'>
-                  <Link
-                    className='inline-flex text-base font-semibold text-foreground transition-colors hover:text-primary'
-                    params={{ postId: post.postId }}
-                    to='/posts/$postId'
-                  >
-                    {post.title}
-                  </Link>
-                  <p className='text-sm leading-6 text-muted-foreground'>{post.descriptionPreview}</p>
-                </div>
+            <div className='space-y-1'>
+              <Link
+                className='inline-flex text-base font-semibold text-foreground transition-colors hover:text-primary'
+                params={{ postId: post.postId }}
+                to='/posts/$postId'
+              >
+                {post.title}
+              </Link>
+              <p className='text-sm leading-6 text-muted-foreground'>{post.descriptionPreview}</p>
+            </div>
 
-                <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
-                  <span className='rounded bg-secondary/70 px-2 py-1'>Where: {post.occurrenceWhere}</span>
-                  <span className='rounded bg-secondary/70 px-2 py-1'>When: {post.occurrenceWhen}</span>
-                </div>
-
-                <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
-                  <span>
-                    {post.createdByName} ({post.createdByIid})
-                  </span>
-                  <span>{post.commentCount} comments</span>
-                  <span>{post.imageCount} images</span>
-                </div>
-              </article>
-            </CardContent>
-          </Card>
+            <p className='tape-meta'>
+              {post.occurrenceWhere} | {post.occurrenceWhen} | {post.createdByName} ({post.createdByIid}) |{' '}
+              {post.commentCount} comments | {post.imageCount} images
+            </p>
+          </article>
         ))}
 
         {posts && posts.length === 0 ? (
-          <Card className='noir-reveal'>
-            <CardHeader>
-              <CardTitle>No posts found</CardTitle>
-              <CardDescription>
-                Try broadening your search or create the first post for this team.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <section className='px-4 py-6'>
+            <p className='text-base font-semibold text-foreground'>No posts found</p>
+            <p className='mt-1 text-sm text-muted-foreground'>
+              Try broadening your search or create the first post for this team.
+            </p>
+          </section>
         ) : null}
       </section>
     </AppSidebarShell>

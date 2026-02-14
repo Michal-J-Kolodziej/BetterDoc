@@ -10,8 +10,8 @@ export const Route = createFileRoute('/')({
 function HomePage() {
   return (
     <main className='app-shell'>
-      <section className='noir-panel noir-reveal px-10 py-11'>
-        <p className='noir-kicker'>Noir Grid Workspace</p>
+      <section className='noir-reveal border-b border-border/55 pb-10 pt-8'>
+        <p className='noir-kicker'>Incident Tape</p>
         <h1 className='mt-3 text-5xl font-semibold text-foreground'>BetterDoc</h1>
         <p className='mt-4 max-w-2xl text-base leading-6 text-muted-foreground'>
           Minimal incident knowledge flow for teams. Capture a problem once, discuss with context,
@@ -29,18 +29,16 @@ function HomePage() {
           </Button>
         </div>
 
-        <div className='noir-divider my-7' />
-
-        <div className='grid grid-cols-3 gap-3 text-xs text-muted-foreground'>
-          <div className='rounded-lg border border-border/80 bg-secondary/45 p-3'>
+        <div className='mt-8 grid grid-cols-3 gap-8 text-xs text-muted-foreground'>
+          <div className='tape-list-row pb-3'>
             <p className='noir-kicker mb-2'>Capture</p>
             <p>Post issue context with images in under a minute.</p>
           </div>
-          <div className='rounded-lg border border-border/80 bg-secondary/45 p-3'>
+          <div className='tape-list-row pb-3'>
             <p className='noir-kicker mb-2'>Discuss</p>
             <p>Threaded team comments with clear ownership and timing.</p>
           </div>
-          <div className='rounded-lg border border-border/80 bg-secondary/45 p-3'>
+          <div className='tape-list-row pb-3'>
             <p className='noir-kicker mb-2'>Search</p>
             <p>Use qualifiers to find similar incidents quickly.</p>
           </div>

@@ -38,13 +38,13 @@ export function AppSidebarShell({
 }: AppSidebarShellProps) {
   return (
     <div className='app-desktop-shell'>
-      <aside className='app-sidebar noir-panel noir-reveal'>
+      <aside className='app-sidebar noir-reveal'>
         <div className='space-y-1'>
-          <p className='noir-kicker'>Noir Grid Workspace</p>
+          <p className='noir-kicker'>Workspace</p>
           <h2 className='text-xl font-semibold'>BetterDoc</h2>
         </div>
 
-        <nav className='mt-6 grid gap-2'>
+        <nav className='mt-6 grid gap-1'>
           {navItems.map((item) => {
             const Icon = item.icon
             const active = item.key === activeNav
@@ -53,10 +53,10 @@ export function AppSidebarShell({
               <Link
                 key={item.key}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-2 rounded-sm px-3 py-2 text-sm font-medium transition-colors',
                   active
-                    ? 'border-primary/45 bg-primary/15 text-primary'
-                    : 'border-border/75 bg-transparent text-muted-foreground hover:border-border hover:bg-secondary/65 hover:text-foreground',
+                    ? 'bg-secondary/60 text-foreground'
+                    : 'text-muted-foreground hover:bg-secondary/45 hover:text-foreground',
                 )}
                 to={item.to}
               >
@@ -69,13 +69,13 @@ export function AppSidebarShell({
 
         <div className='mt-auto space-y-3'>
           <div className='noir-divider' />
-          <div className='rounded-lg border border-border/80 bg-background/45 px-3 py-3'>
+          <div className='rounded-sm bg-secondary/45 px-3 py-3'>
             <p className='noir-kicker mb-1'>Signed in as</p>
             <p className='truncate text-sm font-medium text-foreground'>{userLabel}</p>
             <p className='truncate text-xs text-muted-foreground'>{userEmail ?? 'No email available'}</p>
           </div>
           <Link
-            className='flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20'
+            className='flex items-center gap-2 rounded-sm px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/14'
             to='/logout'
           >
             <LogOut className='h-4 w-4' />
@@ -85,7 +85,7 @@ export function AppSidebarShell({
       </aside>
 
       <main className='app-main'>
-        <header className='noir-panel noir-reveal px-5 py-4'>
+        <header className='noir-reveal border-b border-border/55 px-1 py-4'>
           <p className='noir-kicker'>{sectionLabel}</p>
           <h1 className='mt-1 text-2xl font-semibold text-foreground'>{title}</h1>
           {description ? <p className='mt-1 text-sm text-muted-foreground'>{description}</p> : null}

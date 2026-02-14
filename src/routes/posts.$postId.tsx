@@ -8,7 +8,6 @@ import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -282,11 +281,7 @@ function PostDetailPage() {
   if (auth.loading || !user || !postDetail) {
     return (
       <main className='app-shell'>
-        <Card className='noir-reveal'>
-          <CardHeader>
-            <CardTitle>Loading post...</CardTitle>
-          </CardHeader>
-        </Card>
+        <p className='text-sm text-muted-foreground'>Loading post...</p>
       </main>
     )
   }
@@ -300,253 +295,236 @@ function PostDetailPage() {
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
-      <Card className='noir-reveal'>
-        <CardHeader className='space-y-3'>
-          <div className='flex flex-wrap items-center gap-2'>
-            <Badge variant='outline'>{postDetail.teamName}</Badge>
-            <Badge variant={postDetail.status === 'active' ? 'default' : 'secondary'}>{postDetail.status}</Badge>
-          </div>
+      <section className='tape-surface noir-reveal space-y-4 p-5'>
+        <div className='flex flex-wrap items-center gap-2'>
+          <Badge variant='outline'>{postDetail.teamName}</Badge>
+          <Badge variant={postDetail.status === 'active' ? 'default' : 'secondary'}>{postDetail.status}</Badge>
+        </div>
 
-          <div>
-            <CardTitle>{postDetail.title}</CardTitle>
-            <CardDescription>
-              Where: {postDetail.occurrenceWhere} | When: {postDetail.occurrenceWhen}
-            </CardDescription>
-          </div>
+        <div>
+          <h2 className='text-2xl font-semibold text-foreground'>{postDetail.title}</h2>
+          <p className='mt-1 text-sm text-muted-foreground'>
+            Where: {postDetail.occurrenceWhere} | When: {postDetail.occurrenceWhen}
+          </p>
+        </div>
 
-          <div className='flex flex-wrap items-center gap-2'>
-            {postDetail.canEdit ? (
-              <Button size='sm' variant='secondary' onClick={beginPostEdit}>
-                <PencilLine className='h-4 w-4' />
-                Edit post
-              </Button>
-            ) : null}
-            {postDetail.canArchive ? (
-              <Button size='sm' variant='outline' onClick={handleArchive}>
-                Archive
-              </Button>
-            ) : null}
-            {postDetail.canUnarchive ? (
-              <Button size='sm' onClick={handleUnarchive}>
-                Unarchive
-              </Button>
-            ) : null}
-          </div>
-        </CardHeader>
-
-        <CardContent className='space-y-4'>
-          <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.description}</p>
-
-          {postImages.length > 0 ? (
-            <div className='grid grid-cols-2 gap-2'>
-              {postImages.map((url) => (
-                <img
-                  key={url}
-                  src={url}
-                  alt='Post attachment'
-                  className='h-48 w-full rounded-lg border border-border/70 object-cover'
-                />
-              ))}
-            </div>
+        <div className='flex flex-wrap items-center gap-2'>
+          {postDetail.canEdit ? (
+            <Button size='sm' variant='secondary' onClick={beginPostEdit}>
+              <PencilLine className='h-4 w-4' />
+              Edit post
+            </Button>
           ) : null}
+          {postDetail.canArchive ? (
+            <Button size='sm' variant='outline' onClick={handleArchive}>
+              Archive
+            </Button>
+          ) : null}
+          {postDetail.canUnarchive ? (
+            <Button size='sm' onClick={handleUnarchive}>
+              Unarchive
+            </Button>
+          ) : null}
+        </div>
 
-          <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
-            <span className='rounded bg-secondary/70 px-2 py-1'>Author: {postDetail.createdByName}</span>
-            <span className='rounded bg-secondary/70 px-2 py-1'>IID: {postDetail.createdByIid}</span>
-            <span className='rounded bg-secondary/70 px-2 py-1'>Created: {formatDate(postDetail.createdAt)}</span>
-            <span className='rounded bg-secondary/70 px-2 py-1'>Updated: {formatDate(postDetail.updatedAt)}</span>
+        <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.description}</p>
+
+        {postImages.length > 0 ? (
+          <div className='grid grid-cols-2 gap-2'>
+            {postImages.map((url) => (
+              <img
+                key={url}
+                src={url}
+                alt='Post attachment'
+                className='h-48 w-full rounded-md border border-border/60 object-cover'
+              />
+            ))}
+          </div>
+        ) : null}
+
+        <p className='tape-meta'>
+          Author: {postDetail.createdByName} ({postDetail.createdByIid}) | Created:{' '}
+          {formatDate(postDetail.createdAt)} | Updated: {formatDate(postDetail.updatedAt)}
+        </p>
+
+        {editingPost ? (
+          <div className='space-y-3 bg-secondary/35 p-4'>
+            <div className='grid gap-2'>
+              <Label htmlFor='edit-title'>Title</Label>
+              <Input id='edit-title' value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
+            </div>
+
+            <div className='grid grid-cols-2 gap-2'>
+              <div className='grid gap-2'>
+                <Label htmlFor='edit-where'>Where</Label>
+                <Input id='edit-where' value={editWhere} onChange={(event) => setEditWhere(event.target.value)} />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='edit-when'>When</Label>
+                <Input id='edit-when' value={editWhen} onChange={(event) => setEditWhen(event.target.value)} />
+              </div>
+            </div>
+
+            <div className='grid gap-2'>
+              <Label htmlFor='edit-description'>Description</Label>
+              <Textarea
+                id='edit-description'
+                value={editDescription}
+                rows={6}
+                onChange={(event) => setEditDescription(event.target.value)}
+              />
+            </div>
+
+            <div className='grid gap-2'>
+              <Label htmlFor='edit-files'>Add images</Label>
+              <Input
+                id='edit-files'
+                type='file'
+                multiple
+                accept='image/jpeg,image/png,image/webp'
+                onChange={(event) => setEditFiles(Array.from(event.target.files ?? []))}
+              />
+            </div>
+
+            {editError ? <p className='text-sm text-destructive'>{editError}</p> : null}
+
+            <div className='flex items-center gap-2'>
+              <Button disabled={editBusy} onClick={handlePostEditSave}>
+                {editBusy ? 'Saving...' : 'Save'}
+              </Button>
+              <Button variant='outline' onClick={() => setEditingPost(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className='tape-surface noir-reveal space-y-4 p-5'>
+        <div>
+          <h2 className='text-xl font-semibold text-foreground'>Discussion ({postDetail.commentCount})</h2>
+          <p className='mt-1 text-sm text-muted-foreground'>Team-only comments and screenshots.</p>
+        </div>
+
+        <section className='space-y-3 border-b border-border/45 pb-4'>
+          <div className='grid gap-2'>
+            <Label htmlFor='comment-body'>Comment</Label>
+            <Textarea
+              id='comment-body'
+              value={commentBody}
+              rows={4}
+              placeholder='Add a comment'
+              disabled={postDetail.status === 'archived'}
+              onChange={(event) => setCommentBody(event.target.value)}
+            />
           </div>
 
-          {editingPost ? (
-            <div className='rounded-lg border border-border/80 bg-background/45 p-4'>
-              <div className='grid gap-3'>
-                <div className='grid gap-2'>
-                  <Label htmlFor='edit-title'>Title</Label>
-                  <Input id='edit-title' value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
-                </div>
+          <div className='grid gap-2'>
+            <Label htmlFor='comment-files'>Attachments</Label>
+            <Input
+              id='comment-files'
+              type='file'
+              multiple
+              accept='image/jpeg,image/png,image/webp'
+              disabled={postDetail.status === 'archived'}
+              onChange={(event) => setCommentFiles(Array.from(event.target.files ?? []))}
+            />
+          </div>
 
-                <div className='grid grid-cols-2 gap-2'>
-                  <div className='grid gap-2'>
-                    <Label htmlFor='edit-where'>Where</Label>
-                    <Input id='edit-where' value={editWhere} onChange={(event) => setEditWhere(event.target.value)} />
-                  </div>
-                  <div className='grid gap-2'>
-                    <Label htmlFor='edit-when'>When</Label>
-                    <Input id='edit-when' value={editWhen} onChange={(event) => setEditWhen(event.target.value)} />
-                  </div>
-                </div>
+          {commentError ? <p className='text-sm text-destructive'>{commentError}</p> : null}
 
-                <div className='grid gap-2'>
-                  <Label htmlFor='edit-description'>Description</Label>
+          <Button disabled={commentBusy || postDetail.status === 'archived'} onClick={handleCreateComment}>
+            {commentBusy ? 'Posting...' : 'Post comment'}
+          </Button>
+        </section>
+
+        <section className='tape-list'>
+          {postDetail.comments.map((comment) => (
+            <article key={comment.commentId} className='tape-list-row space-y-3 py-4'>
+              <div className='flex items-center gap-2'>
+                <Avatar className='h-7 w-7'>
+                  <AvatarImage src={undefined} alt={comment.createdByName} />
+                  <AvatarFallback>{comment.createdByName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className='text-sm font-medium text-foreground'>{comment.createdByName}</span>
+                <span className='text-xs text-muted-foreground'>({comment.createdByIid})</span>
+                <span className='ml-auto text-xs text-muted-foreground'>{formatDate(comment.createdAt)}</span>
+              </div>
+
+              {editingCommentId === comment.commentId ? (
+                <div className='space-y-2'>
                   <Textarea
-                    id='edit-description'
-                    value={editDescription}
-                    rows={6}
-                    onChange={(event) => setEditDescription(event.target.value)}
+                    value={editingCommentBody}
+                    rows={4}
+                    onChange={(event) => setEditingCommentBody(event.target.value)}
                   />
-                </div>
-
-                <div className='grid gap-2'>
-                  <Label htmlFor='edit-files'>Add images</Label>
                   <Input
-                    id='edit-files'
                     type='file'
                     multiple
                     accept='image/jpeg,image/png,image/webp'
-                    onChange={(event) => setEditFiles(Array.from(event.target.files ?? []))}
+                    onChange={(event) => setEditingCommentFiles(Array.from(event.target.files ?? []))}
                   />
-                </div>
-
-                {editError ? <p className='text-sm text-destructive'>{editError}</p> : null}
-
-                <div className='flex items-center gap-2'>
-                  <Button disabled={editBusy} onClick={handlePostEditSave}>
-                    {editBusy ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button variant='outline' onClick={() => setEditingPost(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card className='noir-reveal'>
-        <CardHeader>
-          <CardTitle>Discussion ({postDetail.commentCount})</CardTitle>
-          <CardDescription>Team-only comments and screenshots.</CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <section className='rounded-lg border border-border/80 bg-background/45 p-4'>
-            <div className='grid gap-3'>
-              <div className='grid gap-2'>
-                <Label htmlFor='comment-body'>Comment</Label>
-                <Textarea
-                  id='comment-body'
-                  value={commentBody}
-                  rows={4}
-                  placeholder='Add a comment'
-                  disabled={postDetail.status === 'archived'}
-                  onChange={(event) => setCommentBody(event.target.value)}
-                />
-              </div>
-
-              <div className='grid gap-2'>
-                <Label htmlFor='comment-files'>Attachments</Label>
-                <Input
-                  id='comment-files'
-                  type='file'
-                  multiple
-                  accept='image/jpeg,image/png,image/webp'
-                  disabled={postDetail.status === 'archived'}
-                  onChange={(event) => setCommentFiles(Array.from(event.target.files ?? []))}
-                />
-              </div>
-
-              {commentError ? <p className='text-sm text-destructive'>{commentError}</p> : null}
-
-              <Button disabled={commentBusy || postDetail.status === 'archived'} onClick={handleCreateComment}>
-                {commentBusy ? 'Posting...' : 'Post comment'}
-              </Button>
-            </div>
-          </section>
-
-          <section className='grid gap-3'>
-            {postDetail.comments.map((comment) => (
-              <Card key={comment.commentId} className='border-border/75'>
-                <CardContent className='space-y-3 p-4'>
+                  {editingCommentError ? (
+                    <p className='text-sm text-destructive'>{editingCommentError}</p>
+                  ) : null}
                   <div className='flex items-center gap-2'>
-                    <Avatar className='h-7 w-7'>
-                      <AvatarImage src={undefined} alt={comment.createdByName} />
-                      <AvatarFallback>{comment.createdByName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className='text-sm font-medium text-foreground'>{comment.createdByName}</span>
-                    <span className='text-xs text-muted-foreground'>({comment.createdByIid})</span>
-                    <span className='ml-auto text-xs text-muted-foreground'>{formatDate(comment.createdAt)}</span>
+                    <Button disabled={editingCommentBusy} onClick={handleUpdateComment}>
+                      {editingCommentBusy ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button variant='outline' onClick={() => setEditingCommentId(null)}>
+                      Cancel
+                    </Button>
                   </div>
+                </div>
+              ) : (
+                <>
+                  <p className='whitespace-pre-wrap text-sm leading-6'>{comment.body}</p>
 
-                  {editingCommentId === comment.commentId ? (
-                    <div className='space-y-2'>
-                      <Textarea
-                        value={editingCommentBody}
-                        rows={4}
-                        onChange={(event) => setEditingCommentBody(event.target.value)}
-                      />
-                      <Input
-                        type='file'
-                        multiple
-                        accept='image/jpeg,image/png,image/webp'
-                        onChange={(event) => setEditingCommentFiles(Array.from(event.target.files ?? []))}
-                      />
-                      {editingCommentError ? (
-                        <p className='text-sm text-destructive'>{editingCommentError}</p>
-                      ) : null}
-                      <div className='flex items-center gap-2'>
-                        <Button disabled={editingCommentBusy} onClick={handleUpdateComment}>
-                          {editingCommentBusy ? 'Saving...' : 'Save'}
-                        </Button>
-                        <Button variant='outline' onClick={() => setEditingCommentId(null)}>
-                          Cancel
-                        </Button>
-                      </div>
+                  {comment.imageUrls.length > 0 ? (
+                    <div className='grid grid-cols-2 gap-2'>
+                      {comment.imageUrls.map((url) => (
+                        <img
+                          key={url}
+                          src={url}
+                          alt='Comment attachment'
+                          className='h-40 w-full rounded-md border border-border/60 object-cover'
+                        />
+                      ))}
                     </div>
-                  ) : (
-                    <>
-                      <p className='whitespace-pre-wrap text-sm leading-6'>{comment.body}</p>
+                  ) : null}
 
-                      {comment.imageUrls.length > 0 ? (
-                        <div className='grid grid-cols-2 gap-2'>
-                          {comment.imageUrls.map((url) => (
-                            <img
-                              key={url}
-                              src={url}
-                              alt='Comment attachment'
-                              className='h-40 w-full rounded-lg border border-border/70 object-cover'
-                            />
-                          ))}
-                        </div>
-                      ) : null}
+                  <div className='flex items-center gap-2'>
+                    {comment.canEdit ? (
+                      <Button
+                        variant='secondary'
+                        size='sm'
+                        onClick={() => beginCommentEdit(comment.commentId, comment.body)}
+                      >
+                        <PencilLine className='h-4 w-4' />
+                        Edit
+                      </Button>
+                    ) : null}
+                    {comment.canDelete ? (
+                      <Button
+                        variant='destructive'
+                        size='sm'
+                        onClick={() => handleDeleteComment(comment.commentId)}
+                      >
+                        <Trash2 className='h-4 w-4' />
+                        Delete
+                      </Button>
+                    ) : null}
+                  </div>
+                </>
+              )}
+            </article>
+          ))}
 
-                      <div className='flex items-center gap-2'>
-                        {comment.canEdit ? (
-                          <Button
-                            variant='secondary'
-                            size='sm'
-                            onClick={() => beginCommentEdit(comment.commentId, comment.body)}
-                          >
-                            <PencilLine className='h-4 w-4' />
-                            Edit
-                          </Button>
-                        ) : null}
-                        {comment.canDelete ? (
-                          <Button
-                            variant='destructive'
-                            size='sm'
-                            onClick={() => handleDeleteComment(comment.commentId)}
-                          >
-                            <Trash2 className='h-4 w-4' />
-                            Delete
-                          </Button>
-                        ) : null}
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-
-            {postDetail.comments.length === 0 ? (
-              <Card>
-                <CardContent className='p-4 text-sm text-muted-foreground'>
-                  No comments yet. Start the discussion.
-                </CardContent>
-              </Card>
-            ) : null}
-          </section>
-        </CardContent>
-      </Card>
+          {postDetail.comments.length === 0 ? (
+            <p className='py-4 text-sm text-muted-foreground'>No comments yet. Start the discussion.</p>
+          ) : null}
+        </section>
+      </section>
     </AppSidebarShell>
   )
 }
