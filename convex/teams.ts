@@ -23,6 +23,10 @@ import {
   slugify,
   teamRoleValidator,
 } from './model'
+import {
+  buildInviteReceivedDedupeKey,
+  enqueueNotification,
+} from './notifications'
 
 type CtxLike = Pick<QueryCtx, 'db' | 'storage'> | Pick<MutationCtx, 'db' | 'storage'>
 
@@ -306,6 +310,15 @@ export const inviteByIID = mutation({
         throw new ConvexError('Invite could not be loaded.')
       }
 
+      await enqueueNotification(ctx, {
+        teamId: args.teamId,
+        recipientUserId: invitedUser._id,
+        actorUserId: actor._id,
+        type: 'invite_received',
+        dedupeKey: buildInviteReceivedDedupeKey(refreshed._id, invitedUser._id),
+        inviteId: refreshed._id,
+      })
+
       return buildInviteView(ctx, refreshed)
     }
 
@@ -324,6 +337,15 @@ export const inviteByIID = mutation({
     if (!invite) {
       throw new ConvexError('Invite could not be loaded.')
     }
+
+    await enqueueNotification(ctx, {
+      teamId: args.teamId,
+      recipientUserId: invitedUser._id,
+      actorUserId: actor._id,
+      type: 'invite_received',
+      dedupeKey: buildInviteReceivedDedupeKey(invite._id, invitedUser._id),
+      inviteId: invite._id,
+    })
 
     return buildInviteView(ctx, invite)
   },

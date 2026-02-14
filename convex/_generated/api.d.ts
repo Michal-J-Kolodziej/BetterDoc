@@ -14,6 +14,7 @@ import type * as files from "../files.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as model from "../model.js";
+import type * as notifications from "../notifications.js";
 import type * as postSearch from "../postSearch.js";
 import type * as posts from "../posts.js";
 import type * as teams from "../teams.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   health: typeof health;
   http: typeof http;
   model: typeof model;
+  notifications: typeof notifications;
   postSearch: typeof postSearch;
   posts: typeof posts;
   teams: typeof teams;

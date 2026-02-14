@@ -8,6 +8,10 @@ import {
   requireUserByWorkosUserId,
 } from './auth'
 import { limits, normalizeText } from './model'
+import {
+  buildCommentOnPostDedupeKey,
+  enqueueNotification,
+} from './notifications'
 import { refreshPostSearchText } from './posts'
 
 function normalizeCommentBody(value: string): string {
@@ -83,6 +87,18 @@ export const createComment = mutation({
     })
 
     await refreshPostSearchText(ctx, post._id)
+
+    if (actor._id !== post.createdByUserId) {
+      await enqueueNotification(ctx, {
+        teamId: post.teamId,
+        recipientUserId: post.createdByUserId,
+        actorUserId: actor._id,
+        type: 'comment_on_post',
+        dedupeKey: buildCommentOnPostDedupeKey(commentId, post.createdByUserId),
+        postId: post._id,
+        commentId,
+      })
+    }
 
     return {
       commentId,

@@ -1,5 +1,24 @@
 # BetterDoc Change Log
 
+## 2026-02-14 (BD-201, BD-202: notification foundation + draft/template schema)
+- Code paths changed:
+  - `convex/schema.ts`
+  - `convex/model.ts`
+  - `convex/notifications.ts`
+  - `convex/teams.ts`
+  - `convex/comments.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/convex/notifications.test.ts`
+  - `src/convex/draft-retention.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added Convex schema foundations for `postTemplates`, `postDrafts`, `commentDrafts`, and `notifications` with team/user/time-oriented indexes and a dedupe-key index for idempotent enqueue.
+  - Added notification service primitives (`notifications.enqueue`, `notifications.enqueueMany`) with dedupe-by-key semantics and deterministic dedupe-key builders for initial event wiring.
+  - Hooked notifications into `teams.inviteByIID` (`invite_received`) and `comments.createComment` (`comment_on_post` when commenter is not the post creator) without changing existing team/post/comment authorization or mutation contracts.
+  - Added tests covering notification dedupe behavior (`enqueue` + `enqueueMany`) and default draft retention fallback behavior (`resolveDraftExpiresAt`).
+
 ## 2026-02-14 (V1 tape-feed redesign rollout across app)
 - Code paths changed:
   - `src/styles.css`

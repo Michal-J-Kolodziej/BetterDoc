@@ -99,6 +99,7 @@ Last updated: 2026-02-14
 ## Convex Backend (V2 Domain)
 - Schema: `convex/schema.ts`
 - Shared validators/constants: `convex/model.ts`
+  - Includes notification type validators and draft retention helper (`resolveDraftExpiresAt`).
 - Authorization helpers: `convex/auth.ts`
 - Post search-text builder: `convex/postSearch.ts`
 - Domain function modules:
@@ -106,6 +107,7 @@ Last updated: 2026-02-14
   - `convex/teams.ts`
   - `convex/posts.ts`
   - `convex/comments.ts`
+  - `convex/notifications.ts`
   - `convex/files.ts`
 - Optional health endpoint: `convex/health.ts`
 - HTTP router (currently no custom routes): `convex/http.ts`
@@ -116,14 +118,24 @@ Last updated: 2026-02-14
 - `teamMemberships`
 - `teamInvites`
 - `posts`
+- `postTemplates`
+- `postDrafts`
+- `commentDrafts`
 - `comments`
+- `notifications`
 
 ### Core API Surface
 - `users.getMe`, `users.upsertMe`, `users.updateProfile`
 - `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.inviteByIID`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
 - `posts.createPost`, `posts.updatePost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.getPostDetail`
 - `comments.createComment`, `comments.updateComment`, `comments.deleteComment`
+- `notifications.enqueue`, `notifications.enqueueMany` (internal service primitives)
 - `files.generateUploadUrl`, `files.attachUploadedFile`
+
+### Notification/Event Notes
+- `teams.inviteByIID` now enqueues `invite_received` notifications for invite recipients.
+- `comments.createComment` now enqueues `comment_on_post` notifications to the post creator when the commenter is a different user.
+- Notification enqueue is deduplicated by `dedupeKey` (`notifications.by_dedupe_key` index) to keep retried events single-write.
 
 ## Removed Legacy Areas
 The following legacy areas are removed from active code paths:

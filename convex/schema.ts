@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 
 import {
   inviteStatusValidator,
+  notificationTypeValidator,
   postStatusValidator,
   teamRoleValidator,
 } from './model'
@@ -80,6 +81,53 @@ export default defineSchema({
       filterFields: ['teamId', 'status', 'createdByUserId'],
     }),
 
+  postTemplates: defineTable({
+    teamId: v.id('teams'),
+    name: v.string(),
+    title: v.string(),
+    occurrenceWhere: v.string(),
+    occurrenceWhen: v.string(),
+    description: v.string(),
+    createdByUserId: v.id('users'),
+    updatedByUserId: v.id('users'),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_team_updated_at', ['teamId', 'updatedAt'])
+    .index('by_team_created_at', ['teamId', 'createdAt'])
+    .index('by_team_name', ['teamId', 'name']),
+
+  postDrafts: defineTable({
+    teamId: v.id('teams'),
+    userId: v.id('users'),
+    sourcePostId: v.union(v.id('posts'), v.null()),
+    title: v.string(),
+    occurrenceWhere: v.string(),
+    occurrenceWhen: v.string(),
+    description: v.string(),
+    imageStorageIds: v.array(v.id('_storage')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_user_team_source_post', ['userId', 'teamId', 'sourcePostId'])
+    .index('by_user_updated_at', ['userId', 'updatedAt'])
+    .index('by_team_expires_at', ['teamId', 'expiresAt']),
+
+  commentDrafts: defineTable({
+    teamId: v.id('teams'),
+    postId: v.id('posts'),
+    userId: v.id('users'),
+    body: v.string(),
+    imageStorageIds: v.array(v.id('_storage')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_post_user', ['postId', 'userId'])
+    .index('by_user_updated_at', ['userId', 'updatedAt'])
+    .index('by_team_expires_at', ['teamId', 'expiresAt']),
+
   comments: defineTable({
     postId: v.id('posts'),
     teamId: v.id('teams'),
@@ -94,4 +142,21 @@ export default defineSchema({
   })
     .index('by_post_created_at', ['postId', 'createdAt'])
     .index('by_post_updated_at', ['postId', 'updatedAt']),
+
+  notifications: defineTable({
+    teamId: v.id('teams'),
+    recipientUserId: v.id('users'),
+    actorUserId: v.union(v.id('users'), v.null()),
+    type: notificationTypeValidator,
+    dedupeKey: v.string(),
+    inviteId: v.union(v.id('teamInvites'), v.null()),
+    postId: v.union(v.id('posts'), v.null()),
+    commentId: v.union(v.id('comments'), v.null()),
+    readAt: v.union(v.number(), v.null()),
+    createdAt: v.number(),
+  })
+    .index('by_dedupe_key', ['dedupeKey'])
+    .index('by_recipient_created_at', ['recipientUserId', 'createdAt'])
+    .index('by_recipient_read_created_at', ['recipientUserId', 'readAt', 'createdAt'])
+    .index('by_team_created_at', ['teamId', 'createdAt']),
 })

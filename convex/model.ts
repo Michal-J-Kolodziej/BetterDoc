@@ -9,6 +9,9 @@ export type InviteStatus = (typeof inviteStatuses)[number]
 export const postStatuses = ['active', 'archived'] as const
 export type PostStatus = (typeof postStatuses)[number]
 
+export const notificationTypes = ['invite_received', 'comment_on_post'] as const
+export type NotificationType = (typeof notificationTypes)[number]
+
 export const teamRoleValidator = v.union(
   v.literal('admin'),
   v.literal('teamleader'),
@@ -25,6 +28,11 @@ export const inviteStatusValidator = v.union(
 )
 
 export const postStatusValidator = v.union(v.literal('active'), v.literal('archived'))
+
+export const notificationTypeValidator = v.union(
+  v.literal('invite_received'),
+  v.literal('comment_on_post'),
+)
 
 export const fileContentTypeValidator = v.union(
   v.literal('image/jpeg'),
@@ -45,6 +53,7 @@ export const limits = {
   maxCommentImages: 4,
   maxUploadSizeBytes: 10 * 1024 * 1024,
   inviteDurationMs: 14 * 24 * 60 * 60 * 1000,
+  draftRetentionMs: 30 * 24 * 60 * 60 * 1000,
 } as const
 
 export function slugify(value: string): string {
@@ -56,4 +65,19 @@ export function slugify(value: string): string {
 
 export function normalizeText(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
+}
+
+export function resolveDraftExpiresAt(
+  now: number,
+  requestedExpiresAt: number | null | undefined,
+): number {
+  if (
+    typeof requestedExpiresAt === 'number' &&
+    Number.isFinite(requestedExpiresAt) &&
+    requestedExpiresAt > now
+  ) {
+    return requestedExpiresAt
+  }
+
+  return now + limits.draftRetentionMs
 }
