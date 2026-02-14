@@ -1,7 +1,11 @@
 node_modules
 bun.lock
+# Local environment files
 .env
+.env.local
 .env.*.local
+.env.*
+!.env.example
 dist
 .coverage
 .DS_Store
