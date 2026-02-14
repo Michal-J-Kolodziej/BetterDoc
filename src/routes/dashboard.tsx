@@ -1,9 +1,32 @@
+import type { ReactNode } from 'react'
+
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { getAuthkit } from '@workos/authkit-tanstack-react-start'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
 import { useState } from 'react'
 
+import { AppShell } from '@/components/ui/AppShell'
+import { PageTopbar } from '@/components/ui/PageTopbar'
+import { SidebarRail } from '@/components/ui/SidebarRail'
+import { DashboardTabs } from '@/features/dashboard/DashboardTabs'
+import { AuditPanel } from '@/features/dashboard/panels/AuditPanel'
+import { OverviewPanel } from '@/features/dashboard/panels/OverviewPanel'
+import { SearchPanel } from '@/features/dashboard/panels/SearchPanel'
+import { TipStudioPanel } from '@/features/dashboard/panels/TipStudioPanel'
+import { WatchlistPanel } from '@/features/dashboard/panels/WatchlistPanel'
+import { WorkflowPanel } from '@/features/dashboard/panels/WorkflowPanel'
+import {
+  createEmptyTipSearchState,
+  getTipComponentLinkKey,
+  parseDashboardTab,
+  type DashboardTab,
+  dashboardTabs,
+  type TipComponentLink,
+  type TipSearchState,
+  validateTipSearchState,
+} from '@/features/dashboard/types'
+import { cn } from '@/lib/classnames'
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
 import { hasPermission, type AppRole, type Permission } from '../lib/rbac'
@@ -15,43 +38,11 @@ import {
   type TipEditorValidationErrors,
 } from '../lib/tip-editor'
 
-type TipStatus = 'draft' | 'in_review' | 'published' | 'deprecated'
-type TipSearchStatus = 'all' | TipStatus
-
-type TipSearchState = {
-  searchText: string
-  project: string
-  library: string
-  component: string
-  tag: string
-  status: TipSearchStatus
-}
-
-type TipComponentLink = {
-  workspaceId: string
-  projectName: string
-  componentName: string
-  componentFilePath: string
-}
-
-function getTipComponentLinkKey(link: TipComponentLink): string {
-  return [
-    link.workspaceId.toLowerCase(),
-    link.projectName.toLowerCase(),
-    link.componentName.toLowerCase(),
-    link.componentFilePath.toLowerCase(),
-  ].join('::')
-}
-
-const searchFieldLimits = {
-  project: 96,
-  library: 96,
-  component: 96,
-  tag: 48,
-} as const
-
 export const Route = createFileRoute('/dashboard')({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab === undefined ? undefined : parseDashboardTab(search.tab),
+  }),
   server: {
     handlers: {
       GET: async ({ context, next, request }) => {
@@ -74,43 +65,12 @@ export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
 })
 
-function createEmptyTipSearchState(): TipSearchState {
-  return {
-    searchText: '',
-    project: '',
-    library: '',
-    component: '',
-    tag: '',
-    status: 'all',
-  }
-}
-
-function validateTipSearchState(state: TipSearchState): string | null {
-  const projectLength = state.project.trim().length
-  if (projectLength > searchFieldLimits.project) {
-    return `Project filter must be ${searchFieldLimits.project} characters or fewer.`
-  }
-
-  const libraryLength = state.library.trim().length
-  if (libraryLength > searchFieldLimits.library) {
-    return `Library filter must be ${searchFieldLimits.library} characters or fewer.`
-  }
-
-  const componentLength = state.component.trim().length
-  if (componentLength > searchFieldLimits.component) {
-    return `Component filter must be ${searchFieldLimits.component} characters or fewer.`
-  }
-
-  const tagLength = state.tag.trim().length
-  if (tagLength > searchFieldLimits.tag) {
-    return `Tag filter must be ${searchFieldLimits.tag} characters or fewer.`
-  }
-
-  return null
-}
-
 function DashboardPage() {
   const auth = useAuth()
+  const navigate = Route.useNavigate()
+  const search = Route.useSearch()
+  const activeTab = parseDashboardTab(search.tab)
+
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [tipEditorMessage, setTipEditorMessage] = useState<string | null>(null)
   const [draftTipId, setDraftTipId] = useState<Id<'tips'> | null>(null)
@@ -491,6 +451,60 @@ function DashboardPage() {
     setLinkComponentId('')
   }
 
+  const selectDraftTip = (nextTipId: string) => {
+    setTipEditorMessage(null)
+    setTipComponentMessage(null)
+
+    if (!nextTipId) {
+      resetEditorToNewDraft()
+      return
+    }
+
+    setDraftTipId(nextTipId as Id<'tips'>)
+    setTipValidationErrors({})
+    setTipComponentLinks([])
+  }
+
+  const loadSelectedTipContent = () => {
+    if (!editorTip) {
+      setTipEditorMessage('Tip content is still loading.')
+      return
+    }
+
+    setTipEditorState({
+      symptom: editorTip.symptom,
+      rootCause: editorTip.rootCause,
+      fix: editorTip.fix,
+      prevention: editorTip.prevention,
+      project: editorTip.project ?? '',
+      library: editorTip.library ?? '',
+      component: editorTip.component ?? '',
+      tags: editorTip.tags.join(', '),
+      references: editorTip.references.join('\n'),
+    })
+
+    if (editorTipComponentLinks) {
+      setTipComponentLinks(
+        editorTipComponentLinks.map((link) => ({
+          workspaceId: link.workspaceId,
+          projectName: link.projectName,
+          componentName: link.componentName,
+          componentFilePath: link.componentFilePath,
+        })),
+      )
+      setTipComponentMessage(
+        `Loaded ${String(editorTipComponentLinks.length)} linked component${editorTipComponentLinks.length === 1 ? '' : 's'}.`,
+      )
+    } else {
+      setTipComponentMessage(
+        'Tip content loaded. Component links are still loading.',
+      )
+    }
+
+    setTipValidationErrors({})
+    setTipEditorMessage('Loaded selected tip content into the editor.')
+  }
+
   const saveEditorDraft = async () => {
     if (!user) {
       return
@@ -523,989 +537,299 @@ function DashboardPage() {
     }
   }
 
+  const setActiveTab = (tab: DashboardTab) => {
+    void navigate({
+      search: { tab },
+    })
+  }
+
+  const sidebar = (
+    <SidebarRail
+      brandMeta="Governance + prevention tips"
+      brandTitle="Engineering Insights"
+      footer={
+        <div className="space-y-2 text-sm text-slate-300">
+          <p>
+            Signed in as <code className="app-code">{role}</code>
+          </p>
+          <Link className="app-btn-secondary w-full justify-start" to="/logout">
+            Sign out
+          </Link>
+        </div>
+      }
+      navLabel="Dashboard sections"
+      navSlot={
+        <>
+          {dashboardTabs.map((tab) => (
+            <button
+              key={tab.value}
+              className={cn(
+                'app-btn-secondary w-full justify-start',
+                activeTab === tab.value &&
+                  'border-cyan-300/45 bg-cyan-300/20 text-cyan-100',
+              )}
+              onClick={() => setActiveTab(tab.value)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+          <div className="h-px bg-white/10" />
+          <Link className="app-btn-secondary w-full justify-start" to="/explorer">
+            Component explorer
+          </Link>
+          <Link className="app-btn-secondary w-full justify-start" to="/">
+            Home
+          </Link>
+        </>
+      }
+    />
+  )
+
   if (auth.loading || !user || !accessProfile) {
     return (
-      <main className="bd-loading-view">
-        <h1>Authenticated Dashboard</h1>
-        <p>Loading role-aware access profile...</p>
-      </main>
+      <AppShell
+        topbar={
+          <PageTopbar
+            description="Loading role-aware access profile and dashboard context."
+            title="Authenticated Dashboard"
+          />
+        }
+      >
+        <div className="app-panel">
+          <p className="text-sm text-slate-300">Please wait while we load your profile.</p>
+        </div>
+      </AppShell>
     )
   }
 
-  return (
-    <div className="bd-dashboard-shell">
-      <aside className="bd-dashboard-sidebar">
-        <div className="bd-sidebar-brand">
-          <strong>BetterDoc</strong>
-          <span>Governance + prevention tips</span>
-        </div>
-        <nav className="bd-sidebar-nav" aria-label="Dashboard sections">
-          <a href="#session-role">Session + Role</a>
-          <a href="#tip-editor">Tip Editor</a>
-          <a href="#tip-workflow">Workflow</a>
-          <a href="#tips-search">Tip Search</a>
-          <a href="#watch-notifications">Notifications</a>
-          <a href="#audit-events">Audit Events</a>
-        </nav>
-        <div className="bd-sidebar-meta">
-          <p>
-            Signed in as <code>{role}</code>
-          </p>
-          <p>
-            <Link to="/logout">Sign out</Link>
-          </p>
-        </div>
-      </aside>
-
-      <div className="bd-dashboard-stage">
-        <header className="bd-dashboard-topbar">
-          <div>
-            <h1>Engineering Insights Dashboard</h1>
-            <p>
-              Access is protected by WorkOS session checks plus capability guards
-              mapped from the signed-in user role.
-            </p>
-          </div>
-          <div className="bd-dashboard-topbar-actions">
-            <Link to="/explorer">Component explorer</Link>
-            <Link to="/">Home</Link>
-          </div>
-        </header>
-
-        <main className="bd-dashboard-main">
-      <section id="session-role" className="bd-panel">
-        <h2>Session + Role</h2>
-        <p>
-          WorkOS user: <code>{user.id}</code>
-        </p>
-        <p>
-          Active role: <code>{role}</code>
-        </p>
-        <p>
-          Organization: <code>{organizationId ?? 'none'}</code>
-        </p>
-      </section>
-
-      <section id="rbac-matrix" className="bd-panel">
-        <h2>RBAC Matrix</h2>
-        <p>
-          Reader: <code>tips.read</code>
-        </p>
-        <p>
-          Contributor: <code>tips.read</code>, <code>tips.create</code>
-        </p>
-        <p>
-          Reviewer: Contributor + <code>tips.publish</code>,{' '}
-          <code>tips.deprecate</code>, <code>audit.read</code>
-        </p>
-        <p>
-          Admin: Reviewer + <code>roles.assign</code>,{' '}
-          <code>integration.configure</code>
-        </p>
-      </section>
-
-      <section id="tip-editor" className="bd-panel">
-        <h2>Tip Editor (BD-006, BD-007)</h2>
-        {!canCreateTips && (
-          <p>
-            Permission denied. <code>tips.create</code> is required.
-          </p>
-        )}
-
-        {canCreateTips && (
-          <>
-            <p>
-              Structured fields are stored as tip revisions. Root cause, fix, and
-              prevention support markdown text.
-            </p>
-
-            <p>
-              <label htmlFor="tip-selector">Edit existing tip: </label>
-              <select
-                id="tip-selector"
-                value={draftTipId ?? ''}
-                onChange={(event) => {
-                  const nextTipId = event.target.value
-                  setTipEditorMessage(null)
-                  setTipComponentMessage(null)
-
-                  if (!nextTipId) {
-                    resetEditorToNewDraft()
-                    return
-                  }
-
-                  setDraftTipId(nextTipId as Id<'tips'>)
-                  setTipValidationErrors({})
-                  setTipComponentLinks([])
-                }}
-              >
-                <option value="">Create new draft</option>
-                {tips?.map((tip) => (
-                  <option key={tip.id} value={tip.id}>
-                    {tip.title} ({tip.status}, r{tip.currentRevision})
-                  </option>
-                ))}
-              </select>
-            </p>
-
-            {draftTipId && editorTip && (
-              <p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTipEditorState({
-                      symptom: editorTip.symptom,
-                      rootCause: editorTip.rootCause,
-                      fix: editorTip.fix,
-                      prevention: editorTip.prevention,
-                      project: editorTip.project ?? '',
-                      library: editorTip.library ?? '',
-                      component: editorTip.component ?? '',
-                      tags: editorTip.tags.join(', '),
-                      references: editorTip.references.join('\n'),
-                    })
-                    if (editorTipComponentLinks) {
-                      setTipComponentLinks(
-                        editorTipComponentLinks.map((link) => ({
-                          workspaceId: link.workspaceId,
-                          projectName: link.projectName,
-                          componentName: link.componentName,
-                          componentFilePath: link.componentFilePath,
-                        })),
-                      )
-                      setTipComponentMessage(
-                        `Loaded ${String(editorTipComponentLinks.length)} linked component${editorTipComponentLinks.length === 1 ? '' : 's'}.`,
-                      )
-                    } else {
-                      setTipComponentMessage(
-                        'Tip content loaded. Component links are still loading.',
-                      )
-                    }
-                    setTipValidationErrors({})
-                    setTipEditorMessage('Loaded selected tip content into the editor.')
-                  }}
-                >
-                  Load selected tip content
-                </button>
-              </p>
-            )}
-
-            <p>
-              <label htmlFor="tip-symptom">Symptom</label>
-              <br />
-              <textarea
-                id="tip-symptom"
-                rows={3}
-                value={tipEditorState.symptom}
-                onChange={(event) =>
-                  setEditorField('symptom', event.target.value)
-                }
-              />
-              {tipValidationErrors.symptom && <br />}
-              {tipValidationErrors.symptom && (
-                <small>{tipValidationErrors.symptom}</small>
-              )}
-            </p>
-
-            <p>
-              <label htmlFor="tip-root-cause">Root cause</label>
-              <br />
-              <textarea
-                id="tip-root-cause"
-                rows={5}
-                value={tipEditorState.rootCause}
-                onChange={(event) =>
-                  setEditorField('rootCause', event.target.value)
-                }
-              />
-              {tipValidationErrors.rootCause && <br />}
-              {tipValidationErrors.rootCause && (
-                <small>{tipValidationErrors.rootCause}</small>
-              )}
-            </p>
-
-            <p>
-              <label htmlFor="tip-fix">Fix</label>
-              <br />
-              <textarea
-                id="tip-fix"
-                rows={5}
-                value={tipEditorState.fix}
-                onChange={(event) => setEditorField('fix', event.target.value)}
-              />
-              {tipValidationErrors.fix && <br />}
-              {tipValidationErrors.fix && <small>{tipValidationErrors.fix}</small>}
-            </p>
-
-            <p>
-              <label htmlFor="tip-prevention">Prevention</label>
-              <br />
-              <textarea
-                id="tip-prevention"
-                rows={5}
-                value={tipEditorState.prevention}
-                onChange={(event) =>
-                  setEditorField('prevention', event.target.value)
-                }
-              />
-              {tipValidationErrors.prevention && <br />}
-              {tipValidationErrors.prevention && (
-                <small>{tipValidationErrors.prevention}</small>
-              )}
-            </p>
-
-            <p>
-              <label htmlFor="tip-project">Project (optional)</label>
-              <br />
-              <input
-                id="tip-project"
-                value={tipEditorState.project}
-                onChange={(event) => setEditorField('project', event.target.value)}
-                placeholder="media-press"
-              />
-              {tipValidationErrors.project && <br />}
-              {tipValidationErrors.project && (
-                <small>{tipValidationErrors.project}</small>
-              )}
-            </p>
-
-            <p>
-              <label htmlFor="tip-library">Library (optional)</label>
-              <br />
-              <input
-                id="tip-library"
-                value={tipEditorState.library}
-                onChange={(event) => setEditorField('library', event.target.value)}
-                placeholder="billing-core"
-              />
-              {tipValidationErrors.library && <br />}
-              {tipValidationErrors.library && (
-                <small>{tipValidationErrors.library}</small>
-              )}
-            </p>
-
-            <p>
-              <label htmlFor="tip-component">Component (optional)</label>
-              <br />
-              <input
-                id="tip-component"
-                value={tipEditorState.component}
-                onChange={(event) => setEditorField('component', event.target.value)}
-                placeholder="InvoiceSummary"
-              />
-              {tipValidationErrors.component && <br />}
-              {tipValidationErrors.component && (
-                <small>{tipValidationErrors.component}</small>
-              )}
-            </p>
-
-            <p>
-              <label htmlFor="tip-link-workspace">Component links (BD-013)</label>
-              <br />
-              <small>
-                Link this tip to scanned components for many-to-many lookup from
-                component detail pages.
-              </small>
-              {componentWorkspaces === undefined && (
-                <>
-                  <br />
-                  <small>Loading scanned workspaces...</small>
-                </>
-              )}
-              {componentWorkspaces?.length === 0 && (
-                <>
-                  <br />
-                  <small>No scanned workspaces found yet.</small>
-                </>
-              )}
-              <br />
-              <select
-                id="tip-link-workspace"
-                value={linkWorkspaceId}
-                onChange={(event) => {
-                  setLinkWorkspaceId(event.target.value)
-                  setLinkProjectName('')
-                  setLinkComponentId('')
-                  setTipComponentMessage(null)
-                }}
-              >
-                <option value="">Select workspace</option>
-                {componentWorkspaces?.map((workspace) => (
-                  <option key={workspace.workspaceId} value={workspace.workspaceId}>
-                    {workspace.workspaceId} (v{workspace.graphVersionNumber})
-                  </option>
-                ))}
-              </select>
-            </p>
-
-            {linkWorkspaceId && selectedWorkspaceGraph === undefined && (
-              <p>Loading workspace graph snapshot...</p>
-            )}
-            {linkWorkspaceId && selectedWorkspaceGraph === null && (
-              <p>
-                No graph snapshot found for workspace <code>{linkWorkspaceId}</code>.
-              </p>
-            )}
-
-            <p>
-              <label htmlFor="tip-link-project">Project/Library</label>
-              <br />
-              <select
-                id="tip-link-project"
-                value={linkProjectName}
-                disabled={!linkWorkspaceId || !selectedWorkspaceGraph}
-                onChange={(event) => {
-                  setLinkProjectName(event.target.value)
-                  setLinkComponentId('')
-                  setTipComponentMessage(null)
-                }}
-              >
-                <option value="">Select project or library</option>
-                {selectedWorkspaceGraph?.projects.map((project) => (
-                  <option key={project.name} value={project.name}>
-                    {project.name} ({project.type}, {project.componentCount} components)
-                  </option>
-                ))}
-              </select>
-            </p>
-
-            {linkWorkspaceId && linkProjectName && selectedProjectGraph === undefined && (
-              <p>Loading components for selected project...</p>
-            )}
-            {linkWorkspaceId && linkProjectName && selectedProjectGraph === null && (
-              <p>
-                Selected project <code>{linkProjectName}</code> was not found in the
-                latest workspace graph.
-              </p>
-            )}
-
-            <p>
-              <label htmlFor="tip-link-component">Component</label>
-              <br />
-              <select
-                id="tip-link-component"
-                value={linkComponentId}
-                disabled={!linkWorkspaceId || !linkProjectName || !selectedProjectGraph}
-                onChange={(event) => {
-                  setLinkComponentId(event.target.value)
-                  setTipComponentMessage(null)
-                }}
-              >
-                <option value="">Select component</option>
-                {selectedProjectGraph?.components.map((component) => (
-                  <option key={component.id} value={component.id}>
-                    {component.name} ({component.filePath})
-                  </option>
-                ))}
-              </select>
-            </p>
-
-            <p>
-              <button
-                type="button"
-                onClick={addSelectedComponentLink}
-                disabled={!linkWorkspaceId || !linkProjectName || !linkComponentId}
-              >
-                Add component link
-              </button>{' '}
-              <Link to="/explorer">Open component explorer</Link>
-            </p>
-
-            {tipComponentMessage && <p>{tipComponentMessage}</p>}
-            {tipComponentLinks.length === 0 && (
-              <p>No component links are attached to this draft yet.</p>
-            )}
-            {tipComponentLinks.map((link) => (
-              <p key={getTipComponentLinkKey(link)}>
-                <code>
-                  {link.workspaceId}/{link.projectName}/{link.componentName}
-                </code>
-                <br />
-                <code>{link.componentFilePath}</code>
-                <br />
-                <Link
-                  to="/explorer/$workspaceId/project/$projectName"
-                  params={{
-                    workspaceId: encodeWorkspaceRouteParam(link.workspaceId),
-                    projectName: link.projectName,
-                  }}
-                >
-                  Open project
-                </Link>{' '}
-                ·{' '}
-                <button
-                  type="button"
-                  onClick={() => removeComponentLink(link)}
-                >
-                  Remove link
-                </button>
-              </p>
-            ))}
-
-            <p>
-              <label htmlFor="tip-tags">Tags (comma or newline separated)</label>
-              <br />
-              <textarea
-                id="tip-tags"
-                rows={3}
-                value={tipEditorState.tags}
-                onChange={(event) => setEditorField('tags', event.target.value)}
-              />
-              {tipValidationErrors.tags && <br />}
-              {tipValidationErrors.tags && <small>{tipValidationErrors.tags}</small>}
-            </p>
-
-            <p>
-              <label htmlFor="tip-references">
-                References (comma or newline separated)
-              </label>
-              <br />
-              <textarea
-                id="tip-references"
-                rows={4}
-                value={tipEditorState.references}
-                onChange={(event) =>
-                  setEditorField('references', event.target.value)
-                }
-              />
-              {tipValidationErrors.references && <br />}
-              {tipValidationErrors.references && (
-                <small>{tipValidationErrors.references}</small>
-              )}
-            </p>
-
-            <p>
-              <button type="button" onClick={saveEditorDraft}>
-                Save draft
-              </button>{' '}
-              <button type="button" onClick={resetEditorToNewDraft}>
-                New draft
-              </button>
-            </p>
-
-            {draftTipId && (
-              <p>
-                Current draft tip ID: <code>{draftTipId}</code>
-              </p>
-            )}
-            {draftTipId && editorTipComponentLinks === undefined && (
-              <p>Loading existing component links for this tip...</p>
-            )}
-            {tipEditorMessage && <p>{tipEditorMessage}</p>}
-
-            {draftTipId && (
-              <>
-                <h3>Revision history</h3>
-                {tipRevisions?.length === 0 && <p>No revisions saved yet.</p>}
-                {tipRevisions?.map((revision) => (
-                  <p key={revision.revisionId}>
-                    r{revision.revisionNumber} ({revision.status}) by{' '}
-                    <code>{revision.editedByWorkosUserId}</code> at{' '}
-                    {new Date(revision.createdAt).toISOString()}
-                  </p>
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </section>
-
-      <section id="tip-workflow" className="bd-panel">
-        <h2>Tip Workflow (BD-008)</h2>
-        {!canCreateTips && (
-          <p>
-            Permission denied. <code>tips.create</code> is required.
-          </p>
-        )}
-
-        {canCreateTips && (
-          <>
-            {!draftTipId && <p>Select a tip in the editor to run transitions.</p>}
-            {draftTipId && (
-              <p>
-                Selected tip status: <code>{selectedTipStatus ?? 'loading'}</code>
-              </p>
-            )}
-
-            <p>
-              <button
-                type="button"
-                disabled={!draftTipId || selectedTipStatus !== 'draft'}
-                onClick={() =>
-                  runAction('Tip moved to in_review.', async () => {
-                    if (!draftTipId) {
-                      throw new Error('Save a draft tip first.')
-                    }
-
-                    await submitTipForReview({
-                      actorWorkosUserId: user.id,
-                      actorOrganizationId: organizationId,
-                      tipId: draftTipId,
-                    })
-                  })
-                }
-              >
-                Submit for review (Contributor+)
-              </button>
-            </p>
-
-            <p>
-              <button
-                type="button"
-                disabled={!can('tips.publish') || !draftTipId || selectedTipStatus !== 'in_review'}
-                onClick={() =>
-                  runAction('Tip returned to draft for edits.', async () => {
-                    if (!draftTipId) {
-                      throw new Error('Select a tip first.')
-                    }
-
-                    await returnTipToDraft({
-                      actorWorkosUserId: user.id,
-                      actorOrganizationId: organizationId,
-                      tipId: draftTipId,
-                    })
-                  })
-                }
-              >
-                Return to draft (Reviewer+)
-              </button>
-            </p>
-
-            <p>
-              <button
-                type="button"
-                disabled={!can('tips.publish') || !draftTipId || selectedTipStatus !== 'in_review'}
-                onClick={async () => {
-                  if (!draftTipId) {
-                    setStatusMessage('Action failed: Select a tip first.')
-                    return
-                  }
-
-                  try {
-                    const result = await publishTip({
-                      actorWorkosUserId: user.id,
-                      actorOrganizationId: organizationId,
-                      tipId: draftTipId,
-                    })
-
-                    setStatusMessage(
-                      `Tip published and audited. ${String(result.notificationCount)} ${result.notificationEventType} notification${result.notificationCount === 1 ? '' : 's'} logged.`,
-                    )
-                  } catch (error) {
-                    const message =
-                      error instanceof Error ? error.message : 'Unknown error'
-                    setStatusMessage(`Action failed: ${message}`)
-                  }
-                }}
-              >
-                Publish tip (Reviewer+)
-              </button>
-            </p>
-
-            <p>
-              <button
-                type="button"
-                disabled={!can('tips.deprecate') || !draftTipId || selectedTipStatus !== 'published'}
-                onClick={() =>
-                  runAction('Tip deprecated and audit event stored.', async () => {
-                    if (!draftTipId) {
-                      throw new Error('Select a tip first.')
-                    }
-
-                    await deprecateTip({
-                      actorWorkosUserId: user.id,
-                      actorOrganizationId: organizationId,
-                      tipId: draftTipId,
-                    })
-                  })
-                }
-              >
-                Deprecate tip (Reviewer+)
-              </button>
-            </p>
-          </>
-        )}
-      </section>
-
-      <section id="privileged-actions" className="bd-panel">
-        <h2>Privileged Actions (Guarded)</h2>
-        <p>
-          <button
-            type="button"
-            onClick={() =>
-              runAction('Bootstrap completed: current user is now Admin.', async () => {
-                await bootstrapFirstAdmin({
-                  actorWorkosUserId: user.id,
-                  actorOrganizationId: organizationId,
-                })
+  const tabContent: Record<DashboardTab, ReactNode> = {
+    overview: (
+      <OverviewPanel
+        canCreateTips={canCreateTips}
+        canReadAudit={canReadAudit}
+        canReadTips={canReadTips}
+        organizationId={organizationId}
+        role={role}
+        userId={user.id}
+        watchSubscriptionCount={myWatchSubscriptions?.length ?? 0}
+      />
+    ),
+    'tip-studio': (
+      <TipStudioPanel
+        canCreateTips={canCreateTips}
+        canLoadSelectedTip={Boolean(draftTipId && editorTip)}
+        componentWorkspaces={componentWorkspaces}
+        draftTipId={draftTipId}
+        editorTip={editorTip}
+        editorTipComponentLinks={editorTipComponentLinks}
+        linkComponentId={linkComponentId}
+        linkProjectName={linkProjectName}
+        linkWorkspaceId={linkWorkspaceId}
+        onAddSelectedComponentLink={addSelectedComponentLink}
+        onLoadSelectedTipContent={loadSelectedTipContent}
+        onRemoveComponentLink={removeComponentLink}
+        onResetToNewDraft={resetEditorToNewDraft}
+        onSaveDraft={saveEditorDraft}
+        onSelectDraftTip={selectDraftTip}
+        onSetEditorField={setEditorField}
+        onSetLinkComponentId={(value) => {
+          setLinkComponentId(value)
+          setTipComponentMessage(null)
+        }}
+        onSetLinkProjectName={(value) => {
+          setLinkProjectName(value)
+          setLinkComponentId('')
+          setTipComponentMessage(null)
+        }}
+        onSetLinkWorkspaceId={(value) => {
+          setLinkWorkspaceId(value)
+          setLinkProjectName('')
+          setLinkComponentId('')
+          setTipComponentMessage(null)
+        }}
+        selectedProjectGraph={selectedProjectGraph}
+        selectedWorkspaceGraph={selectedWorkspaceGraph}
+        tipComponentLinks={tipComponentLinks}
+        tipComponentMessage={tipComponentMessage}
+        tipEditorMessage={tipEditorMessage}
+        tipEditorState={tipEditorState}
+        tipRevisions={tipRevisions}
+        tipValidationErrors={tipValidationErrors}
+        tips={
+          tips?.map((tip) => ({
+            id: tip.id,
+            title: tip.title,
+            status: tip.status,
+            currentRevision: tip.currentRevision,
+          })) ?? []
+        }
+        workspaceToRouteParam={encodeWorkspaceRouteParam}
+      />
+    ),
+    workflow: (
+      <WorkflowPanel
+        canAssignRoles={can('roles.assign')}
+        canConfigureIntegration={can('integration.configure')}
+        canCreateTips={canCreateTips}
+        canDeprecateTips={can('tips.deprecate')}
+        canPublishTips={can('tips.publish')}
+        draftTipId={draftTipId}
+        nextRole={nextRole}
+        onAssignRole={() =>
+          void runAction('Role assignment saved and audited.', async () => {
+            await assignRole({
+              actorWorkosUserId: user.id,
+              actorOrganizationId: organizationId,
+              targetWorkosUserId,
+              role: nextRole,
+            })
+          })
+        }
+        onBootstrapFirstAdmin={() =>
+          void runAction('Bootstrap completed: current user is now Admin.', async () => {
+            await bootstrapFirstAdmin({
+              actorWorkosUserId: user.id,
+              actorOrganizationId: organizationId,
+            })
+          })
+        }
+        onConfigureIntegration={() =>
+          void runAction(
+            'Integration config updated and audit event stored.',
+            async () => {
+              await configureIntegration({
+                actorWorkosUserId: user.id,
+                actorOrganizationId: organizationId,
+                key: 'azure-devops',
+                enabled: true,
               })
+            },
+          )
+        }
+        onDeprecateTip={() =>
+          void runAction('Tip deprecated and audit event stored.', async () => {
+            if (!draftTipId) {
+              throw new Error('Select a tip first.')
             }
-          >
-            Bootstrap first admin (one-time)
-          </button>
-        </p>
 
-        <p>
-          <label htmlFor="target-user-id">Role assignment target user ID: </label>
-          <input
-            id="target-user-id"
-            value={targetWorkosUserId}
-            onChange={(event) => setTargetWorkosUserId(event.target.value)}
-            placeholder="user_123"
-          />
-        </p>
-        <p>
-          <label htmlFor="next-role">Next role: </label>
-          <select
-            id="next-role"
-            value={nextRole}
-            onChange={(event) => setNextRole(event.target.value as AppRole)}
-          >
-            <option value="Reader">Reader</option>
-            <option value="Contributor">Contributor</option>
-            <option value="Reviewer">Reviewer</option>
-            <option value="Admin">Admin</option>
-          </select>
-        </p>
-        <p>
-          <button
-            type="button"
-            disabled={!can('roles.assign') || targetWorkosUserId.length === 0}
-            onClick={() =>
-              runAction('Role assignment saved and audited.', async () => {
-                await assignRole({
-                  actorWorkosUserId: user.id,
-                  actorOrganizationId: organizationId,
-                  targetWorkosUserId,
-                  role: nextRole,
-                })
+            await deprecateTip({
+              actorWorkosUserId: user.id,
+              actorOrganizationId: organizationId,
+              tipId: draftTipId,
+            })
+          })
+        }
+        onPublishTip={() =>
+          void (async () => {
+            if (!draftTipId) {
+              setStatusMessage('Action failed: Select a tip first.')
+              return
+            }
+
+            try {
+              const result = await publishTip({
+                actorWorkosUserId: user.id,
+                actorOrganizationId: organizationId,
+                tipId: draftTipId,
               })
-            }
-          >
-            Assign role (Admin)
-          </button>
-        </p>
 
-        <p>
-          <button
-            type="button"
-            disabled={!can('integration.configure')}
-            onClick={() =>
-              runAction(
-                'Integration config updated and audit event stored.',
-                async () => {
-                  await configureIntegration({
-                    actorWorkosUserId: user.id,
-                    actorOrganizationId: organizationId,
-                    key: 'azure-devops',
-                    enabled: true,
-                  })
-                },
+              setStatusMessage(
+                `Tip published and audited. ${String(result.notificationCount)} ${result.notificationEventType} notification${result.notificationCount === 1 ? '' : 's'} logged.`,
               )
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : 'Unknown error'
+              setStatusMessage(`Action failed: ${message}`)
             }
-          >
-            Configure integration (Admin)
-          </button>
-        </p>
+          })()
+        }
+        onReturnTipToDraft={() =>
+          void runAction('Tip returned to draft for edits.', async () => {
+            if (!draftTipId) {
+              throw new Error('Select a tip first.')
+            }
 
-        {statusMessage && <p>{statusMessage}</p>}
-      </section>
+            await returnTipToDraft({
+              actorWorkosUserId: user.id,
+              actorOrganizationId: organizationId,
+              tipId: draftTipId,
+            })
+          })
+        }
+        onSetNextRole={setNextRole}
+        onSetTargetWorkosUserId={setTargetWorkosUserId}
+        onSubmitForReview={() =>
+          void runAction('Tip moved to in_review.', async () => {
+            if (!draftTipId) {
+              throw new Error('Save a draft tip first.')
+            }
 
-      <section id="tips-search" className="bd-panel">
-        <h2>Tips Search (BD-009)</h2>
-        {!canReadTips && (
-          <p>
-            Permission denied. <code>tips.read</code> is required.
-          </p>
-        )}
+            await submitTipForReview({
+              actorWorkosUserId: user.id,
+              actorOrganizationId: organizationId,
+              tipId: draftTipId,
+            })
+          })
+        }
+        selectedTipStatus={selectedTipStatus}
+        statusMessage={statusMessage}
+        targetWorkosUserId={targetWorkosUserId}
+      />
+    ),
+    search: (
+      <SearchPanel
+        canReadTips={canReadTips}
+        onClearFilters={() => setTipSearchState(createEmptyTipSearchState())}
+        onSetTipSearchField={setTipSearchField}
+        results={filteredTips}
+        searchError={tipSearchError}
+        tipSearchState={tipSearchState}
+      />
+    ),
+    watchlist: (
+      <WatchlistPanel
+        canReadTips={canReadTips}
+        encodeWorkspaceId={encodeWorkspaceRouteParam}
+        notificationMessage={notificationMessage}
+        notifications={watchNotifications}
+        onMarkAllNotificationsAsRead={() => void markAllNotificationsAsRead()}
+        onMarkNotificationAsRead={(id) =>
+          void markNotificationAsRead(id as Id<'watchNotifications'>)
+        }
+        onRemoveWatchSubscription={(link) => void removeWatchSubscription(link)}
+        onSetShowUnreadOnly={setShowUnreadNotificationsOnly}
+        showUnreadOnly={showUnreadNotificationsOnly}
+        subscriptions={myWatchSubscriptions}
+        watchlistMessage={watchlistMessage}
+      />
+    ),
+    audit: <AuditPanel canReadAudit={canReadAudit} events={auditEvents} />,
+  }
 
-        {canReadTips && (
-          <>
-            <p>
-              Filterable tip discovery with indexed querying across text,
-              project, library, component, tag, and status.
-            </p>
-
-            <p>
-              <label htmlFor="tip-search-text">Text search</label>
-              <br />
-              <input
-                id="tip-search-text"
-                value={tipSearchState.searchText}
-                onChange={(event) =>
-                  setTipSearchField('searchText', event.target.value)
-                }
-                placeholder="race condition callback"
-              />
-            </p>
-
-            <p>
-              <label htmlFor="tip-search-project">Project</label>
-              <br />
-              <input
-                id="tip-search-project"
-                value={tipSearchState.project}
-                onChange={(event) =>
-                  setTipSearchField('project', event.target.value)
-                }
-                placeholder="media-press"
-              />
-            </p>
-
-            <p>
-              <label htmlFor="tip-search-library">Library</label>
-              <br />
-              <input
-                id="tip-search-library"
-                value={tipSearchState.library}
-                onChange={(event) =>
-                  setTipSearchField('library', event.target.value)
-                }
-                placeholder="billing-core"
-              />
-            </p>
-
-            <p>
-              <label htmlFor="tip-search-component">Component</label>
-              <br />
-              <input
-                id="tip-search-component"
-                value={tipSearchState.component}
-                onChange={(event) =>
-                  setTipSearchField('component', event.target.value)
-                }
-                placeholder="InvoiceSummary"
-              />
-            </p>
-
-            <p>
-              <label htmlFor="tip-search-tag">Tag</label>
-              <br />
-              <input
-                id="tip-search-tag"
-                value={tipSearchState.tag}
-                onChange={(event) => setTipSearchField('tag', event.target.value)}
-                placeholder="react"
-              />
-            </p>
-
-            <p>
-              <label htmlFor="tip-search-status">Status</label>
-              <br />
-              <select
-                id="tip-search-status"
-                value={tipSearchState.status}
-                onChange={(event) =>
-                  setTipSearchField(
-                    'status',
-                    event.target.value as TipSearchStatus,
-                  )
-                }
-              >
-                <option value="all">All statuses</option>
-                <option value="draft">Draft</option>
-                <option value="in_review">In review</option>
-                <option value="published">Published</option>
-                <option value="deprecated">Deprecated</option>
-              </select>
-            </p>
-
-            <p>
-              <button
-                type="button"
-                onClick={() => setTipSearchState(createEmptyTipSearchState())}
-              >
-                Clear filters
-              </button>
-            </p>
-
-            {tipSearchError && <p>Search error: {tipSearchError}</p>}
-            {!tipSearchError && filteredTips === undefined && (
-              <p>Loading indexed results...</p>
-            )}
-            {!tipSearchError && filteredTips?.length === 0 && (
-              <p>No tips match the current filters.</p>
-            )}
-            {!tipSearchError &&
-              filteredTips?.map((tip) => (
-                <p key={tip.id}>
-                  <code>{tip.slug}</code> - {tip.title} ({tip.status}, r
-                  {tip.currentRevision})
-                  {tip.project ? ` · project:${tip.project}` : ''}
-                  {tip.library ? ` · library:${tip.library}` : ''}
-                  {tip.component ? ` · component:${tip.component}` : ''}
-                  {tip.tags.length > 0 ? ` · tags:${tip.tags.join(', ')}` : ''}
-                </p>
-              ))}
-          </>
-        )}
-      </section>
-
-      <section id="my-watchlist" className="bd-panel">
-        <h2>My Watchlist (BD-016)</h2>
-        {!canReadTips && (
-          <p>
-            Permission denied. <code>tips.read</code> is required.
-          </p>
-        )}
-        {canReadTips && myWatchSubscriptions === undefined && (
-          <p>Loading watchlist subscriptions...</p>
-        )}
-        {canReadTips && myWatchSubscriptions?.length === 0 && (
-          <p>
-            You are not watching any components yet. Open a component page in the
-            explorer to subscribe.
-          </p>
-        )}
-        {canReadTips &&
-          myWatchSubscriptions?.map((subscription) => (
-            <p key={subscription.subscriptionId}>
-              <code>
-                {subscription.workspaceId}/{subscription.projectName}/
-                {subscription.componentName}
-              </code>
-              <br />
-              <code>{subscription.componentFilePath}</code>
-              <br />
-              Updated {new Date(subscription.updatedAt).toLocaleString()}
-              <br />
-              <Link
-                to="/explorer/$workspaceId/project/$projectName"
-                params={{
-                  workspaceId: encodeWorkspaceRouteParam(subscription.workspaceId),
-                  projectName: subscription.projectName,
-                }}
-              >
-                Open project
-              </Link>{' '}
-              ·{' '}
-              <button
-                type="button"
-                onClick={() =>
-                  void removeWatchSubscription({
-                    workspaceId: subscription.workspaceId,
-                    projectName: subscription.projectName,
-                    componentName: subscription.componentName,
-                    componentFilePath: subscription.componentFilePath,
-                  })
-                }
-              >
-                Remove
-              </button>
-            </p>
-          ))}
-        {watchlistMessage && <p>{watchlistMessage}</p>}
-      </section>
-
-      <section id="watch-notifications" className="bd-panel">
-        <h2>Watch Notifications (BD-016)</h2>
-        {!canReadTips && (
-          <p>
-            Permission denied. <code>tips.read</code> is required.
-          </p>
-        )}
-        {canReadTips && (
-          <>
-            <p>
-              Notifications are logged when component-linked tips are published or
-              updated.
-            </p>
-            <p>
-              <label htmlFor="notification-unread-toggle">
-                <input
-                  id="notification-unread-toggle"
-                  type="checkbox"
-                  checked={showUnreadNotificationsOnly}
-                  onChange={(event) =>
-                    setShowUnreadNotificationsOnly(event.target.checked)
-                  }
-                />{' '}
-                Show unread only
-              </label>
-            </p>
-            <p>
-              <button type="button" onClick={() => void markAllNotificationsAsRead()}>
-                Mark all as read
-              </button>
-            </p>
-            {watchNotifications === undefined && <p>Loading notifications...</p>}
-            {watchNotifications?.length === 0 && (
-              <p>No notifications match the current filter.</p>
-            )}
-            {watchNotifications?.map((notification) => (
-              <p key={notification.notificationId}>
-                [{new Date(notification.createdAt).toLocaleString()}]{' '}
-                <code>{notification.eventType}</code> · {notification.tipTitle} (
-                <code>{notification.tipSlug}</code>) · r{notification.revisionNumber}
-                <br />
-                Component{' '}
-                <code>
-                  {notification.workspaceId}/{notification.projectName}/
-                  {notification.componentName}
-                </code>
-                <br />
-                Status:{' '}
-                <code>
-                  {notification.deliveryStatus}
-                  {notification.isRead ? ', read' : ', unread'}
-                </code>
-                {!notification.isRead && (
-                  <>
-                    {' '}
-                    ·{' '}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void markNotificationAsRead(notification.notificationId)
-                      }
-                    >
-                      Mark read
-                    </button>
-                  </>
-                )}
-              </p>
-            ))}
-            {notificationMessage && <p>{notificationMessage}</p>}
-          </>
-        )}
-      </section>
-
-      <section id="audit-events" className="bd-panel">
-        <h2>Audit Events</h2>
-        {!canReadAudit && (
-          <p>
-            Permission denied. <code>audit.read</code> is required.
-          </p>
-        )}
-        {canReadAudit && auditEvents?.length === 0 && (
-          <p>No audit events yet for this tenant.</p>
-        )}
-        {canReadAudit &&
-          auditEvents?.map((event) => (
-            <p key={event.id}>
-              [{new Date(event.createdAt).toISOString()}] {event.action} by{' '}
-              <code>{event.actorWorkosUserId}</code> on{' '}
-              <code>
-                {event.targetType}:{event.targetId}
-              </code>
-            </p>
-          ))}
-      </section>
-
-      <section id="navigation" className="bd-panel">
-        <h2>Navigation</h2>
-        <p>
-          <Link to="/explorer">Component explorer</Link>
-        </p>
-        <p>
-          <Link to="/logout">Sign out</Link>
-        </p>
-        <p>
-          <Link to="/">Back to home</Link>
-        </p>
-      </section>
-        </main>
-      </div>
-    </div>
+  return (
+    <AppShell
+      mobileRail={sidebar}
+      sidebar={sidebar}
+      topbar={
+        <PageTopbar
+          actions={
+            <>
+              <Link className="app-btn-secondary" to="/explorer">
+                Component explorer
+              </Link>
+              <Link className="app-btn-secondary" to="/">
+                Home
+              </Link>
+            </>
+          }
+          description="Access is protected by WorkOS session checks plus capability guards mapped from your current role."
+          title="Engineering Insights Dashboard"
+        />
+      }
+    >
+      <DashboardTabs onChange={setActiveTab} value={activeTab} />
+      {tabContent[activeTab]}
+    </AppShell>
   )
 }

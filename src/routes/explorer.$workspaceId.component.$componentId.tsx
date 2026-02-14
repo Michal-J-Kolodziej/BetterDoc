@@ -3,6 +3,10 @@ import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
 import { useState } from 'react'
 
+import { EntityList } from '@/components/ui/EntityList'
+import { Panel } from '@/components/ui/Panel'
+import { StatusChip } from '@/components/ui/StatusChip'
+import { ExplorerLayout } from '@/features/explorer/ExplorerLayout'
 import { api } from '../../convex/_generated/api.js'
 import type { Id } from '../../convex/_generated/dataModel'
 import {
@@ -91,208 +95,193 @@ function ComponentExplorerComponentPage() {
   }
 
   return (
-    <div className="bd-explorer-shell">
-      <aside className="bd-explorer-sidebar">
-        <div className="bd-sidebar-brand">
-          <strong>Component Detail</strong>
-          <span>
-            <code>{componentId}</code>
-          </span>
-        </div>
-        <nav className="bd-sidebar-nav" aria-label="Component navigation">
-          {component && (
+    <ExplorerLayout
+      description={
+        <>
+          Workspace <code className="app-code">{workspaceId}</code> · Component ID{' '}
+          <code className="app-code">{componentId}</code>
+        </>
+      }
+      navLabel="Component navigation"
+      navSlot={
+        <>
+          {component ? (
             <Link
-              to="/explorer/$workspaceId/project/$projectName"
+              className="app-btn-secondary w-full justify-start"
               params={{
-                workspaceId: workspaceRouteParam,
                 projectName: component.component.project,
+                workspaceId: workspaceRouteParam,
               }}
+              to="/explorer/$workspaceId/project/$projectName"
             >
               Back to project
             </Link>
-          )}
-          <Link to="/explorer/$workspaceId" params={{ workspaceId: workspaceRouteParam }}>
+          ) : null}
+          <Link
+            className="app-btn-secondary w-full justify-start"
+            params={{ workspaceId: workspaceRouteParam }}
+            to="/explorer/$workspaceId"
+          >
             Back to workspace
           </Link>
-          <Link to="/dashboard">Dashboard</Link>
-        </nav>
-      </aside>
+          <Link
+            className="app-btn-secondary w-full justify-start"
+            search={{ tab: 'overview' }}
+            to="/dashboard"
+          >
+            Dashboard
+          </Link>
+        </>
+      }
+      sidebarMeta={<code className="app-code">{componentId}</code>}
+      sidebarTitle="Component Detail"
+      title="Component Detail"
+    >
+      {!user ? (
+        <Panel title="Sign In Required">
+          <Link className="app-btn" to="/login">
+            Sign in with WorkOS
+          </Link>
+        </Panel>
+      ) : null}
 
-      <main className="bd-explorer-main">
-        <header className="bd-page-header">
-          <div>
-            <h1>Component Detail</h1>
-            <p>
-              Workspace <code>{workspaceId}</code> · Component ID{' '}
-              <code>{componentId}</code>
-            </p>
-          </div>
-        </header>
+      {user && component === undefined ? (
+        <Panel title="Loading">
+          <p className="text-sm text-slate-300">Loading component metadata and related published tips...</p>
+        </Panel>
+      ) : null}
 
-        {!user && (
-          <section className="bd-panel">
-            <h2>Sign In Required</h2>
-            <p>
-              <Link to="/login">Sign in with WorkOS</Link> to open component
-              detail data.
-            </p>
-          </section>
-        )}
+      {user && component === null ? (
+        <Panel title="Not Found">
+          <p className="text-sm text-slate-300">
+            Component <code className="app-code">{componentId}</code> was not found in latest graph version.
+          </p>
+        </Panel>
+      ) : null}
 
-        {user && component === undefined && (
-          <section className="bd-panel">
-            <h2>Loading</h2>
-            <p>Loading component metadata and related published tips...</p>
-          </section>
-        )}
-
-        {user && component === null && (
-          <section className="bd-panel">
-            <h2>Not Found</h2>
-            <p>
-              Component <code>{componentId}</code> was not found in the latest
-              graph version for this workspace.
-            </p>
-          </section>
-        )}
-
-        {user && component && (
-          <>
-            <section className="bd-panel">
-              <h2>Component Metadata</h2>
+      {user && component ? (
+        <>
+          <Panel title="Component Metadata">
+            <div className="space-y-3 text-sm text-slate-300">
               <p>
-                Name <code>{component.component.name}</code> · project{' '}
-                <code>{component.component.project}</code> ({component.project.type})
+                Name <code className="app-code">{component.component.name}</code> · project{' '}
+                <code className="app-code">{component.component.project}</code> ({component.project.type})
               </p>
               <p>
-                Class <code>{component.component.className ?? '(unknown)'}</code> ·
-                selector <code>{component.component.selector ?? '(none)'}</code> ·
-                standalone{' '}
-                <code>
+                Class <code className="app-code">{component.component.className ?? '(unknown)'}</code> · selector{' '}
+                <code className="app-code">{component.component.selector ?? '(none)'}</code> · standalone{' '}
+                <code className="app-code">
                   {component.component.standalone === null
                     ? '(unknown)'
                     : String(component.component.standalone)}
                 </code>
               </p>
               <p>
-                File path <code>{component.component.filePath}</code>
+                File path <code className="app-code">{component.component.filePath}</code>
               </p>
               <p>
-                Graph version <code>v{component.graphVersionNumber}</code>
+                Graph version <code className="app-code">v{component.graphVersionNumber}</code>
               </p>
-            </section>
+            </div>
+          </Panel>
 
-            <section className="bd-panel">
-              <h2>Dependency Graph Context</h2>
-              <p>
-                Project-level edges for <code>{component.component.project}</code>.
-              </p>
-              <p>
-                Internal dependency targets from this component:{' '}
-                {component.component.dependencies.length > 0
-                  ? component.component.dependencies.join(', ')
-                  : 'none'}
-              </p>
-              <div className="bd-card-list">
-                {component.dependenciesOut.map((dependency) => (
-                  <article
-                    key={`out:${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`}
-                    className="bd-card-item"
-                  >
-                    <p>
-                      Out: {dependency.sourceProject} → {dependency.targetProject}
-                    </p>
-                    <p>
-                      ({dependency.viaFiles.length} via file
-                      {dependency.viaFiles.length === 1 ? '' : 's'})
-                    </p>
-                  </article>
-                ))}
-                {component.dependenciesIn.map((dependency) => (
-                  <article
-                    key={`in:${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`}
-                    className="bd-card-item"
-                  >
-                    <p>
-                      In: {dependency.sourceProject} → {dependency.targetProject}
-                    </p>
-                    <p>
-                      ({dependency.viaFiles.length} via file
-                      {dependency.viaFiles.length === 1 ? '' : 's'})
-                    </p>
-                  </article>
-                ))}
-              </div>
-              {component.dependenciesOut.length === 0 &&
-                component.dependenciesIn.length === 0 && (
-                  <p>No graph edges for this component's project.</p>
-                )}
-            </section>
-
-            <section className="bd-panel">
-              <h2>Related Published Tips</h2>
-              <p>
-                Tips linked to this exact component
-                (workspace/project/component/file path) and currently in{' '}
-                <code>published</code> state.
-              </p>
-              {component.relatedPublishedTips.length === 0 && (
-                <p>No published tips are linked to this component yet.</p>
+          <Panel
+            description={
+              <>
+                Project-level edges for <code className="app-code">{component.component.project}</code>
+              </>
+            }
+            title="Dependency Graph Context"
+          >
+            <p className="text-sm text-slate-300">
+              Internal dependency targets:{' '}
+              {component.component.dependencies.length > 0
+                ? component.component.dependencies.join(', ')
+                : 'none'}
+            </p>
+            <EntityList
+              empty="No graph edges for this component's project."
+              getKey={(dependency) =>
+                `${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`
+              }
+              items={[...component.dependenciesOut, ...component.dependenciesIn]}
+              renderItem={(dependency) => (
+                <article className="app-card space-y-2">
+                  <p className="text-sm text-slate-100">
+                    {dependency.sourceProject} → {dependency.targetProject}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {dependency.viaFiles.length} via file{dependency.viaFiles.length === 1 ? '' : 's'}
+                  </p>
+                </article>
               )}
-              <div className="bd-card-list">
-                {component.relatedPublishedTips.map((tip) => (
-                  <article key={tip.id} className="bd-card-item">
-                    <p>
-                      <code>{tip.slug}</code> · {tip.title} (r{tip.currentRevision})
-                    </p>
-                    <p>Updated {new Date(tip.updatedAt).toLocaleString()}</p>
-                    <p>{tip.tags.length > 0 ? `Tags: ${tip.tags.join(', ')}` : 'No tags'}</p>
-                  </article>
-                ))}
-              </div>
-            </section>
+            />
+          </Panel>
 
-            <section className="bd-panel">
-              <h2>Watchlist Notifications (BD-016)</h2>
-              <p>
-                Subscribe to receive in-app notifications when component-linked
-                tips are published or updated.
-              </p>
+          <Panel
+            description="Tips linked to this exact component (workspace/project/component/file path) and currently in published state."
+            title="Related Published Tips"
+          >
+            <EntityList
+              empty="No published tips are linked to this component yet."
+              getKey={(tip) => tip.id}
+              items={component.relatedPublishedTips}
+              renderItem={(tip) => (
+                <article className="app-card space-y-2">
+                  <p className="text-sm text-slate-100">
+                    <code className="app-code">{tip.slug}</code> · {tip.title} (r{tip.currentRevision})
+                  </p>
+                  <p className="text-xs text-slate-400">Updated {new Date(tip.updatedAt).toLocaleString()}</p>
+                  <p className="text-xs text-slate-400">
+                    {tip.tags.length > 0 ? `Tags: ${tip.tags.join(', ')}` : 'No tags'}
+                  </p>
+                </article>
+              )}
+            />
+          </Panel>
+
+          <Panel
+            description="Subscribe to receive in-app notifications when component-linked tips are published or updated."
+            title="Watchlist Notifications"
+          >
+            <div className="space-y-3 text-sm text-slate-300">
               <p>
                 Watchers for this component:{' '}
-                <code>{watchStatus ? watchStatus.watcherCount : 'loading'}</code>
+                <StatusChip tone="info">{watchStatus ? watchStatus.watcherCount : 'loading'}</StatusChip>
               </p>
               <p>
                 You are currently:{' '}
-                <code>
+                <StatusChip tone={watchStatus?.isWatching ? 'success' : 'default'}>
                   {watchStatus
                     ? watchStatus.isWatching
                       ? 'watching'
                       : 'not watching'
                     : 'loading'}
-                </code>
+                </StatusChip>
               </p>
-              <p>
+              <div className="flex flex-wrap gap-2">
                 <button
-                  type="button"
+                  className="app-btn"
                   disabled={!watchStatus || watchStatus.isWatching}
                   onClick={() => void updateWatchStatus('watch')}
+                  type="button"
                 >
                   Watch component
-                </button>{' '}
+                </button>
                 <button
-                  type="button"
+                  className="app-btn-secondary"
                   disabled={!watchStatus || !watchStatus.isWatching}
                   onClick={() => void updateWatchStatus('unwatch')}
+                  type="button"
                 >
                   Unwatch component
                 </button>
-              </p>
-              {watchActionMessage && <p>{watchActionMessage}</p>}
-            </section>
-          </>
-        )}
-      </main>
-    </div>
+              </div>
+              {watchActionMessage ? <p className="text-cyan-100">{watchActionMessage}</p> : null}
+            </div>
+          </Panel>
+        </>
+      ) : null}
+    </ExplorerLayout>
   )
 }

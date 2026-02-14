@@ -1,5 +1,48 @@
 # BetterDoc Change Log
 
+## 2026-02-13 (Tailwind UX redesign + tabbed dashboard shell)
+- Code paths changed:
+  - `package.json`
+  - `vite.config.ts`
+  - `src/styles.css`
+  - `src/styles/tokens.css`
+  - `src/styles/base.css`
+  - `src/styles/components.css`
+  - `src/styles/motion.css`
+  - `src/lib/classnames.ts`
+  - `src/components/ui/AppShell.tsx`
+  - `src/components/ui/SidebarRail.tsx`
+  - `src/components/ui/PageTopbar.tsx`
+  - `src/components/ui/Tabs.tsx`
+  - `src/components/ui/Panel.tsx`
+  - `src/components/ui/StatusChip.tsx`
+  - `src/components/ui/MetricStrip.tsx`
+  - `src/components/ui/EntityList.tsx`
+  - `src/features/explorer/ExplorerLayout.tsx`
+  - `src/features/dashboard/DashboardTabs.tsx`
+  - `src/features/dashboard/types.ts`
+  - `src/features/dashboard/panels/OverviewPanel.tsx`
+  - `src/features/dashboard/panels/TipStudioPanel.tsx`
+  - `src/features/dashboard/panels/WorkflowPanel.tsx`
+  - `src/features/dashboard/panels/SearchPanel.tsx`
+  - `src/features/dashboard/panels/WatchlistPanel.tsx`
+  - `src/features/dashboard/panels/AuditPanel.tsx`
+  - `src/routes/index.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/explorer.tsx`
+  - `src/routes/explorer.$workspaceId.tsx`
+  - `src/routes/explorer.$workspaceId.project.$projectName.tsx`
+  - `src/routes/explorer.$workspaceId.lib.$libraryName.tsx`
+  - `src/routes/explorer.$workspaceId.component.$componentId.tsx`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Migrated the app UI to Tailwind v4 with Vite plugin integration and layered token/base/component/motion style modules.
+  - Replaced border-heavy route markup with reusable shell primitives and feature panels across home, dashboard, and explorer route families.
+  - Added URL-synced dashboard tabs (`tab`) with normalization to `overview` for missing/invalid values while preserving existing auth, RBAC, Convex query/mutation behavior.
+  - Updated explorer route head metadata so smoke checks still detect expected shell text (`Component Explorer`).
+
 ## 2026-02-13 (Dark surface pass: removed white backgrounds)
 - Code paths changed:
   - `src/styles.css`

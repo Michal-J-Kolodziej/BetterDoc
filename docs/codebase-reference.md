@@ -23,31 +23,57 @@ Last updated: 2026-02-13
 - Index route: `src/routes/index.tsx`
   - Public landing page with links into auth flow, protected dashboard, and component explorer.
 
-### UI Styling System (Desktop)
-- Global style source: `src/styles.css`
-  - Implements a desktop-first visual system inspired by the stitch references in `docs/designs/stitch/`.
-  - Uses a shared typography stack (`Space Grotesk`, `Manrope`, `JetBrains Mono`) plus green accent tokens to align dashboard/explorer/editor surfaces.
-  - Applies layered background treatment, glass-like page shells, card sections, and consistent control styling across all route screens without changing route logic.
-  - Adds route-level shell classes for structural layouts (`.bd-dashboard-shell`, `.bd-explorer-shell`, `.bd-dashboard-topbar`, `.bd-explorer-sidebar`, `.bd-card-list`) so the rendered HTML structure follows stitch-style patterns (sidebar navigation + top content pane + card grids) instead of single-column content stacks.
-  - Uses a dark non-white surface system across page shells, panels, cards, input controls, and action chips to keep the UI visually consistent with the dark stitch references.
-  - Includes focus/disabled states for inputs, selects, textareas, checkboxes/radios, links, buttons, and inline code chips used by dashboard and explorer content.
-  - Adds lightweight entry animations for page and section mounts to improve perceived UI responsiveness on desktop.
+### UI Styling System (Tailwind v4)
+- Tailwind runtime:
+  - `tailwindcss` + `@tailwindcss/vite` configured in `vite.config.ts`
+- Global style entry:
+  - `src/styles.css` now imports Tailwind and layered style modules:
+    - `src/styles/tokens.css`
+    - `src/styles/base.css`
+    - `src/styles/components.css`
+    - `src/styles/motion.css`
+- Theme system:
+  - Uses dark ink/cyan/amber tokens and font tokens (`Space Grotesk`, `Manrope`, `JetBrains Mono`) via `@theme`.
+  - Applies minimal-border, tonal-depth panel styling (`app-panel`, `app-card`) and utility-first control classes (`app-input`, `app-select`, `app-textarea`, `app-btn*`).
+- Accessibility and interaction:
+  - Centralized focus-visible treatment, reduced-motion fallback, and consistent input/button disabled behavior in layered base/components CSS.
 
-### Route Structure Refresh (Desktop shell composition)
+### Shared UI Primitive Layer
+- `src/components/ui/AppShell.tsx`
+- `src/components/ui/SidebarRail.tsx`
+- `src/components/ui/PageTopbar.tsx`
+- `src/components/ui/Tabs.tsx`
+- `src/components/ui/Panel.tsx`
+- `src/components/ui/StatusChip.tsx`
+- `src/components/ui/MetricStrip.tsx`
+- `src/components/ui/EntityList.tsx`
+- `src/lib/classnames.ts`
+
+### Route Structure Refresh (Tabbed dashboard + unified explorer shell)
 - `src/routes/dashboard.tsx`
-  - Refactored top-level markup from a flat `<main>` stack into a two-pane app shell:
-    - left sidebar (`<aside>`) with section anchors and quick navigation
-    - right stage with topbar header and sectioned content canvas
-  - Existing RBAC, workflow, editor, watchlist, notification, and audit logic remains unchanged.
+  - Uses `validateSearch` with URL-synced tab selection contract:
+    - `tab` values: `overview`, `tip-studio`, `workflow`, `search`, `watchlist`, `audit`
+    - missing/invalid values fall back to `overview`
+  - Refactored into shell primitives + feature panels while preserving all existing RBAC/query/mutation behavior.
+- Dashboard feature components:
+  - `src/features/dashboard/DashboardTabs.tsx`
+  - `src/features/dashboard/types.ts`
+  - `src/features/dashboard/panels/OverviewPanel.tsx`
+  - `src/features/dashboard/panels/TipStudioPanel.tsx`
+  - `src/features/dashboard/panels/WorkflowPanel.tsx`
+  - `src/features/dashboard/panels/SearchPanel.tsx`
+  - `src/features/dashboard/panels/WatchlistPanel.tsx`
+  - `src/features/dashboard/panels/AuditPanel.tsx`
 - Explorer family:
+  - `src/features/explorer/ExplorerLayout.tsx`
   - `src/routes/explorer.tsx`
   - `src/routes/explorer.$workspaceId.tsx`
   - `src/routes/explorer.$workspaceId.project.$projectName.tsx`
   - `src/routes/explorer.$workspaceId.lib.$libraryName.tsx`
   - `src/routes/explorer.$workspaceId.component.$componentId.tsx`
-  - Refactored each view to a sidebar + content-pane HTML layout with card-list structures for workspace/project/library/component entities.
+  - All explorer views now share a common shell composition (sidebar rail + topbar + semantic data panels).
 - `src/routes/index.tsx`
-  - Updated to a control-center style header + action rail + split panel grid to match the desktop design language used by dashboard/explorer.
+  - Updated to use the same shell primitives and metric/panel structure for consistent UX with dashboard and explorer.
 
 ### Convex integration
 - Convex client provider: `src/lib/convex-client.tsx`
@@ -79,9 +105,9 @@ Last updated: 2026-02-13
 - `bun run typecheck`
 - `bun run test`
 - `bun run build`
-- `bun run smoke:http -- --base-url <deployed-url>`
+- `bun run smoke:http -- --base-url <deployed-url-or-local-url>`
 
-All four pass with valid environment variables set.
+All listed checks pass with valid environment variables set.
 
 ## Authentication (BD-003)
 
@@ -101,6 +127,7 @@ All four pass with valid environment variables set.
   - `GET /dashboard` server handler checks `context.auth()` from middleware.
   - Unauthenticated requests redirect to WorkOS sign-in.
   - Uses `ssr: false` because dashboard relies on Convex React hooks (`useQuery`, `useMutation`) and `ConvexProvider` is mounted client-side.
+  - Validates optional `tab` search param and normalizes invalid values to `overview`.
   - Authenticated requests call `next()` and render dashboard component with role-aware guards.
 
 ## Authorization + Audit (BD-004, BD-005)
@@ -172,22 +199,31 @@ All four pass with valid environment variables set.
   - Existing-tip writes and transitions enforce organization-scoped access.
 
 ### Editor UI
-- `src/routes/dashboard.tsx`
-  - Structured editor fields:
-    - `symptom`
-    - `root cause`
-    - `fix`
-    - `prevention`
-    - `project` (optional)
-    - `library` (optional)
-    - `component` (optional)
-    - `tags`
-    - `references`
-  - Uses `saveTipDraft` for draft saves and shows revision history from `listTipRevisions`.
-  - Adds component-linking controls (workspace -> project/library -> component) backed by latest scanned graph queries and persists links via `saveTipDraft.componentLinks`.
-  - Includes an explicit load action to populate the editor from an existing tip.
-  - Adds workflow controls for submit/review return/publish/deprecate with status-aware button gating.
-  - Adds a search/filter section with empty, local-validation error, and permission-denied states.
+- Dashboard orchestration route: `src/routes/dashboard.tsx`
+  - Owns hook wiring, permissions, mutation/query orchestration, and URL-synced tab state.
+- Tab panels:
+  - `src/features/dashboard/panels/TipStudioPanel.tsx`
+    - Structured editor fields:
+      - `symptom`
+      - `root cause`
+      - `fix`
+      - `prevention`
+      - `project` (optional)
+      - `library` (optional)
+      - `component` (optional)
+      - `tags`
+      - `references`
+    - Uses `saveTipDraft` for draft saves and shows revision history from `listTipRevisions`.
+    - Provides component-linking controls (workspace -> project/library -> component) backed by latest scanned graph queries and persists links via `saveTipDraft.componentLinks`.
+  - `src/features/dashboard/panels/WorkflowPanel.tsx`
+    - Includes lifecycle controls for submit/review return/publish/deprecate with status-aware button gating.
+    - Includes guarded privileged actions (bootstrap first admin, role assignment, integration configure).
+  - `src/features/dashboard/panels/SearchPanel.tsx`
+    - Renders indexed search/filter UI with empty, validation-error, and permission-denied states.
+  - `src/features/dashboard/panels/WatchlistPanel.tsx`
+    - Renders watchlist management and notification inbox actions.
+  - `src/features/dashboard/panels/AuditPanel.tsx`
+    - Renders immutable audit event timeline table.
 - `src/lib/tip-editor.ts`
   - Client-side validation and payload shaping for core fields, optional facets, tags, and references before mutation calls.
 

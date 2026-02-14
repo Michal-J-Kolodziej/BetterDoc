@@ -7,6 +7,10 @@ import {
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useQuery } from 'convex/react'
 
+import { EntityList } from '@/components/ui/EntityList'
+import { Panel } from '@/components/ui/Panel'
+import { StatusChip } from '@/components/ui/StatusChip'
+import { ExplorerLayout } from '@/features/explorer/ExplorerLayout'
 import { api } from '../../convex/_generated/api.js'
 import {
   decodeWorkspaceRouteParam,
@@ -47,184 +51,176 @@ function ComponentExplorerWorkspacePage() {
   }
 
   return (
-    <div className="bd-explorer-shell">
-      <aside className="bd-explorer-sidebar">
-        <div className="bd-sidebar-brand">
-          <strong>Workspace</strong>
-          <span>
-            <code>{workspaceId}</code>
-          </span>
-        </div>
-        <nav className="bd-sidebar-nav" aria-label="Workspace navigation">
-          <Link to="/explorer">All workspaces</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/">Home</Link>
-        </nav>
-      </aside>
+    <ExplorerLayout
+      description={
+        <>
+          Workspace <code className="app-code">{workspaceId}</code>
+        </>
+      }
+      navLabel="Workspace navigation"
+      navSlot={
+        <>
+          <Link className="app-btn-secondary w-full justify-start" to="/explorer">
+            All workspaces
+          </Link>
+          <Link
+            className="app-btn-secondary w-full justify-start"
+            search={{ tab: 'overview' }}
+            to="/dashboard"
+          >
+            Dashboard
+          </Link>
+          <Link className="app-btn-secondary w-full justify-start" to="/">
+            Home
+          </Link>
+        </>
+      }
+      sidebarMeta={<code className="app-code">{workspaceId}</code>}
+      sidebarTitle="Workspace"
+      title="Workspace Explorer"
+    >
+      {!user ? (
+        <Panel title="Sign In Required">
+          <Link className="app-btn" to="/login">
+            Sign in with WorkOS
+          </Link>
+        </Panel>
+      ) : null}
 
-      <main className="bd-explorer-main">
-        <header className="bd-page-header">
-          <div>
-            <h1>Workspace Explorer</h1>
-            <p>
-              Workspace: <code>{workspaceId}</code>
-            </p>
-          </div>
-        </header>
+      {user && workspace === undefined ? (
+        <Panel title="Loading">
+          <p className="text-sm text-slate-300">Fetching latest graph snapshot for this workspace...</p>
+        </Panel>
+      ) : null}
 
-        {!user && (
-          <section className="bd-panel">
-            <h2>Sign In Required</h2>
-            <p>
-              <Link to="/login">Sign in with WorkOS</Link> to browse project and
-              component graph data.
-            </p>
-          </section>
-        )}
+      {user && workspace === null ? (
+        <Panel title="No Snapshot Found">
+          <p className="text-sm text-slate-300">
+            No successful scan snapshot exists for <code className="app-code">{workspaceId}</code>.
+          </p>
+        </Panel>
+      ) : null}
 
-        {user && workspace === undefined && (
-          <section className="bd-panel">
-            <h2>Loading</h2>
-            <p>Fetching latest graph snapshot for this workspace...</p>
-          </section>
-        )}
-
-        {user && workspace === null && (
-          <section className="bd-panel">
-            <h2>No Snapshot Found</h2>
-            <p>
-              No successful scan snapshot exists for <code>{workspaceId}</code>.
-            </p>
-          </section>
-        )}
-
-        {user && workspace && (
-          <>
-            <section className="bd-panel">
-              <h2>Latest Graph Version</h2>
-              <p>
-                Graph version <code>v{workspace.graphVersionNumber}</code> · scanner{' '}
-                <code>{workspace.scannerName}</code>{' '}
+      {user && workspace ? (
+        <>
+          <Panel title="Latest Graph Version">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+              <StatusChip tone="info">v{workspace.graphVersionNumber}</StatusChip>
+              <span>
+                scanner <code className="app-code">{workspace.scannerName}</code>
                 {workspace.scannerVersion ? (
                   <>
-                    v<code>{workspace.scannerVersion}</code>
+                    {' '}
+                    v<code className="app-code">{workspace.scannerVersion}</code>
                   </>
-                ) : (
-                  ''
-                )}{' '}
-                · source <code>{workspace.source}</code>
-              </p>
-              <p>
-                Completed {new Date(workspace.completedAt).toLocaleString()} ·{' '}
-                {workspace.projectCount} projects · {workspace.libraryCount} libs ·{' '}
-                {workspace.componentCount} components ·{' '}
-                {workspace.dependencyCount} edges
-              </p>
-            </section>
+                ) : null}
+              </span>
+              <span>
+                source <code className="app-code">{workspace.source}</code>
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-slate-300">
+              Completed {new Date(workspace.completedAt).toLocaleString()} · {workspace.projectCount} projects ·{' '}
+              {workspace.libraryCount} libs · {workspace.componentCount} components · {workspace.dependencyCount}{' '}
+              edges
+            </p>
+          </Panel>
 
-            <section className="bd-panel">
-              <h2>Projects</h2>
-              {workspace.projects.length === 0 && (
-                <p>No projects in this snapshot.</p>
-              )}
-              <div className="bd-card-list">
-                {workspace.projects.map((project) => (
-                  <article key={project.name} className="bd-card-item">
-                    <h3>
-                      <code>{project.name}</code> ({project.type})
-                    </h3>
-                    <p>{project.componentCount} components</p>
-                    <p>
-                      <Link
-                        to="/explorer/$workspaceId/project/$projectName"
-                        params={{
-                          workspaceId: workspaceRouteParam,
-                          projectName: project.name,
-                        }}
-                      >
-                        Open project view
-                      </Link>
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="bd-panel">
-              <h2>Libraries</h2>
-              {workspace.libraries.length === 0 && (
-                <p>No library-type projects in this snapshot.</p>
-              )}
-              <div className="bd-card-list">
-                {workspace.libraries.map((library) => (
-                  <article key={library.name} className="bd-card-item">
-                    <h3>
-                      <code>{library.name}</code>
-                    </h3>
-                    <p>{library.componentCount} components</p>
-                    <p>
-                      <Link
-                        to="/explorer/$workspaceId/lib/$libraryName"
-                        params={{
-                          workspaceId: workspaceRouteParam,
-                          libraryName: library.name,
-                        }}
-                      >
-                        Open library view
-                      </Link>
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="bd-panel">
-              <h2>Dependency Graph</h2>
-              <p>
-                Directed edges between projects/libraries in the latest graph
-                snapshot.
-              </p>
-              {workspace.dependencies.length === 0 && (
-                <p>No dependency edges in this snapshot.</p>
-              )}
-              <div className="bd-card-list">
-                {workspace.dependencies.map((dependency) => (
-                  <article
-                    key={`${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`}
-                    className="bd-card-item"
+          <Panel title="Projects">
+            <EntityList
+              empty="No projects in this snapshot."
+              getKey={(project) => project.name}
+              items={workspace.projects}
+              renderItem={(project) => (
+                <article className="app-card space-y-3">
+                  <p className="text-sm text-slate-100">
+                    <code className="app-code">{project.name}</code> ({project.type})
+                  </p>
+                  <p className="text-sm text-slate-300">{project.componentCount} components</p>
+                  <Link
+                    className="app-btn"
+                    params={{
+                      projectName: project.name,
+                      workspaceId: workspaceRouteParam,
+                    }}
+                    to="/explorer/$workspaceId/project/$projectName"
                   >
-                    <p>
-                      <Link
-                        to="/explorer/$workspaceId/project/$projectName"
-                        params={{
-                          workspaceId: workspaceRouteParam,
-                          projectName: dependency.sourceProject,
-                        }}
-                      >
-                        {dependency.sourceProject}
-                      </Link>{' '}
-                      →{' '}
-                      <Link
-                        to="/explorer/$workspaceId/project/$projectName"
-                        params={{
-                          workspaceId: workspaceRouteParam,
-                          projectName: dependency.targetProject,
-                        }}
-                      >
-                        {dependency.targetProject}
-                      </Link>
-                    </p>
-                    <p>
-                      ({dependency.viaFiles.length} import file
-                      {dependency.viaFiles.length === 1 ? '' : 's'})
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-      </main>
-    </div>
+                    Open project view
+                  </Link>
+                </article>
+              )}
+            />
+          </Panel>
+
+          <Panel title="Libraries">
+            <EntityList
+              empty="No library-type projects in this snapshot."
+              getKey={(library) => library.name}
+              items={workspace.libraries}
+              renderItem={(library) => (
+                <article className="app-card space-y-3">
+                  <p className="text-sm text-slate-100">
+                    <code className="app-code">{library.name}</code>
+                  </p>
+                  <p className="text-sm text-slate-300">{library.componentCount} components</p>
+                  <Link
+                    className="app-btn"
+                    params={{
+                      libraryName: library.name,
+                      workspaceId: workspaceRouteParam,
+                    }}
+                    to="/explorer/$workspaceId/lib/$libraryName"
+                  >
+                    Open library view
+                  </Link>
+                </article>
+              )}
+            />
+          </Panel>
+
+          <Panel
+            description="Directed edges between projects/libraries in the latest graph snapshot."
+            title="Dependency Graph"
+          >
+            <EntityList
+              empty="No dependency edges in this snapshot."
+              getKey={(dependency) =>
+                `${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`
+              }
+              items={workspace.dependencies}
+              renderItem={(dependency) => (
+                <article className="app-card space-y-3">
+                  <p className="text-sm text-slate-100">
+                    <Link
+                      params={{
+                        projectName: dependency.sourceProject,
+                        workspaceId: workspaceRouteParam,
+                      }}
+                      to="/explorer/$workspaceId/project/$projectName"
+                    >
+                      {dependency.sourceProject}
+                    </Link>{' '}
+                    →{' '}
+                    <Link
+                      params={{
+                        projectName: dependency.targetProject,
+                        workspaceId: workspaceRouteParam,
+                      }}
+                      to="/explorer/$workspaceId/project/$projectName"
+                    >
+                      {dependency.targetProject}
+                    </Link>
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {dependency.viaFiles.length} import file
+                    {dependency.viaFiles.length === 1 ? '' : 's'}
+                  </p>
+                </article>
+              )}
+            />
+          </Panel>
+        </>
+      ) : null}
+    </ExplorerLayout>
   )
 }

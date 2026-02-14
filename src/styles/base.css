@@ -1,0 +1,50 @@
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-ink-950);
+    color: rgb(241 245 249);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+  }
+
+  a {
+    color: rgb(126 231 251);
+    text-decoration: none;
+    transition: color 140ms ease;
+  }
+
+  a:hover {
+    color: rgb(184 242 255);
+  }
+
+  code {
+    font-family: var(--font-mono);
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  ::selection {
+    background-color: rgb(18 197 230 / 30%);
+    color: rgb(236 254 255);
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(53 215 242 / 75%), 0 0 0 4px rgb(7 16 30 / 85%);
+  }
+}

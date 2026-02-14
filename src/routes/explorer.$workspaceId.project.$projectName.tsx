@@ -2,6 +2,10 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useQuery } from 'convex/react'
 
+import { EntityList } from '@/components/ui/EntityList'
+import { Panel } from '@/components/ui/Panel'
+import { StatusChip } from '@/components/ui/StatusChip'
+import { ExplorerLayout } from '@/features/explorer/ExplorerLayout'
 import { api } from '../../convex/_generated/api.js'
 import {
   decodeWorkspaceRouteParam,
@@ -33,163 +37,167 @@ function ComponentExplorerProjectPage() {
   )
 
   return (
-    <div className="bd-explorer-shell">
-      <aside className="bd-explorer-sidebar">
-        <div className="bd-sidebar-brand">
-          <strong>Project View</strong>
-          <span>
-            <code>{projectName}</code>
-          </span>
-        </div>
-        <nav className="bd-sidebar-nav" aria-label="Project navigation">
-          <Link to="/explorer/$workspaceId" params={{ workspaceId: workspaceRouteParam }}>
+    <ExplorerLayout
+      description={
+        <>
+          Workspace <code className="app-code">{workspaceId}</code> · Project{' '}
+          <code className="app-code">{projectName}</code>
+        </>
+      }
+      navLabel="Project navigation"
+      navSlot={
+        <>
+          <Link
+            className="app-btn-secondary w-full justify-start"
+            params={{ workspaceId: workspaceRouteParam }}
+            to="/explorer/$workspaceId"
+          >
             Back to workspace
           </Link>
-          <Link to="/explorer">All workspaces</Link>
-          <Link to="/dashboard">Dashboard</Link>
-        </nav>
-      </aside>
+          <Link className="app-btn-secondary w-full justify-start" to="/explorer">
+            All workspaces
+          </Link>
+          <Link
+            className="app-btn-secondary w-full justify-start"
+            search={{ tab: 'overview' }}
+            to="/dashboard"
+          >
+            Dashboard
+          </Link>
+        </>
+      }
+      sidebarMeta={<code className="app-code">{projectName}</code>}
+      sidebarTitle="Project View"
+      title="Project Explorer"
+    >
+      {!user ? (
+        <Panel title="Sign In Required">
+          <Link className="app-btn" to="/login">
+            Sign in with WorkOS
+          </Link>
+        </Panel>
+      ) : null}
 
-      <main className="bd-explorer-main">
-        <header className="bd-page-header">
-          <div>
-            <h1>Project Explorer</h1>
-            <p>
-              Workspace <code>{workspaceId}</code> · Project{' '}
-              <code>{projectName}</code>
-            </p>
-          </div>
-        </header>
+      {user && project === undefined ? (
+        <Panel title="Loading">
+          <p className="text-sm text-slate-300">Loading project graph details...</p>
+        </Panel>
+      ) : null}
 
-        {!user && (
-          <section className="bd-panel">
-            <h2>Sign In Required</h2>
-            <p>
-              <Link to="/login">Sign in with WorkOS</Link> to open project
-              explorer details.
-            </p>
-          </section>
-        )}
+      {user && project === null ? (
+        <Panel title="Not Found">
+          <p className="text-sm text-slate-300">
+            Project <code className="app-code">{projectName}</code> is not available in the latest graph snapshot.
+          </p>
+        </Panel>
+      ) : null}
 
-        {user && project === undefined && (
-          <section className="bd-panel">
-            <h2>Loading</h2>
-            <p>Loading project graph details...</p>
-          </section>
-        )}
-
-        {user && project === null && (
-          <section className="bd-panel">
-            <h2>Not Found</h2>
-            <p>
-              Project <code>{projectName}</code> is not available in the latest
-              graph snapshot.
-            </p>
-          </section>
-        )}
-
-        {user && project && (
-          <>
-            <section className="bd-panel">
-              <h2>Project Details</h2>
-              <p>
-                Type <code>{project.project.type}</code> ·{' '}
-                {project.project.componentCount} components · graph version{' '}
-                <code>v{project.graphVersionNumber}</code>
-              </p>
-              <p>
-                Root path <code>{project.project.rootPath}</code>
-              </p>
-              <p>
-                Source root{' '}
-                <code>{project.project.sourceRootPath ?? '(not configured)'}</code>
-              </p>
-              <p>
-                Config file <code>{project.project.configFilePath}</code>
-              </p>
-            </section>
-
-            <section className="bd-panel">
-              <h2>Components</h2>
-              {project.components.length === 0 && <p>No components found.</p>}
-              <div className="bd-card-list">
-                {project.components.map((component) => (
-                  <article key={component.id} className="bd-card-item">
-                    <h3>{component.name}</h3>
-                    <p>
-                      {component.selector ? (
-                        <code>{component.selector}</code>
-                      ) : (
-                        '(no selector)'
-                      )}
-                    </p>
-                    <p>
-                      <code>{component.filePath}</code>
-                    </p>
-                    <p>
-                      <Link
-                        to="/explorer/$workspaceId/component/$componentId"
-                        params={{
-                          workspaceId: workspaceRouteParam,
-                          componentId: component.id,
-                        }}
-                      >
-                        Open component detail
-                      </Link>
-                    </p>
-                  </article>
-                ))}
+      {user && project ? (
+        <>
+          <Panel title="Project Details">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+              <StatusChip tone="info">{project.project.type}</StatusChip>
+              <span>{project.project.componentCount} components</span>
+              <span>
+                graph version <code className="app-code">v{project.graphVersionNumber}</code>
+              </span>
+            </div>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="app-card py-3">
+                <dt className="text-xs uppercase tracking-[0.14em] text-slate-400">Root path</dt>
+                <dd className="mt-1">
+                  <code className="app-code">{project.project.rootPath}</code>
+                </dd>
               </div>
-            </section>
+              <div className="app-card py-3">
+                <dt className="text-xs uppercase tracking-[0.14em] text-slate-400">Source root</dt>
+                <dd className="mt-1">
+                  <code className="app-code">{project.project.sourceRootPath ?? '(not configured)'}</code>
+                </dd>
+              </div>
+              <div className="app-card py-3 sm:col-span-2">
+                <dt className="text-xs uppercase tracking-[0.14em] text-slate-400">Config file</dt>
+                <dd className="mt-1">
+                  <code className="app-code">{project.project.configFilePath}</code>
+                </dd>
+              </div>
+            </dl>
+          </Panel>
 
-            <section className="bd-panel">
-              <h2>Dependency Graph: Outgoing</h2>
-              {project.dependenciesOut.length === 0 && (
-                <p>No outgoing dependencies from this project.</p>
-              )}
-              <div className="bd-card-list">
-                {project.dependenciesOut.map((dependency) => (
-                  <article
-                    key={`out:${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`}
-                    className="bd-card-item"
+          <Panel title="Components">
+            <EntityList
+              empty="No components found."
+              getKey={(component) => component.id}
+              items={project.components}
+              renderItem={(component) => (
+                <article className="app-card space-y-3">
+                  <h3 className="font-display text-lg font-semibold text-white">{component.name}</h3>
+                  <p className="text-xs text-slate-400">
+                    {component.selector ? (
+                      <code className="app-code">{component.selector}</code>
+                    ) : (
+                      '(no selector)'
+                    )}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    <code className="app-code">{component.filePath}</code>
+                  </p>
+                  <Link
+                    className="app-btn"
+                    params={{
+                      componentId: component.id,
+                      workspaceId: workspaceRouteParam,
+                    }}
+                    to="/explorer/$workspaceId/component/$componentId"
                   >
-                    <p>
-                      {dependency.sourceProject} → {dependency.targetProject}
-                    </p>
-                    <p>
-                      ({dependency.viaFiles.length} via file
-                      {dependency.viaFiles.length === 1 ? '' : 's'})
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="bd-panel">
-              <h2>Dependency Graph: Incoming</h2>
-              {project.dependenciesIn.length === 0 && (
-                <p>No incoming dependencies to this project.</p>
+                    Open component detail
+                  </Link>
+                </article>
               )}
-              <div className="bd-card-list">
-                {project.dependenciesIn.map((dependency) => (
-                  <article
-                    key={`in:${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`}
-                    className="bd-card-item"
-                  >
-                    <p>
-                      {dependency.sourceProject} → {dependency.targetProject}
-                    </p>
-                    <p>
-                      ({dependency.viaFiles.length} via file
-                      {dependency.viaFiles.length === 1 ? '' : 's'})
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-      </main>
-    </div>
+            />
+          </Panel>
+
+          <Panel title="Dependency Graph: Outgoing">
+            <EntityList
+              empty="No outgoing dependencies from this project."
+              getKey={(dependency) =>
+                `out:${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`
+              }
+              items={project.dependenciesOut}
+              renderItem={(dependency) => (
+                <article className="app-card space-y-2">
+                  <p className="text-sm text-slate-100">
+                    {dependency.sourceProject} → {dependency.targetProject}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {dependency.viaFiles.length} via file{dependency.viaFiles.length === 1 ? '' : 's'}
+                  </p>
+                </article>
+              )}
+            />
+          </Panel>
+
+          <Panel title="Dependency Graph: Incoming">
+            <EntityList
+              empty="No incoming dependencies to this project."
+              getKey={(dependency) =>
+                `in:${dependency.sourceProject}:${dependency.targetProject}:${dependency.viaFiles[0] ?? 'edge'}`
+              }
+              items={project.dependenciesIn}
+              renderItem={(dependency) => (
+                <article className="app-card space-y-2">
+                  <p className="text-sm text-slate-100">
+                    {dependency.sourceProject} → {dependency.targetProject}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {dependency.viaFiles.length} via file{dependency.viaFiles.length === 1 ? '' : 's'}
+                  </p>
+                </article>
+              )}
+            />
+          </Panel>
+        </>
+      ) : null}
+    </ExplorerLayout>
   )
 }

@@ -2,11 +2,22 @@ import { Link, Outlet, createFileRoute, useRouterState } from '@tanstack/react-r
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useQuery } from 'convex/react'
 
+import { EntityList } from '@/components/ui/EntityList'
+import { Panel } from '@/components/ui/Panel'
+import { StatusChip } from '@/components/ui/StatusChip'
+import { ExplorerLayout } from '@/features/explorer/ExplorerLayout'
 import { api } from '../../convex/_generated/api.js'
 import { encodeWorkspaceRouteParam } from '../lib/workspace-route'
 
 export const Route = createFileRoute('/explorer')({
   ssr: false,
+  head: () => ({
+    meta: [
+      {
+        title: 'Component Explorer | BetterDoc',
+      },
+    ],
+  }),
   component: ComponentExplorerWorkspaceListPage,
 })
 
@@ -34,82 +45,83 @@ function ComponentExplorerWorkspaceListPage() {
   }
 
   return (
-    <div className="bd-explorer-shell">
-      <aside className="bd-explorer-sidebar">
-        <div className="bd-sidebar-brand">
-          <strong>Component Explorer</strong>
-          <span>Workspace graph navigation</span>
-        </div>
-        <nav className="bd-sidebar-nav" aria-label="Explorer navigation">
-          <Link to="/explorer">All workspaces</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/">Home</Link>
-        </nav>
-      </aside>
-
-      <main className="bd-explorer-main">
-        <header className="bd-page-header">
-          <div>
-            <h1>Workspace Directory</h1>
-            <p>
-              Browse the latest scanned workspace graph, drill into
-              projects/libraries, and open component detail views with linked
-              published tips.
+    <ExplorerLayout
+      description="Browse the latest scanned workspace graph, then drill into projects, libraries, and components with linked published tips."
+      navLabel="Explorer navigation"
+      navSlot={
+        <>
+          <Link className="app-btn-secondary w-full justify-start" to="/explorer">
+            All workspaces
+          </Link>
+          <Link
+            className="app-btn-secondary w-full justify-start"
+            search={{ tab: 'overview' }}
+            to="/dashboard"
+          >
+            Dashboard
+          </Link>
+          <Link className="app-btn-secondary w-full justify-start" to="/">
+            Home
+          </Link>
+        </>
+      }
+      sidebarMeta="Workspace graph navigation"
+      sidebarTitle="Component Explorer"
+      title="Workspace Directory"
+    >
+      {!user ? (
+        <Panel title="Sign In Required">
+          <p className="text-sm text-slate-300">
+            <Link className="app-btn" to="/login">
+              Sign in with WorkOS
+            </Link>{' '}
+            to open explorer data.
+          </p>
+        </Panel>
+      ) : (
+        <Panel title="Available Workspaces">
+          {workspaces === undefined ? <p className="text-sm text-slate-300">Loading latest scan workspaces...</p> : null}
+          {workspaces?.length === 0 ? (
+            <p className="text-sm text-slate-300">
+              No successful scan snapshots were found yet. Run scanner ingestion first.
             </p>
-          </div>
-        </header>
+          ) : null}
 
-        {!user && (
-          <section className="bd-panel">
-            <h2>Sign In Required</h2>
-            <p>
-              <Link to="/login">Sign in with WorkOS</Link> to open component
-              explorer data.
-            </p>
-          </section>
-        )}
-
-        {user && (
-          <section className="bd-panel">
-            <h2>Available Workspaces</h2>
-            {workspaces === undefined && <p>Loading latest scan workspaces...</p>}
-            {workspaces?.length === 0 && (
-              <p>
-                No successful scan snapshots were found yet. Run the scanner
-                ingest pipeline first.
-              </p>
-            )}
-            <div className="bd-card-list">
-              {workspaces?.map((workspace) => (
-                <article key={workspace.workspaceId} className="bd-card-item">
-                  <h3>
-                    <code>{workspace.workspaceId}</code>
-                  </h3>
-                  <p>
-                    v{workspace.graphVersionNumber} · {workspace.projectCount}{' '}
-                    projects · {workspace.libraryCount} libs ·{' '}
-                    {workspace.componentCount} components ·{' '}
-                    {workspace.dependencyCount} edges
+          {workspaces ? (
+            <EntityList
+              empty="No workspaces yet."
+              getKey={(workspace) => workspace.workspaceId}
+              items={workspaces}
+              renderItem={(workspace) => (
+                <article className="app-card space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-display text-lg font-semibold text-white">
+                      <code className="app-code">{workspace.workspaceId}</code>
+                    </h3>
+                    <StatusChip tone="info">v{workspace.graphVersionNumber}</StatusChip>
+                  </div>
+                  <p className="text-sm text-slate-300">
+                    {workspace.projectCount} projects · {workspace.libraryCount} libs · {workspace.componentCount}{' '}
+                    components · {workspace.dependencyCount} edges
                   </p>
-                  <p>Scanned {new Date(workspace.completedAt).toLocaleString()}</p>
-                  <p>
-                    <Link
-                      to="/explorer/$workspaceId"
-                      params={{
-                        workspaceId: encodeWorkspaceRouteParam(
-                          workspace.workspaceId,
-                        ),
-                      }}
-                    >
-                      Open workspace explorer
-                    </Link>
+                  <p className="text-xs text-slate-400">
+                    Scanned {new Date(workspace.completedAt).toLocaleString()}
                   </p>
+                  <Link
+                    className="app-btn"
+                    params={{
+                      workspaceId: encodeWorkspaceRouteParam(workspace.workspaceId),
+                    }}
+                    to="/explorer/$workspaceId"
+                  >
+                    Open workspace explorer
+                  </Link>
                 </article>
-              ))}
-            </div>
-          </section>
-        )}
-      </main>
-    </div>
+              )}
+            />
+          ) : null}
+        </Panel>
+      )}
+    </ExplorerLayout>
   )
 }

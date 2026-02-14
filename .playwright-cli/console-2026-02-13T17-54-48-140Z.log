@@ -1,0 +1,4 @@
+[ 8705478ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/src/styles.css?t=1771013993571:0
+[ 8705479ms] [ERROR] [vite] Failed to reload /src/styles.css. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3001/@vite/client:808
+[ 8741548ms] [ERROR] Failed to load resource: the server responded with a status of 504 (Outdated Optimize Dep) @ http://localhost:3001/node_modules/.vite/deps/convex_react.js?v=69a3a355:0
+[ 8741568ms] Failed to fetch dynamically imported module: http://localhost:3001/@id/virtual:tanstack-start-client-entry
