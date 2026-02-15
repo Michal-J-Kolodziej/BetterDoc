@@ -133,6 +133,7 @@ function ProfilePage() {
       sectionLabel='Account'
       title='Profile'
       description='Manage your name, avatar, and shareable IID.'
+      actorWorkosUserId={user.id}
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >

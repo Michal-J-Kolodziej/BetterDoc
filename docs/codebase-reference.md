@@ -41,6 +41,7 @@ Last updated: 2026-02-15
     - Shows `Possible duplicate` when top score is `>= 0.65`.
     - Provides deep links to `/posts/$postId`.
   - Successful post creation clears the associated create-post draft.
+  - Description composer supports `@` mention picking via `teams.searchTeamMembers` and inserts IID mentions (`@BD-XXXXXXXX`).
   - Main feed now renders as divider-based tape rows (instead of stacked cards) for higher scan density.
 - `src/routes/dashboard_.v1.tsx`
 - `src/routes/dashboard_.v2.tsx`
@@ -56,7 +57,11 @@ Last updated: 2026-02-15
   - Post edit/archive/unarchive plus compact discussion composer and comment CRUD.
   - Comment composer draft autosaves every 1.5 seconds and supports restore/discard per user+post.
   - Successful comment creation clears the associated comment draft.
+  - Post description and comment composers support `@` mention picking with IID insertion.
   - Detail and discussion surfaces use shared tape-style sections and row separators instead of nested card stacks.
+- `src/routes/inbox.tsx`
+  - Protected in-app inbox route with cursor pagination, deep links, and per-item/mark-all read controls.
+  - Opening an inbox notification link marks the item read before navigation.
 - `src/routes/teams.tsx`
   - Uses shared protected desktop shell with persistent left nav.
   - Team management with split create/invite + member management surfaces.
@@ -78,8 +83,12 @@ Last updated: 2026-02-15
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
 - Shared protected route shell:
   - `src/components/layout/app-sidebar-shell.tsx`
-  - Provides fixed desktop two-column shell with persistent left navigation (`Dashboard`, `Teams`, `Profile`, `Logout`) and account footer block.
+  - Provides fixed desktop two-column shell with persistent left navigation (`Dashboard`, `Inbox`, `Teams`, `Profile`, `Logout`) and account footer block.
+  - Displays reactive unread badge counts in sidebar and header inbox entry points using `notifications.getUnreadCount`.
   - Shell styling is intentionally flatter (minimal paneling, separator-first hierarchy) to match dashboard V1.
+- Mention input UI:
+  - `src/components/mentions/mention-textarea.tsx`
+  - Detects `@` mention triggers at the current textarea caret and queries `teams.searchTeamMembers` for inline IID mention insertion.
 - Shadcn component primitives in `src/components/ui`:
   - `avatar.tsx`
   - `badge.tsx`
@@ -120,6 +129,7 @@ Last updated: 2026-02-15
   - `convex/posts.ts`
   - `convex/postSimilarity.ts`
   - `convex/comments.ts`
+  - `convex/mentions.ts`
   - `convex/notifications.ts`
   - `convex/files.ts`
 - Optional health endpoint: `convex/health.ts`
@@ -139,17 +149,21 @@ Last updated: 2026-02-15
 
 ### Core API Surface
 - `users.getMe`, `users.upsertMe`, `users.updateProfile`
-- `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.inviteByIID`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
+- `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.searchTeamMembers`, `teams.inviteByIID`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
 - `posts.createPost`, `posts.updatePost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.findSimilar`, `posts.getPostDetail`
 - `comments.createComment`, `comments.updateComment`, `comments.deleteComment`
 - `templates.listTeamTemplates`, `templates.createTemplate`, `templates.updateTemplate`, `templates.deleteTemplate`
 - `drafts.getPostDraft`, `drafts.upsertPostDraft`, `drafts.deletePostDraft`, `drafts.getCommentDraft`, `drafts.upsertCommentDraft`, `drafts.deleteCommentDraft`
+- `notifications.getUnreadCount`, `notifications.listInbox`, `notifications.markRead`, `notifications.markAllRead`
 - `notifications.enqueue`, `notifications.enqueueMany` (internal service primitives)
 - `files.generateUploadUrl`, `files.attachUploadedFile`
 
 ### Notification/Event Notes
 - `teams.inviteByIID` now enqueues `invite_received` notifications for invite recipients.
 - `comments.createComment` now enqueues `comment_on_post` notifications to the post creator when the commenter is a different user.
+- Post/comment mention parsing uses IID tokens (`@BD-XXXXXXXX`) and notifies only newly added mentions on create/update.
+- Mention notifications skip self-notifications and ignore users who are not current members of the referenced team.
+- Mention dedupe keys are scoped to entity+recipient (`mention_in_post:${postId}:${recipientId}`, `mention_in_comment:${commentId}:${recipientId}`).
 - Notification enqueue is deduplicated by `dedupeKey` (`notifications.by_dedupe_key` index) to keep retried events single-write.
 
 ### Similar Incident Notes

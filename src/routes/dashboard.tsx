@@ -5,6 +5,7 @@ import { Plus, Search, Shield } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
+import { MentionTextarea } from '@/components/mentions/mention-textarea'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,7 +20,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { parseDashboardSearch, stringifySearchQuery } from '@/lib/search'
 import {
@@ -620,6 +620,7 @@ function DashboardPage() {
       sectionLabel='Team Board'
       title='Dashboard'
       description='Search active and archived team posts from one place.'
+      actorWorkosUserId={user.id}
       userLabel={currentUserLabel}
       userEmail={user.email ?? undefined}
     >
@@ -769,13 +770,15 @@ function DashboardPage() {
 
                 <div className='grid gap-2'>
                   <Label htmlFor='create-description'>Description</Label>
-                  <Textarea
+                  <MentionTextarea
+                    actorWorkosUserId={user.id}
+                    teamId={createTeamId}
                     id='create-description'
                     placeholder='Issue description'
                     value={createDescription}
                     maxLength={5000}
                     rows={6}
-                    onChange={(event) => setCreateDescription(event.target.value)}
+                    onChange={setCreateDescription}
                   />
                 </div>
 

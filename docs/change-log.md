@@ -1,5 +1,37 @@
 # BetterDoc Change Log
 
+## 2026-02-15 (BD-207, BD-208: mentions pipeline + in-app inbox)
+- Code paths changed:
+  - `convex/model.ts`
+  - `convex/mentions.ts`
+  - `convex/notifications.ts`
+  - `convex/posts.ts`
+  - `convex/comments.ts`
+  - `convex/teams.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/components/layout/app-sidebar-shell.tsx`
+  - `src/components/mentions/mention-textarea.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/routes/inbox.tsx`
+  - `src/routes/teams.tsx`
+  - `src/routes/profile.tsx`
+  - `src/features/dashboard-variants/page.tsx`
+  - `src/routeTree.gen.ts`
+  - `src/convex/notifications.test.ts`
+  - `src/convex/mentions.test.ts`
+  - `src/convex/inbox-notifications.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added mention parsing for IID tokens (`@BD-XXXXXXXX`) in post descriptions and comment bodies, with create/update support that only notifies newly added mentions.
+  - Added mention recipient validation so notifications are sent only to current team members and never to the actor who authored the content.
+  - Added mention notification types and dedupe keys scoped by entity+recipient to prevent duplicate mention notifications from retries/replays.
+  - Added `teams.searchTeamMembers` for mention picker search and introduced a reusable mention-aware textarea component used in dashboard/post detail composers.
+  - Added in-app inbox APIs (`getUnreadCount`, `listInbox` with cursor pagination, `markRead`, `markAllRead`) and idempotent read-state transitions.
+  - Added protected `/inbox` UI with pagination, deep links, mark-read controls, and mark-on-open behavior; added unread badges to shell nav/header inbox entry points.
+
 ## 2026-02-15 (BD-205, BD-206: similar incidents API + composer duplicate signals)
 - Code paths changed:
   - `convex/posts.ts`

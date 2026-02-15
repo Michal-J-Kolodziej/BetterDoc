@@ -46,6 +46,13 @@ const teamMemberValidator = v.object({
   avatarStorageId: v.union(v.id('_storage'), v.null()),
 })
 
+const teamMemberSearchResultValidator = v.object({
+  userId: v.id('users'),
+  iid: v.string(),
+  name: v.string(),
+  avatarUrl: v.union(v.string(), v.null()),
+})
+
 const inviteViewValidator = v.object({
   inviteId: v.id('teamInvites'),
   teamId: v.id('teams'),
@@ -241,6 +248,58 @@ export const listTeamMembers = query({
     return members
       .filter((member): member is NonNullable<typeof member> => Boolean(member))
       .sort((left, right) => left.name.localeCompare(right.name))
+  },
+})
+
+export const searchTeamMembers = query({
+  args: {
+    actorWorkosUserId: v.string(),
+    teamId: v.id('teams'),
+    query: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(teamMemberSearchResultValidator),
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    await ensureTeamExists(ctx.db, args.teamId)
+    await requireMembership(ctx.db, args.teamId, actor._id)
+
+    const searchText = normalizeText(args.query ?? '').toLowerCase()
+    const limit = Math.min(Math.max(Math.trunc(args.limit ?? 8), 1), 20)
+
+    const memberships = await ctx.db
+      .query('teamMemberships')
+      .withIndex('by_team', (query) => query.eq('teamId', args.teamId))
+      .collect()
+
+    const members = await Promise.all(
+      memberships.map(async (membership) => {
+        const user = await ctx.db.get(membership.userId)
+
+        if (!user || user._id === actor._id) {
+          return null
+        }
+
+        const avatarUrl = user.avatarStorageId ? await ctx.storage.getUrl(user.avatarStorageId) : null
+        const searchable = `${user.name.toLowerCase()} ${user.iid.toLowerCase()}`
+
+        if (searchText && !searchable.includes(searchText)) {
+          return null
+        }
+
+        return {
+          userId: user._id,
+          iid: user.iid,
+          name: user.name,
+          avatarUrl,
+        }
+      }),
+    )
+
+    return members
+      .filter((member): member is NonNullable<typeof member> => Boolean(member))
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .slice(0, limit)
   },
 })
 

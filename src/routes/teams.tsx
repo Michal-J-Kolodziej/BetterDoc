@@ -255,6 +255,7 @@ function TeamsPage() {
       sectionLabel='Organization'
       title='Teams'
       description='Create teams, invite by IID, and manage roles.'
+      actorWorkosUserId={user.id}
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >

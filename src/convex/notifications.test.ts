@@ -5,6 +5,7 @@ import type { MutationCtx } from '../../convex/_generated/server'
 import {
   buildCommentOnPostDedupeKey,
   buildInviteReceivedDedupeKey,
+  buildMentionInPostDedupeKey,
   enqueueManyNotifications,
   enqueueNotification,
 } from '../../convex/notifications'
@@ -174,5 +175,36 @@ describe('notifications enqueue primitives', () => {
         dedupeKey: '   ',
       }),
     ).rejects.toThrow('Notification dedupe key is required.')
+  })
+
+  it('dedupes mention notifications by post and recipient', async () => {
+    const ctx = createNotificationCtx()
+    const teamId = asId<'teams'>('team-1')
+    const recipientUserId = asId<'users'>('user-1')
+    const actorUserId = asId<'users'>('user-2')
+    const postId = asId<'posts'>('post-1')
+    const dedupeKey = buildMentionInPostDedupeKey(postId, recipientUserId)
+
+    const first = await enqueueNotification(ctx, {
+      teamId,
+      recipientUserId,
+      actorUserId,
+      type: 'mention_in_post',
+      dedupeKey,
+      postId,
+    })
+
+    const second = await enqueueNotification(ctx, {
+      teamId,
+      recipientUserId,
+      actorUserId,
+      type: 'mention_in_post',
+      dedupeKey,
+      postId,
+    })
+
+    expect(first.created).toBe(true)
+    expect(second.created).toBe(false)
+    expect(second.notificationId).toBe(first.notificationId)
   })
 })

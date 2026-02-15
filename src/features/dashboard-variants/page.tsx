@@ -185,6 +185,7 @@ export function DashboardVariantPage({ variant }: { variant: VariantKey }) {
       sectionLabel='Design Review'
       title={`Dashboard ${variant.toUpperCase()} - ${variantConfig.label}`}
       description='Five desktop-only dashboard options with low chrome, no glow buttons, and lighter framing.'
+      actorWorkosUserId={user.id}
       userLabel={currentUserLabel}
       userEmail={user.email ?? undefined}
     >

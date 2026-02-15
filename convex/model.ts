@@ -9,7 +9,12 @@ export type InviteStatus = (typeof inviteStatuses)[number]
 export const postStatuses = ['active', 'archived'] as const
 export type PostStatus = (typeof postStatuses)[number]
 
-export const notificationTypes = ['invite_received', 'comment_on_post'] as const
+export const notificationTypes = [
+  'invite_received',
+  'comment_on_post',
+  'mention_in_post',
+  'mention_in_comment',
+] as const
 export type NotificationType = (typeof notificationTypes)[number]
 
 export const teamRoleValidator = v.union(
@@ -32,6 +37,8 @@ export const postStatusValidator = v.union(v.literal('active'), v.literal('archi
 export const notificationTypeValidator = v.union(
   v.literal('invite_received'),
   v.literal('comment_on_post'),
+  v.literal('mention_in_post'),
+  v.literal('mention_in_comment'),
 )
 
 export const fileContentTypeValidator = v.union(

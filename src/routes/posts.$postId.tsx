@@ -5,12 +5,12 @@ import { PencilLine, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
+import { MentionTextarea } from '@/components/mentions/mention-textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { uploadImageFiles } from '@/lib/uploads'
 import { userDisplayName } from '@/utils/user-display'
@@ -424,6 +424,7 @@ function PostDetailPage() {
       sectionLabel='Incident Thread'
       title='Post Detail'
       description='Post details, timeline, and team discussion in one place.'
+      actorWorkosUserId={user.id}
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
@@ -499,11 +500,13 @@ function PostDetailPage() {
 
             <div className='grid gap-2'>
               <Label htmlFor='edit-description'>Description</Label>
-              <Textarea
+              <MentionTextarea
+                actorWorkosUserId={user.id}
+                teamId={postDetail.teamId}
                 id='edit-description'
                 value={editDescription}
                 rows={6}
-                onChange={(event) => setEditDescription(event.target.value)}
+                onChange={setEditDescription}
               />
             </div>
 
@@ -543,13 +546,15 @@ function PostDetailPage() {
         <section className='space-y-3 border-b border-border/45 pb-4'>
           <div className='grid gap-2'>
             <Label htmlFor='comment-body'>Comment</Label>
-            <Textarea
+            <MentionTextarea
+              actorWorkosUserId={user.id}
+              teamId={postDetail.teamId}
               id='comment-body'
               value={commentBody}
               rows={4}
               placeholder='Add a comment'
               disabled={postDetail.status === 'archived'}
-              onChange={(event) => setCommentBody(event.target.value)}
+              onChange={setCommentBody}
             />
           </div>
 
@@ -584,7 +589,11 @@ function PostDetailPage() {
 
         <section className='tape-list'>
           {postDetail.comments.map((comment) => (
-            <article key={comment.commentId} className='tape-list-row space-y-3 py-4'>
+            <article
+              key={comment.commentId}
+              id={`comment-${comment.commentId}`}
+              className='tape-list-row space-y-3 py-4'
+            >
               <div className='flex items-center gap-2'>
                 <Avatar className='h-7 w-7'>
                   <AvatarImage src={undefined} alt={comment.createdByName} />
@@ -597,10 +606,12 @@ function PostDetailPage() {
 
               {editingCommentId === comment.commentId ? (
                 <div className='space-y-2'>
-                  <Textarea
+                  <MentionTextarea
+                    actorWorkosUserId={user.id}
+                    teamId={postDetail.teamId}
                     value={editingCommentBody}
                     rows={4}
-                    onChange={(event) => setEditingCommentBody(event.target.value)}
+                    onChange={setEditingCommentBody}
                   />
                   <Input
                     type='file'

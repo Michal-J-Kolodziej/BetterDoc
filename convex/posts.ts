@@ -19,6 +19,11 @@ import {
   rankSimilarPosts,
   type SimilarPostCandidate,
 } from './postSimilarity'
+import { diffMentions, resolveMentionRecipientUserIds } from './mentions'
+import {
+  buildMentionInPostDedupeKey,
+  enqueueManyNotifications,
+} from './notifications'
 
 type CtxLike = Pick<QueryCtx, 'db' | 'storage'> | Pick<MutationCtx, 'db' | 'storage'>
 type DbLike = QueryCtx['db'] | MutationCtx['db']
@@ -356,6 +361,27 @@ export const createPost = mutation({
       updatedAt: now,
     })
 
+    const mentionRecipientUserIds = await resolveMentionRecipientUserIds(
+      ctx.db,
+      args.teamId,
+      diffMentions('', description),
+      actor._id,
+    )
+
+    if (mentionRecipientUserIds.length > 0) {
+      await enqueueManyNotifications(
+        ctx,
+        mentionRecipientUserIds.map((recipientUserId) => ({
+          teamId: args.teamId,
+          recipientUserId,
+          actorUserId: actor._id,
+          type: 'mention_in_post' as const,
+          dedupeKey: buildMentionInPostDedupeKey(postId, recipientUserId),
+          postId,
+        })),
+      )
+    }
+
     return { postId }
   },
 })
@@ -423,6 +449,27 @@ export const updatePost = mutation({
     })
 
     await refreshPostSearchText(ctx, args.postId)
+
+    const mentionRecipientUserIds = await resolveMentionRecipientUserIds(
+      ctx.db,
+      post.teamId,
+      diffMentions(post.description, description),
+      actor._id,
+    )
+
+    if (mentionRecipientUserIds.length > 0) {
+      await enqueueManyNotifications(
+        ctx,
+        mentionRecipientUserIds.map((recipientUserId) => ({
+          teamId: post.teamId,
+          recipientUserId,
+          actorUserId: actor._id,
+          type: 'mention_in_post' as const,
+          dedupeKey: buildMentionInPostDedupeKey(args.postId, recipientUserId),
+          postId: args.postId,
+        })),
+      )
+    }
 
     return { postId: args.postId }
   },

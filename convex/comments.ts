@@ -8,8 +8,11 @@ import {
   requireUserByWorkosUserId,
 } from './auth'
 import { limits, normalizeText } from './model'
+import { diffMentions, resolveMentionRecipientUserIds } from './mentions'
 import {
   buildCommentOnPostDedupeKey,
+  buildMentionInCommentDedupeKey,
+  enqueueManyNotifications,
   enqueueNotification,
 } from './notifications'
 import { refreshPostSearchText } from './posts'
@@ -100,6 +103,28 @@ export const createComment = mutation({
       })
     }
 
+    const mentionRecipientUserIds = await resolveMentionRecipientUserIds(
+      ctx.db,
+      post.teamId,
+      diffMentions('', body),
+      actor._id,
+    )
+
+    if (mentionRecipientUserIds.length > 0) {
+      await enqueueManyNotifications(
+        ctx,
+        mentionRecipientUserIds.map((recipientUserId) => ({
+          teamId: post.teamId,
+          recipientUserId,
+          actorUserId: actor._id,
+          type: 'mention_in_comment' as const,
+          dedupeKey: buildMentionInCommentDedupeKey(commentId, recipientUserId),
+          postId: post._id,
+          commentId,
+        })),
+      )
+    }
+
     return {
       commentId,
     }
@@ -167,6 +192,28 @@ export const updateComment = mutation({
     })
 
     await refreshPostSearchText(ctx, post._id)
+
+    const mentionRecipientUserIds = await resolveMentionRecipientUserIds(
+      ctx.db,
+      post.teamId,
+      diffMentions(comment.body, body),
+      actor._id,
+    )
+
+    if (mentionRecipientUserIds.length > 0) {
+      await enqueueManyNotifications(
+        ctx,
+        mentionRecipientUserIds.map((recipientUserId) => ({
+          teamId: post.teamId,
+          recipientUserId,
+          actorUserId: actor._id,
+          type: 'mention_in_comment' as const,
+          dedupeKey: buildMentionInCommentDedupeKey(comment._id, recipientUserId),
+          postId: post._id,
+          commentId: comment._id,
+        })),
+      )
+    }
 
     return {
       commentId: comment._id,
