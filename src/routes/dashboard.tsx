@@ -2,7 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
 import { Plus, Search, Shield } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Badge } from '@/components/ui/badge'
@@ -62,6 +62,30 @@ function formatDate(value: number): string {
   return new Date(value).toLocaleString()
 }
 
+function isCreateDraftEmpty(values: {
+  title: string
+  occurrenceWhere: string
+  occurrenceWhen: string
+  description: string
+}): boolean {
+  return (
+    values.title.trim().length === 0 &&
+    values.occurrenceWhere.trim().length === 0 &&
+    values.occurrenceWhen.trim().length === 0 &&
+    values.description.trim().length === 0
+  )
+}
+
+function buildCreateDraftFingerprint(values: {
+  teamId: string
+  title: string
+  occurrenceWhere: string
+  occurrenceWhen: string
+  description: string
+}): string {
+  return JSON.stringify(values)
+}
+
 function DashboardPage() {
   const auth = useAuth()
   const navigate = Route.useNavigate()
@@ -85,10 +109,25 @@ function DashboardPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [createBusy, setCreateBusy] = useState(false)
 
+  const [templateName, setTemplateName] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [templateBusy, setTemplateBusy] = useState(false)
+  const [templateError, setTemplateError] = useState<string | null>(null)
+  const [draftError, setDraftError] = useState<string | null>(null)
+  const [draftHydratedTeamId, setDraftHydratedTeamId] = useState<string | null>(null)
+  const createDraftFingerprintRef = useRef('')
+
   const upsertMe = useMutation(api.users.upsertMe)
   const createPost = useMutation(api.posts.createPost)
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
   const attachUploadedFile = useMutation(api.files.attachUploadedFile)
+
+  const createTemplate = useMutation(api.templates.createTemplate)
+  const updateTemplate = useMutation(api.templates.updateTemplate)
+  const deleteTemplate = useMutation(api.templates.deleteTemplate)
+
+  const upsertPostDraft = useMutation(api.drafts.upsertPostDraft)
+  const deletePostDraft = useMutation(api.drafts.deletePostDraft)
 
   const me = useQuery(api.users.getMe, user ? { workosUserId: user.id } : 'skip')
 
@@ -129,6 +168,27 @@ function DashboardPage() {
     }
   }, [createTeamId, teams])
 
+  const teamTemplates = useQuery(
+    api.templates.listTeamTemplates,
+    user && createDialogOpen && createTeamId
+      ? {
+          actorWorkosUserId: user.id,
+          teamId: createTeamId as Id<'teams'>,
+        }
+      : 'skip',
+  )
+
+  const postDraft = useQuery(
+    api.drafts.getPostDraft,
+    user && createDialogOpen && createTeamId
+      ? {
+          actorWorkosUserId: user.id,
+          teamId: createTeamId as Id<'teams'>,
+          sourcePostId: null,
+        }
+      : 'skip',
+  )
+
   const posts = useQuery(
     api.posts.listPosts,
     user && me
@@ -145,6 +205,145 @@ function DashboardPage() {
         }
       : 'skip',
   )
+
+  const debouncedCreateTitle = useDebouncedValue(createTitle, 1500)
+  const debouncedCreateWhere = useDebouncedValue(createWhere, 1500)
+  const debouncedCreateWhen = useDebouncedValue(createWhen, 1500)
+  const debouncedCreateDescription = useDebouncedValue(createDescription, 1500)
+
+  useEffect(() => {
+    if (!createDialogOpen || !createTeamId) {
+      return
+    }
+
+    setSelectedTemplateId('')
+    setTemplateName('')
+    setTemplateError(null)
+    setDraftError(null)
+    setDraftHydratedTeamId(null)
+    createDraftFingerprintRef.current = ''
+  }, [createDialogOpen, createTeamId])
+
+  useEffect(() => {
+    if (!createDialogOpen || !createTeamId) {
+      return
+    }
+
+    if (postDraft === undefined || draftHydratedTeamId === createTeamId) {
+      return
+    }
+
+    if (postDraft) {
+      setCreateTitle(postDraft.title)
+      setCreateWhere(postDraft.occurrenceWhere)
+      setCreateWhen(postDraft.occurrenceWhen)
+      setCreateDescription(postDraft.description)
+    } else {
+      setCreateTitle('')
+      setCreateWhere('')
+      setCreateWhen('')
+      setCreateDescription('')
+    }
+
+    setCreateFiles([])
+    setDraftError(null)
+
+    createDraftFingerprintRef.current = buildCreateDraftFingerprint({
+      teamId: createTeamId,
+      title: postDraft?.title ?? '',
+      occurrenceWhere: postDraft?.occurrenceWhere ?? '',
+      occurrenceWhen: postDraft?.occurrenceWhen ?? '',
+      description: postDraft?.description ?? '',
+    })
+
+    setDraftHydratedTeamId(createTeamId)
+  }, [createDialogOpen, createTeamId, draftHydratedTeamId, postDraft])
+
+  useEffect(() => {
+    if (!createDialogOpen || !user || !createTeamId) {
+      return
+    }
+
+    if (draftHydratedTeamId !== createTeamId) {
+      return
+    }
+
+    const snapshot = {
+      teamId: createTeamId,
+      title: debouncedCreateTitle,
+      occurrenceWhere: debouncedCreateWhere,
+      occurrenceWhen: debouncedCreateWhen,
+      description: debouncedCreateDescription,
+    }
+    const fingerprint = buildCreateDraftFingerprint(snapshot)
+
+    if (fingerprint === createDraftFingerprintRef.current) {
+      return
+    }
+
+    if (isCreateDraftEmpty(snapshot)) {
+      void deletePostDraft({
+        actorWorkosUserId: user.id,
+        teamId: createTeamId as Id<'teams'>,
+        sourcePostId: null,
+      })
+        .then(() => {
+          createDraftFingerprintRef.current = fingerprint
+          setDraftError(null)
+        })
+        .catch((error) => {
+          setDraftError(error instanceof Error ? error.message : 'Failed to clear draft.')
+        })
+
+      return
+    }
+
+    void upsertPostDraft({
+      actorWorkosUserId: user.id,
+      teamId: createTeamId as Id<'teams'>,
+      sourcePostId: null,
+      title: snapshot.title,
+      occurrenceWhere: snapshot.occurrenceWhere,
+      occurrenceWhen: snapshot.occurrenceWhen,
+      description: snapshot.description,
+    })
+      .then(() => {
+        createDraftFingerprintRef.current = fingerprint
+        setDraftError(null)
+      })
+      .catch((error) => {
+        setDraftError(error instanceof Error ? error.message : 'Failed to save draft.')
+      })
+  }, [
+    createDialogOpen,
+    createTeamId,
+    debouncedCreateDescription,
+    debouncedCreateTitle,
+    debouncedCreateWhen,
+    debouncedCreateWhere,
+    deletePostDraft,
+    draftHydratedTeamId,
+    upsertPostDraft,
+    user,
+  ])
+
+  useEffect(() => {
+    if (!selectedTemplateId || !teamTemplates) {
+      return
+    }
+
+    const selected = teamTemplates.find((template) => template.templateId === selectedTemplateId)
+
+    if (!selected) {
+      return
+    }
+
+    setCreateTitle(selected.title)
+    setCreateWhere(selected.occurrenceWhere)
+    setCreateWhen(selected.occurrenceWhen)
+    setCreateDescription(selected.description)
+    setTemplateName(selected.name)
+  }, [selectedTemplateId, teamTemplates])
 
   const applyQuickStatus = (status: 'all' | 'active' | 'archived') => {
     const next = {
@@ -190,7 +389,123 @@ function DashboardPage() {
     setCreateWhen('')
     setCreateDescription('')
     setCreateFiles([])
+    setTemplateName('')
+    setSelectedTemplateId('')
     setCreateError(null)
+    setTemplateError(null)
+    setDraftError(null)
+    setDraftHydratedTeamId(null)
+    createDraftFingerprintRef.current = ''
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!user || !createTeamId) {
+      return
+    }
+
+    setTemplateBusy(true)
+    setTemplateError(null)
+
+    try {
+      const created = await createTemplate({
+        actorWorkosUserId: user.id,
+        teamId: createTeamId as Id<'teams'>,
+        name: templateName,
+        title: createTitle,
+        occurrenceWhere: createWhere,
+        occurrenceWhen: createWhen,
+        description: createDescription,
+      })
+
+      setSelectedTemplateId(created.templateId)
+      setTemplateName(created.name)
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : 'Failed to save template.')
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
+
+  const handleUpdateTemplate = async () => {
+    if (!user || !selectedTemplateId) {
+      return
+    }
+
+    setTemplateBusy(true)
+    setTemplateError(null)
+
+    try {
+      const updated = await updateTemplate({
+        actorWorkosUserId: user.id,
+        templateId: selectedTemplateId as Id<'postTemplates'>,
+        name: templateName,
+        title: createTitle,
+        occurrenceWhere: createWhere,
+        occurrenceWhen: createWhen,
+        description: createDescription,
+      })
+
+      setTemplateName(updated.name)
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : 'Failed to update template.')
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
+
+  const handleDeleteTemplate = async () => {
+    if (!user || !selectedTemplateId) {
+      return
+    }
+
+    setTemplateBusy(true)
+    setTemplateError(null)
+
+    try {
+      await deleteTemplate({
+        actorWorkosUserId: user.id,
+        templateId: selectedTemplateId as Id<'postTemplates'>,
+      })
+
+      setSelectedTemplateId('')
+      setTemplateName('')
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : 'Failed to delete template.')
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
+
+  const handleDiscardPostDraft = async () => {
+    if (!user || !createTeamId) {
+      return
+    }
+
+    try {
+      await deletePostDraft({
+        actorWorkosUserId: user.id,
+        teamId: createTeamId as Id<'teams'>,
+        sourcePostId: null,
+      })
+    } catch (error) {
+      setDraftError(error instanceof Error ? error.message : 'Failed to discard draft.')
+      return
+    }
+
+    setCreateTitle('')
+    setCreateWhere('')
+    setCreateWhen('')
+    setCreateDescription('')
+    setCreateFiles([])
+    setDraftError(null)
+
+    createDraftFingerprintRef.current = buildCreateDraftFingerprint({
+      teamId: createTeamId,
+      title: '',
+      occurrenceWhere: '',
+      occurrenceWhen: '',
+      description: '',
+    })
   }
 
   const handleCreatePost = async () => {
@@ -224,6 +539,12 @@ function DashboardPage() {
         imageStorageIds,
       })
 
+      await deletePostDraft({
+        actorWorkosUserId: user.id,
+        teamId: createTeamId as Id<'teams'>,
+        sourcePostId: null,
+      })
+
       setCreateDialogOpen(false)
       resetCreatePostForm()
 
@@ -251,6 +572,7 @@ function DashboardPage() {
 
   const hasTeams = teams.length > 0
   const currentUserLabel = userDisplayName(user)
+  const templates = teamTemplates ?? []
 
   return (
     <AppSidebarShell
@@ -291,7 +613,9 @@ function DashboardPage() {
             <DialogContent className='max-w-2xl'>
               <DialogHeader>
                 <DialogTitle>Create Post</DialogTitle>
-                <DialogDescription>Add a concise issue post to a team board.</DialogDescription>
+                <DialogDescription>
+                  Add a concise issue post to a team board. Drafts autosave every 1.5 seconds.
+                </DialogDescription>
               </DialogHeader>
 
               <div className='grid gap-3 py-1'>
@@ -309,6 +633,64 @@ function DashboardPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className='grid gap-2'>
+                  <Label htmlFor='create-template-select'>Template</Label>
+                  <Select
+                    value={selectedTemplateId || '__none__'}
+                    onValueChange={(value) => setSelectedTemplateId(value === '__none__' ? '' : value)}
+                  >
+                    <SelectTrigger id='create-template-select'>
+                      <SelectValue placeholder='Choose a template' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='__none__'>No template</SelectItem>
+                      {templates.map((template) => (
+                        <SelectItem key={template.templateId} value={template.templateId}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='grid gap-2'>
+                  <Label htmlFor='create-template-name'>Template name</Label>
+                  <Input
+                    id='create-template-name'
+                    placeholder='Example: API incident baseline'
+                    value={templateName}
+                    maxLength={80}
+                    onChange={(event) => setTemplateName(event.target.value)}
+                  />
+                </div>
+
+                <div className='flex flex-wrap gap-2'>
+                  <Button
+                    variant='secondary'
+                    type='button'
+                    disabled={templateBusy || !createTeamId}
+                    onClick={handleSaveTemplate}
+                  >
+                    Save as template
+                  </Button>
+                  <Button
+                    variant='outline'
+                    type='button'
+                    disabled={templateBusy || !selectedTemplateId}
+                    onClick={handleUpdateTemplate}
+                  >
+                    Update selected
+                  </Button>
+                  <Button
+                    variant='destructive'
+                    type='button'
+                    disabled={templateBusy || !selectedTemplateId}
+                    onClick={handleDeleteTemplate}
+                  >
+                    Delete selected
+                  </Button>
                 </div>
 
                 <div className='grid gap-2'>
@@ -368,14 +750,19 @@ function DashboardPage() {
                   />
                 </div>
 
+                {templateError ? <p className='text-sm text-destructive'>{templateError}</p> : null}
+                {draftError ? <p className='text-sm text-destructive'>{draftError}</p> : null}
                 {createError ? <p className='text-sm text-destructive'>{createError}</p> : null}
               </div>
 
               <DialogFooter>
-                <Button variant='outline' onClick={() => setCreateDialogOpen(false)}>
+                <Button variant='secondary' type='button' onClick={handleDiscardPostDraft}>
+                  Discard draft
+                </Button>
+                <Button variant='outline' type='button' onClick={() => setCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button disabled={createBusy || !createTeamId} onClick={handleCreatePost}>
+                <Button disabled={createBusy || !createTeamId} type='button' onClick={handleCreatePost}>
                   {createBusy ? 'Creating...' : 'Create post'}
                 </Button>
               </DialogFooter>

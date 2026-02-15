@@ -1,6 +1,6 @@
 # BetterDoc Codebase Reference
 
-Last updated: 2026-02-14
+Last updated: 2026-02-15
 
 ## Runtime Stack
 - Framework: TanStack Start (`@tanstack/react-start`)
@@ -33,7 +33,9 @@ Last updated: 2026-02-14
   - Uses shared protected desktop shell with persistent left sidebar nav.
   - Search bar supports free text and qualifiers (`team:`, `status:`, `author:`, `has:image`, `before:`, `after:`).
   - Inline status chips + inline team selector in main content controls.
-  - Create-post dialog with image upload.
+  - Create-post dialog includes team template picker and template save/update/delete controls.
+  - Create-post draft autosaves every 1.5 seconds and supports restore/discard per user+team.
+  - Successful post creation clears the associated create-post draft.
   - Main feed now renders as divider-based tape rows (instead of stacked cards) for higher scan density.
 - `src/routes/dashboard_.v1.tsx`
 - `src/routes/dashboard_.v2.tsx`
@@ -47,6 +49,8 @@ Last updated: 2026-02-14
   - Protected post detail view.
   - Uses shared protected desktop shell; sidebar highlights Dashboard nav.
   - Post edit/archive/unarchive plus compact discussion composer and comment CRUD.
+  - Comment composer draft autosaves every 1.5 seconds and supports restore/discard per user+post.
+  - Successful comment creation clears the associated comment draft.
   - Detail and discussion surfaces use shared tape-style sections and row separators instead of nested card stacks.
 - `src/routes/teams.tsx`
   - Uses shared protected desktop shell with persistent left nav.
@@ -103,6 +107,8 @@ Last updated: 2026-02-14
 - Authorization helpers: `convex/auth.ts`
 - Post search-text builder: `convex/postSearch.ts`
 - Domain function modules:
+  - `convex/drafts.ts`
+  - `convex/templates.ts`
   - `convex/users.ts`
   - `convex/teams.ts`
   - `convex/posts.ts`
@@ -129,6 +135,8 @@ Last updated: 2026-02-14
 - `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.inviteByIID`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
 - `posts.createPost`, `posts.updatePost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.getPostDetail`
 - `comments.createComment`, `comments.updateComment`, `comments.deleteComment`
+- `templates.listTeamTemplates`, `templates.createTemplate`, `templates.updateTemplate`, `templates.deleteTemplate`
+- `drafts.getPostDraft`, `drafts.upsertPostDraft`, `drafts.deletePostDraft`, `drafts.getCommentDraft`, `drafts.upsertCommentDraft`, `drafts.deleteCommentDraft`
 - `notifications.enqueue`, `notifications.enqueueMany` (internal service primitives)
 - `files.generateUploadUrl`, `files.attachUploadedFile`
 

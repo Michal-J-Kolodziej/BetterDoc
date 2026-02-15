@@ -45,6 +45,7 @@ export const limits = {
   iidRandomLength: 8,
   maxNameLength: 80,
   maxTeamNameLength: 80,
+  maxTemplateNameLength: 80,
   maxPostTitleLength: 120,
   maxOccurrenceLength: 140,
   maxPostDescriptionLength: 5000,

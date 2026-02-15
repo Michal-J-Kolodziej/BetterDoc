@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
 import { PencilLine, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { uploadImageFiles } from '@/lib/uploads'
 import { userDisplayName } from '@/utils/user-display'
 import { api } from '../../convex/_generated/api.js'
@@ -47,6 +48,10 @@ function formatDate(value: number): string {
   return new Date(value).toLocaleString()
 }
 
+function buildCommentDraftFingerprint(values: { postId: string; body: string }): string {
+  return JSON.stringify(values)
+}
+
 function PostDetailPage() {
   const params = Route.useParams()
   const auth = useAuth()
@@ -62,6 +67,16 @@ function PostDetailPage() {
       : 'skip',
   )
 
+  const commentDraft = useQuery(
+    api.drafts.getCommentDraft,
+    user
+      ? {
+          actorWorkosUserId: user.id,
+          postId: params.postId as Id<'posts'>,
+        }
+      : 'skip',
+  )
+
   const updatePost = useMutation(api.posts.updatePost)
   const archivePost = useMutation(api.posts.archivePost)
   const unarchivePost = useMutation(api.posts.unarchivePost)
@@ -69,6 +84,9 @@ function PostDetailPage() {
   const createComment = useMutation(api.comments.createComment)
   const updateComment = useMutation(api.comments.updateComment)
   const deleteComment = useMutation(api.comments.deleteComment)
+
+  const upsertCommentDraft = useMutation(api.drafts.upsertCommentDraft)
+  const deleteCommentDraft = useMutation(api.drafts.deleteCommentDraft)
 
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
   const attachUploadedFile = useMutation(api.files.attachUploadedFile)
@@ -86,6 +104,9 @@ function PostDetailPage() {
   const [commentFiles, setCommentFiles] = useState<File[]>([])
   const [commentError, setCommentError] = useState<string | null>(null)
   const [commentBusy, setCommentBusy] = useState(false)
+  const [commentDraftError, setCommentDraftError] = useState<string | null>(null)
+  const [commentDraftHydratedPostId, setCommentDraftHydratedPostId] = useState<string | null>(null)
+  const commentDraftFingerprintRef = useRef('')
 
   const [editingCommentId, setEditingCommentId] = useState<Id<'comments'> | null>(null)
   const [editingCommentBody, setEditingCommentBody] = useState('')
@@ -93,7 +114,84 @@ function PostDetailPage() {
   const [editingCommentBusy, setEditingCommentBusy] = useState(false)
   const [editingCommentError, setEditingCommentError] = useState<string | null>(null)
 
+  const debouncedCommentBody = useDebouncedValue(commentBody, 1500)
   const postImages = useMemo(() => postDetail?.imageUrls ?? [], [postDetail?.imageUrls])
+
+  useEffect(() => {
+    setCommentDraftHydratedPostId(null)
+    commentDraftFingerprintRef.current = ''
+  }, [params.postId])
+
+  useEffect(() => {
+    if (commentDraft === undefined || commentDraftHydratedPostId === params.postId) {
+      return
+    }
+
+    setCommentBody(commentDraft?.body ?? '')
+    setCommentFiles([])
+    setCommentDraftError(null)
+    commentDraftFingerprintRef.current = buildCommentDraftFingerprint({
+      postId: params.postId,
+      body: commentDraft?.body ?? '',
+    })
+    setCommentDraftHydratedPostId(params.postId)
+  }, [commentDraft, commentDraftHydratedPostId, params.postId])
+
+  useEffect(() => {
+    if (!user || commentDraftHydratedPostId !== params.postId) {
+      return
+    }
+
+    if (postDetail?.status === 'archived') {
+      return
+    }
+
+    const snapshot = buildCommentDraftFingerprint({
+      postId: params.postId,
+      body: debouncedCommentBody,
+    })
+
+    if (snapshot === commentDraftFingerprintRef.current) {
+      return
+    }
+
+    if (debouncedCommentBody.trim().length === 0) {
+      void deleteCommentDraft({
+        actorWorkosUserId: user.id,
+        postId: params.postId as Id<'posts'>,
+      })
+        .then(() => {
+          commentDraftFingerprintRef.current = snapshot
+          setCommentDraftError(null)
+        })
+        .catch((error) => {
+          setCommentDraftError(error instanceof Error ? error.message : 'Failed to clear draft.')
+        })
+
+      return
+    }
+
+    void upsertCommentDraft({
+      actorWorkosUserId: user.id,
+      postId: params.postId as Id<'posts'>,
+      body: debouncedCommentBody,
+    })
+      .then(() => {
+        commentDraftFingerprintRef.current = snapshot
+        setCommentDraftError(null)
+      })
+      .catch((error) => {
+        setCommentDraftError(error instanceof Error ? error.message : 'Failed to save draft.')
+      })
+  }, [
+    commentDraftHydratedPostId,
+    debouncedCommentBody,
+    deleteCommentDraft,
+    params.postId,
+    postDetail?.status,
+    upsertCommentDraft,
+    user,
+  ])
 
   const beginPostEdit = () => {
     if (!postDetail) {
@@ -181,6 +279,30 @@ function PostDetailPage() {
     }
   }
 
+  const handleDiscardCommentDraft = async () => {
+    if (!user) {
+      return
+    }
+
+    try {
+      await deleteCommentDraft({
+        actorWorkosUserId: user.id,
+        postId: params.postId as Id<'posts'>,
+      })
+    } catch (error) {
+      setCommentDraftError(error instanceof Error ? error.message : 'Failed to discard draft.')
+      return
+    }
+
+    setCommentBody('')
+    setCommentFiles([])
+    setCommentDraftError(null)
+    commentDraftFingerprintRef.current = buildCommentDraftFingerprint({
+      postId: params.postId,
+      body: '',
+    })
+  }
+
   const handleCreateComment = async () => {
     if (!user || !postDetail) {
       return
@@ -209,8 +331,18 @@ function PostDetailPage() {
         imageStorageIds,
       })
 
+      await deleteCommentDraft({
+        actorWorkosUserId: user.id,
+        postId: postDetail.postId,
+      })
+
       setCommentBody('')
       setCommentFiles([])
+      setCommentDraftError(null)
+      commentDraftFingerprintRef.current = buildCommentDraftFingerprint({
+        postId: params.postId,
+        body: '',
+      })
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'Failed to create comment.')
     } finally {
@@ -403,7 +535,9 @@ function PostDetailPage() {
       <section className='tape-surface noir-reveal space-y-4 p-5'>
         <div>
           <h2 className='text-xl font-semibold text-foreground'>Discussion ({postDetail.commentCount})</h2>
-          <p className='mt-1 text-sm text-muted-foreground'>Team-only comments and screenshots.</p>
+          <p className='mt-1 text-sm text-muted-foreground'>
+            Team-only comments and screenshots. Drafts autosave every 1.5 seconds.
+          </p>
         </div>
 
         <section className='space-y-3 border-b border-border/45 pb-4'>
@@ -432,10 +566,20 @@ function PostDetailPage() {
           </div>
 
           {commentError ? <p className='text-sm text-destructive'>{commentError}</p> : null}
+          {commentDraftError ? <p className='text-sm text-destructive'>{commentDraftError}</p> : null}
 
-          <Button disabled={commentBusy || postDetail.status === 'archived'} onClick={handleCreateComment}>
-            {commentBusy ? 'Posting...' : 'Post comment'}
-          </Button>
+          <div className='flex flex-wrap items-center gap-2'>
+            <Button
+              variant='secondary'
+              disabled={postDetail.status === 'archived'}
+              onClick={handleDiscardCommentDraft}
+            >
+              Discard draft
+            </Button>
+            <Button disabled={commentBusy || postDetail.status === 'archived'} onClick={handleCreateComment}>
+              {commentBusy ? 'Posting...' : 'Post comment'}
+            </Button>
+          </div>
         </section>
 
         <section className='tape-list'>

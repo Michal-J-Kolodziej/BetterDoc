@@ -1,5 +1,25 @@
 # BetterDoc Change Log
 
+## 2026-02-15 (BD-203, BD-204: team templates + post/comment draft autosave)
+- Code paths changed:
+  - `convex/templates.ts`
+  - `convex/drafts.ts`
+  - `convex/model.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/convex/drafts.test.ts`
+  - `src/convex/membership-guards.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added team template APIs (`list/create/update/delete`) with team-membership enforcement so all team members can manage shared post templates.
+  - Added post and comment draft APIs (`upsert/get/delete`) with per-user scoping and default retention expiry behavior.
+  - Updated dashboard create-post dialog to apply templates, save/update/delete templates, autosave drafts every 1.5 seconds, restore drafts on reopen, and discard drafts on demand.
+  - Updated post detail discussion composer to autosave/restore/discard comment drafts and clear drafts after successful comment submit.
+  - Added tests covering membership guard usage and draft autosave lifecycle behavior, including cross-user draft isolation.
+
 ## 2026-02-14 (BD-201, BD-202: notification foundation + draft/template schema)
 - Code paths changed:
   - `convex/schema.ts`
