@@ -14,8 +14,24 @@ import {
 } from './auth'
 import { limits, normalizeText, postStatusValidator } from './model'
 import { buildPostSearchText } from './postSearch'
+import {
+  clampSimilarPostLimit,
+  rankSimilarPosts,
+  type SimilarPostCandidate,
+} from './postSimilarity'
 
 type CtxLike = Pick<QueryCtx, 'db' | 'storage'> | Pick<MutationCtx, 'db' | 'storage'>
+type DbLike = QueryCtx['db'] | MutationCtx['db']
+
+type TeamAccessDeps = {
+  requireUserByWorkosUserId: typeof requireUserByWorkosUserId
+  requireMembership: typeof requireMembership
+}
+
+const defaultTeamAccessDeps: TeamAccessDeps = {
+  requireUserByWorkosUserId,
+  requireMembership,
+}
 
 const postListItemValidator = v.object({
   postId: v.id('posts'),
@@ -79,6 +95,29 @@ const postDetailValidator = v.object({
     }),
   ),
 })
+
+const similarPostItemValidator = v.object({
+  postId: v.id('posts'),
+  teamId: v.id('teams'),
+  title: v.string(),
+  occurrenceWhere: v.string(),
+  occurrenceWhen: v.string(),
+  status: postStatusValidator,
+  updatedAt: v.number(),
+  score: v.number(),
+  reasons: v.array(v.string()),
+})
+
+export async function requireActorTeamMemberForPostSimilarity(
+  db: DbLike,
+  actorWorkosUserId: string,
+  teamId: Id<'teams'>,
+  deps: TeamAccessDeps = defaultTeamAccessDeps,
+): Promise<Doc<'users'>> {
+  const actor = await deps.requireUserByWorkosUserId(db, actorWorkosUserId)
+  await deps.requireMembership(db, teamId, actor._id)
+  return actor
+}
 
 function normalizeRequired(value: string, label: string, maxLength: number): string {
   const normalized = normalizeText(value)
@@ -578,6 +617,45 @@ export const listPosts = query({
     const hydrated = await Promise.all(sorted.map((post) => hydratePostListItem(ctx, post)))
 
     return hydrated.filter((item): item is NonNullable<typeof item> => Boolean(item))
+  },
+})
+
+export const findSimilar = query({
+  args: {
+    actorWorkosUserId: v.string(),
+    teamId: v.id('teams'),
+    title: v.optional(v.string()),
+    occurrenceWhere: v.optional(v.string()),
+    occurrenceWhen: v.optional(v.string()),
+    description: v.optional(v.string()),
+    excludePostId: v.optional(v.id('posts')),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(similarPostItemValidator),
+  handler: async (ctx, args) => {
+    await requireActorTeamMemberForPostSimilarity(ctx.db, args.actorWorkosUserId, args.teamId)
+
+    const limit = clampSimilarPostLimit(args.limit)
+    const candidateFetchLimit = Math.max(limit * 30, 200)
+
+    const candidates: SimilarPostCandidate[] = await ctx.db
+      .query('posts')
+      .withIndex('by_team_last_activity', (index) => index.eq('teamId', args.teamId))
+      .order('desc')
+      .take(candidateFetchLimit)
+
+    return rankSimilarPosts({
+      draft: {
+        title: args.title,
+        occurrenceWhere: args.occurrenceWhere,
+        occurrenceWhen: args.occurrenceWhen,
+        description: args.description,
+      },
+      candidates,
+      now: Date.now(),
+      limit,
+      excludePostId: args.excludePostId,
+    })
   },
 })
 

@@ -22,6 +22,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { parseDashboardSearch, stringifySearchQuery } from '@/lib/search'
+import {
+  buildSimilarComposerInput,
+  shouldShowPossibleDuplicateWarning,
+  shouldShowSimilarIncidentsPanel,
+} from '@/lib/similar-incidents'
 import { uploadImageFiles } from '@/lib/uploads'
 import { userDisplayName } from '@/utils/user-display'
 import { api } from '../../convex/_generated/api.js'
@@ -60,6 +65,10 @@ export const Route = createFileRoute('/dashboard')({
 
 function formatDate(value: number): string {
   return new Date(value).toLocaleString()
+}
+
+function formatMatchScore(value: number): string {
+  return `${String(Math.round(value * 100))}%`
 }
 
 function isCreateDraftEmpty(values: {
@@ -210,6 +219,35 @@ function DashboardPage() {
   const debouncedCreateWhere = useDebouncedValue(createWhere, 1500)
   const debouncedCreateWhen = useDebouncedValue(createWhen, 1500)
   const debouncedCreateDescription = useDebouncedValue(createDescription, 1500)
+  const debouncedSimilarTitle = useDebouncedValue(createTitle, 350)
+  const debouncedSimilarWhere = useDebouncedValue(createWhere, 350)
+  const debouncedSimilarWhen = useDebouncedValue(createWhen, 350)
+  const debouncedSimilarDescription = useDebouncedValue(createDescription, 350)
+
+  const createSimilarityInput = useMemo(
+    () => ({
+      title: createTitle,
+      occurrenceWhere: createWhere,
+      occurrenceWhen: createWhen,
+      description: createDescription,
+    }),
+    [createDescription, createTitle, createWhen, createWhere],
+  )
+  const shouldShowSimilarPanel = createDialogOpen && shouldShowSimilarIncidentsPanel(createSimilarityInput)
+
+  const similarPosts = useQuery(
+    api.posts.findSimilar,
+    user && createDialogOpen && createTeamId && shouldShowSimilarPanel
+      ? {
+          actorWorkosUserId: user.id,
+          teamId: createTeamId as Id<'teams'>,
+          title: debouncedSimilarTitle,
+          occurrenceWhere: debouncedSimilarWhere,
+          occurrenceWhen: debouncedSimilarWhen,
+          description: debouncedSimilarDescription,
+        }
+      : 'skip',
+  )
 
   useEffect(() => {
     if (!createDialogOpen || !createTeamId) {
@@ -573,6 +611,8 @@ function DashboardPage() {
   const hasTeams = teams.length > 0
   const currentUserLabel = userDisplayName(user)
   const templates = teamTemplates ?? []
+  const similarInputPreview = buildSimilarComposerInput(createSimilarityInput)
+  const hasPossibleDuplicateWarning = shouldShowPossibleDuplicateWarning(similarPosts?.[0]?.score)
 
   return (
     <AppSidebarShell
@@ -738,6 +778,59 @@ function DashboardPage() {
                     onChange={(event) => setCreateDescription(event.target.value)}
                   />
                 </div>
+
+                {shouldShowSimilarPanel ? (
+                  <section className='grid gap-2 rounded-sm border border-border/60 bg-muted/20 px-3 py-3'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <p className='text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
+                        Similar incidents
+                      </p>
+                      <p className='text-xs text-muted-foreground'>
+                        Input length {String(similarInputPreview.length)}
+                      </p>
+                      {hasPossibleDuplicateWarning ? (
+                        <Badge variant='destructive' className='ml-auto'>
+                          Possible duplicate
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    {similarPosts === undefined ? (
+                      <p className='text-sm text-muted-foreground'>Checking for similar incidents...</p>
+                    ) : similarPosts.length === 0 ? (
+                      <p className='text-sm text-muted-foreground'>
+                        No close matches found in this team yet.
+                      </p>
+                    ) : (
+                      <div className='tape-list'>
+                        {similarPosts.map((similar) => (
+                          <article key={similar.postId} className='tape-list-row grid gap-1 py-2'>
+                            <div className='flex flex-wrap items-center gap-2'>
+                              <Link
+                                className='text-sm font-semibold text-foreground transition-colors hover:text-primary'
+                                params={{ postId: similar.postId }}
+                                to='/posts/$postId'
+                                onClick={() => setCreateDialogOpen(false)}
+                              >
+                                {similar.title}
+                              </Link>
+                              <Badge variant={similar.status === 'active' ? 'default' : 'secondary'}>
+                                {similar.status}
+                              </Badge>
+                              <span className='ml-auto text-xs text-muted-foreground'>
+                                Match {formatMatchScore(similar.score)}
+                              </span>
+                            </div>
+                            <p className='text-xs text-muted-foreground'>
+                              {similar.occurrenceWhere} | {similar.occurrenceWhen}
+                            </p>
+                            <p className='text-xs text-muted-foreground'>{similar.reasons.join(' | ')}</p>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                ) : null}
 
                 <div className='grid gap-2'>
                   <Label htmlFor='create-files'>Attachments</Label>

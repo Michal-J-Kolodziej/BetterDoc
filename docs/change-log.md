@@ -1,5 +1,25 @@
 # BetterDoc Change Log
 
+## 2026-02-15 (BD-205, BD-206: similar incidents API + composer duplicate signals)
+- Code paths changed:
+  - `convex/posts.ts`
+  - `convex/postSimilarity.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/routes/dashboard.tsx`
+  - `src/lib/similar-incidents.ts`
+  - `src/convex/post-similarity.test.ts`
+  - `src/lib/similar-incidents.test.ts`
+  - `src/convex/membership-guards.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added `posts.findSimilar` with deterministic ranking, same-team membership enforcement, `excludePostId` support, and limit clamping (`default 5`, `max 10`).
+  - Implemented similarity scoring as token-overlap (Jaccard-like) plus bounded recency boost, returning `score` and human-readable `reasons`.
+  - Updated dashboard create-post composer with a 350ms debounced similar-incidents panel that appears only when combined input reaches 20 characters.
+  - Added a non-blocking `Possible duplicate` warning when the top match score is `>= 0.65` and linked suggestions to post detail routes.
+  - Added unit tests for deterministic ranking, membership enforcement, and composer threshold/warning behavior.
+
 ## 2026-02-15 (BD-203, BD-204: team templates + post/comment draft autosave)
 - Code paths changed:
   - `convex/templates.ts`

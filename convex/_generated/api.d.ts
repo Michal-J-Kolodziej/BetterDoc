@@ -17,6 +17,7 @@ import type * as http from "../http.js";
 import type * as model from "../model.js";
 import type * as notifications from "../notifications.js";
 import type * as postSearch from "../postSearch.js";
+import type * as postSimilarity from "../postSimilarity.js";
 import type * as posts from "../posts.js";
 import type * as teams from "../teams.js";
 import type * as templates from "../templates.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   model: typeof model;
   notifications: typeof notifications;
   postSearch: typeof postSearch;
+  postSimilarity: typeof postSimilarity;
   posts: typeof posts;
   teams: typeof teams;
   templates: typeof templates;

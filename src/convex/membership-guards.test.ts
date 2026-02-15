@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Doc, Id, TableNames } from '../../convex/_generated/dataModel'
 import type { QueryCtx } from '../../convex/_generated/server'
 import { requireActorPostMember } from '../../convex/drafts'
+import { requireActorTeamMemberForPostSimilarity } from '../../convex/posts'
 import { requireActorTeamMember } from '../../convex/templates'
 
 function asId<TableName extends TableNames>(value: string): Id<TableName> {
@@ -64,6 +65,31 @@ describe('membership guard helpers', () => {
 
     expect(result.actor._id).toBe(actor._id)
     expect(result.post._id).toBe(postId)
+    expect(requireUserByWorkosUserId).toHaveBeenCalledWith(db, 'workos-user-1')
+    expect(requireMembership).toHaveBeenCalledWith(db, teamId, actor._id)
+  })
+
+  it('enforces team membership before similar post lookups', async () => {
+    const teamId = asId<'teams'>('team-1')
+    const actor = {
+      _id: asId<'users'>('user-1'),
+    } as unknown as Doc<'users'>
+    const membership = {
+      _id: asId<'teamMemberships'>('membership-1'),
+      teamId,
+      userId: actor._id,
+    } as unknown as Doc<'teamMemberships'>
+
+    const requireUserByWorkosUserId = vi.fn(async () => actor)
+    const requireMembership = vi.fn(async () => membership)
+    const db = {} as unknown as QueryCtx['db']
+
+    const result = await requireActorTeamMemberForPostSimilarity(db, 'workos-user-1', teamId, {
+      requireUserByWorkosUserId,
+      requireMembership,
+    })
+
+    expect(result._id).toBe(actor._id)
     expect(requireUserByWorkosUserId).toHaveBeenCalledWith(db, 'workos-user-1')
     expect(requireMembership).toHaveBeenCalledWith(db, teamId, actor._id)
   })

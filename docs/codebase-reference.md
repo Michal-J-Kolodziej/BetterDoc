@@ -35,6 +35,11 @@ Last updated: 2026-02-15
   - Inline status chips + inline team selector in main content controls.
   - Create-post dialog includes team template picker and template save/update/delete controls.
   - Create-post draft autosaves every 1.5 seconds and supports restore/discard per user+team.
+  - Create-post dialog includes a non-blocking similar-incidents panel:
+    - Visible once combined compose input reaches 20 characters.
+    - Similar lookup is debounced by 350ms.
+    - Shows `Possible duplicate` when top score is `>= 0.65`.
+    - Provides deep links to `/posts/$postId`.
   - Successful post creation clears the associated create-post draft.
   - Main feed now renders as divider-based tape rows (instead of stacked cards) for higher scan density.
 - `src/routes/dashboard_.v1.tsx`
@@ -97,6 +102,7 @@ Last updated: 2026-02-15
 - Dashboard redesign review variants (shared module): `src/features/dashboard-variants/page.tsx`
 - Dashboard search parser/stringifier: `src/lib/search.ts`
 - Debounce hook: `src/lib/use-debounced-value.ts`
+- Similar incidents composer helpers: `src/lib/similar-incidents.ts`
 - Convex upload client flow: `src/lib/uploads.ts`
 - User display-name fallback logic: `src/utils/user-display.ts`
 
@@ -112,6 +118,7 @@ Last updated: 2026-02-15
   - `convex/users.ts`
   - `convex/teams.ts`
   - `convex/posts.ts`
+  - `convex/postSimilarity.ts`
   - `convex/comments.ts`
   - `convex/notifications.ts`
   - `convex/files.ts`
@@ -133,7 +140,7 @@ Last updated: 2026-02-15
 ### Core API Surface
 - `users.getMe`, `users.upsertMe`, `users.updateProfile`
 - `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.inviteByIID`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
-- `posts.createPost`, `posts.updatePost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.getPostDetail`
+- `posts.createPost`, `posts.updatePost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.findSimilar`, `posts.getPostDetail`
 - `comments.createComment`, `comments.updateComment`, `comments.deleteComment`
 - `templates.listTeamTemplates`, `templates.createTemplate`, `templates.updateTemplate`, `templates.deleteTemplate`
 - `drafts.getPostDraft`, `drafts.upsertPostDraft`, `drafts.deletePostDraft`, `drafts.getCommentDraft`, `drafts.upsertCommentDraft`, `drafts.deleteCommentDraft`
@@ -144,6 +151,15 @@ Last updated: 2026-02-15
 - `teams.inviteByIID` now enqueues `invite_received` notifications for invite recipients.
 - `comments.createComment` now enqueues `comment_on_post` notifications to the post creator when the commenter is a different user.
 - Notification enqueue is deduplicated by `dedupeKey` (`notifications.by_dedupe_key` index) to keep retried events single-write.
+
+### Similar Incident Notes
+- `posts.findSimilar` is team-scoped and enforces same-team membership before reading candidate posts.
+- Ranking combines token overlap (Jaccard-like over normalized `[title, where, when, description]` tokens) and a bounded recency boost.
+- Ranking order is deterministic using tie-breaks: `score`, `tokenOverlap`, `recencyBoost`, `lastActivityAt`, `createdAt`, then `postId`.
+- API supports `excludePostId`; default `limit` is `5` and hard max is `10`.
+- Performance baseline:
+  - Query reads recent team posts via `posts.by_team_last_activity` and scores up to `max(limit * 30, 200)` candidates.
+  - Expected runtime is linear in candidate count (`O(n)` scoring + sort), suitable for typical team datasets in the low-thousands where recent-window matching is sufficient for compose-time suggestions.
 
 ## Removed Legacy Areas
 The following legacy areas are removed from active code paths:
