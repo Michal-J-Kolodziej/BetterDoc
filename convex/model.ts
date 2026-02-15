@@ -59,8 +59,10 @@ export const limits = {
   maxPostImages: 6,
   maxCommentLength: 2000,
   maxCommentImages: 4,
+  maxEmailLength: 320,
   maxUploadSizeBytes: 10 * 1024 * 1024,
   inviteDurationMs: 14 * 24 * 60 * 60 * 1000,
+  inviteLinkMaxUses: 25,
   draftRetentionMs: 30 * 24 * 60 * 60 * 1000,
 } as const
 

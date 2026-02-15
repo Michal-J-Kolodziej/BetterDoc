@@ -66,7 +66,10 @@ Last updated: 2026-02-15
   - Uses shared protected desktop shell with persistent left nav.
   - Team management with split create/invite + member management surfaces.
   - Invite and member areas are rendered as divider lists to reduce border-heavy visual noise.
-  - IID invites, role assignment, member removal, invite responses.
+  - IID/email/link invite creation, copyable join URLs, active-link revoke list, role assignment, member removal, invite responses.
+- `src/routes/join.$token.tsx`
+  - Protected token acceptance flow for `/join/$token` invite URLs.
+  - Calls `teams.acceptInviteToken` and renders accepted/already-accepted outcomes.
 - `src/routes/profile.tsx`
   - Uses shared protected desktop shell with persistent left nav.
   - Profile editor with identity panel, avatar upload, and IID copy.
@@ -122,6 +125,7 @@ Last updated: 2026-02-15
 - Authorization helpers: `convex/auth.ts`
 - Post search-text builder: `convex/postSearch.ts`
 - Domain function modules:
+  - `convex/inviteTokens.ts`
   - `convex/drafts.ts`
   - `convex/templates.ts`
   - `convex/users.ts`
@@ -140,6 +144,8 @@ Last updated: 2026-02-15
 - `teams`
 - `teamMemberships`
 - `teamInvites`
+- `teamEmailInvites`
+- `teamInviteLinks`
 - `posts`
 - `postTemplates`
 - `postDrafts`
@@ -149,7 +155,7 @@ Last updated: 2026-02-15
 
 ### Core API Surface
 - `users.getMe`, `users.upsertMe`, `users.updateProfile`
-- `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.searchTeamMembers`, `teams.inviteByIID`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
+- `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.searchTeamMembers`, `teams.inviteByIID`, `teams.inviteByEmail`, `teams.createInviteLink`, `teams.listTeamInviteLinks`, `teams.acceptInviteToken`, `teams.revokeInviteLink`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
 - `posts.createPost`, `posts.updatePost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.findSimilar`, `posts.getPostDetail`
 - `comments.createComment`, `comments.updateComment`, `comments.deleteComment`
 - `templates.listTeamTemplates`, `templates.createTemplate`, `templates.updateTemplate`, `templates.deleteTemplate`
@@ -165,6 +171,13 @@ Last updated: 2026-02-15
 - Mention notifications skip self-notifications and ignore users who are not current members of the referenced team.
 - Mention dedupe keys are scoped to entity+recipient (`mention_in_post:${postId}:${recipientId}`, `mention_in_comment:${commentId}:${recipientId}`).
 - Notification enqueue is deduplicated by `dedupeKey` (`notifications.by_dedupe_key` index) to keep retried events single-write.
+
+### Team Invite Notes
+- IID invites (`teamInvites`) remain unchanged for internal IID-based invites and inbox notifications.
+- Email invites (`teamEmailInvites`) are tokenized and email-bound: acceptance requires logged-in user email match.
+- Link invites (`teamInviteLinks`) enforce default `14-day` expiry and default `25` max uses.
+- Invite token storage is hash-only (`SHA-256` via `tokenHash` indexes); plain tokens are only returned at creation time.
+- Link acceptance is replay-safe for the same user (`usedByUserIds`), so repeated token submissions are idempotent and do not consume extra uses.
 
 ### Similar Incident Notes
 - `posts.findSimilar` is team-scoped and enforces same-team membership before reading candidate posts.

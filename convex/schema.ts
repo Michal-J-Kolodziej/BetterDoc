@@ -13,12 +13,14 @@ export default defineSchema({
     workosUserId: v.string(),
     iid: v.string(),
     name: v.string(),
+    email: v.optional(v.string()),
     avatarStorageId: v.optional(v.id('_storage')),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index('by_workos_user_id', ['workosUserId'])
-    .index('by_iid', ['iid']),
+    .index('by_iid', ['iid'])
+    .index('by_email', ['email']),
 
   teams: defineTable({
     name: v.string(),
@@ -54,6 +56,38 @@ export default defineSchema({
     .index('by_invited_user_status', ['invitedUserId', 'status'])
     .index('by_team_status', ['teamId', 'status'])
     .index('by_team_invited_user', ['teamId', 'invitedUserId']),
+
+  teamEmailInvites: defineTable({
+    teamId: v.id('teams'),
+    invitedByUserId: v.id('users'),
+    invitedEmail: v.string(),
+    tokenHash: v.string(),
+    role: teamRoleValidator,
+    status: inviteStatusValidator,
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+    expiresAt: v.number(),
+    acceptedByUserId: v.optional(v.id('users')),
+  })
+    .index('by_token_hash', ['tokenHash'])
+    .index('by_team_status', ['teamId', 'status'])
+    .index('by_team_email_status', ['teamId', 'invitedEmail', 'status']),
+
+  teamInviteLinks: defineTable({
+    teamId: v.id('teams'),
+    invitedByUserId: v.id('users'),
+    tokenHash: v.string(),
+    role: teamRoleValidator,
+    maxUses: v.number(),
+    useCount: v.number(),
+    usedByUserIds: v.array(v.id('users')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    expiresAt: v.number(),
+    revokedAt: v.optional(v.number()),
+  })
+    .index('by_token_hash', ['tokenHash'])
+    .index('by_team_created_at', ['teamId', 'createdAt']),
 
   posts: defineTable({
     teamId: v.id('teams'),

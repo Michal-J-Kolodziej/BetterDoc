@@ -1,6 +1,6 @@
 # BetterDoc Security And Access
 
-Last updated: 2026-02-14
+Last updated: 2026-02-15
 
 ## Current Security Model
 - Authentication: WorkOS AuthKit SSO.
@@ -29,7 +29,7 @@ Last updated: 2026-02-14
 2. App redirects to WorkOS sign-in.
 3. WorkOS redirects to `/api/auth/callback`.
 4. AuthKit stores encrypted session cookie.
-5. Protected routes (`/dashboard`, `/posts/$postId`, `/teams`, `/profile`) verify `context.auth()`.
+5. Protected routes (`/dashboard`, `/posts/$postId`, `/teams`, `/profile`, `/inbox`, `/join/$token`) verify `context.auth()`.
 6. `/logout` clears session and signs out through WorkOS.
 
 ## Team Role Model (V2)
@@ -51,6 +51,7 @@ Permission summary:
 - Team management:
   - invites/role assignment/member removal by `teamleader` and `admin`
   - `teamleader` cannot assign or manage `admin`
+  - invite token acceptance is self-service via `/join/$token` with server-side checks
 - Comment edit:
   - comment author only
 - Comment delete:
@@ -64,6 +65,25 @@ Permission summary:
   - `convex/posts.ts`
   - `convex/comments.ts`
 - Frontend hides actions opportunistically, but server-side Convex checks are authoritative.
+
+## Team Invite Security
+- Contract surface:
+  - `teams.inviteByIID` (existing internal IID invite flow)
+  - `teams.inviteByEmail`
+  - `teams.createInviteLink`
+  - `teams.acceptInviteToken`
+  - `teams.revokeInviteLink`
+  - `teams.listTeamInviteLinks`
+- Storage:
+  - `teamInviteLinks.tokenHash` and `teamEmailInvites.tokenHash` store only `SHA-256` hashes of invite tokens.
+  - Plain invite tokens are returned only in create responses and never persisted.
+- Acceptance controls:
+  - Email invite acceptance requires `users.email` match against `teamEmailInvites.invitedEmail`.
+  - Link invite acceptance enforces revoked, expiry, and max-use checks.
+  - Link replay by the same user is idempotent (`usedByUserIds` prevents duplicate consumption).
+- Defaults:
+  - Invite expiry: 14 days.
+  - Link max uses: 25.
 
 ## File Upload Security
 - Upload URL issuance: `files.generateUploadUrl`.

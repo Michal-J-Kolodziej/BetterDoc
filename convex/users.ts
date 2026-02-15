@@ -24,6 +24,7 @@ type ProfileView = {
   workosUserId: string
   iid: string
   name: string
+  email: string | null
   avatarStorageId: Id<'_storage'> | null
   avatarUrl: string | null
   teams: TeamSummary[]
@@ -34,6 +35,7 @@ const profileViewValidator = v.object({
   workosUserId: v.string(),
   iid: v.string(),
   name: v.string(),
+  email: v.union(v.string(), v.null()),
   avatarStorageId: v.union(v.id('_storage'), v.null()),
   avatarUrl: v.union(v.string(), v.null()),
   teams: v.array(
@@ -57,6 +59,30 @@ function normalizeName(name: string): string {
     throw new ConvexError(
       `Name must be ${String(limits.maxNameLength)} characters or fewer.`,
     )
+  }
+
+  return normalized
+}
+
+function normalizeOptionalEmail(email: string | undefined): string | undefined {
+  if (email === undefined) {
+    return undefined
+  }
+
+  const normalized = normalizeText(email).toLowerCase()
+
+  if (!normalized) {
+    return undefined
+  }
+
+  if (normalized.length > limits.maxEmailLength) {
+    throw new ConvexError(
+      `Email must be ${String(limits.maxEmailLength)} characters or fewer.`,
+    )
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new ConvexError('Enter a valid email address.')
   }
 
   return normalized
@@ -134,6 +160,7 @@ async function buildProfileView(
     workosUserId: user.workosUserId,
     iid: user.iid,
     name: user.name,
+    email: user.email ?? null,
     avatarStorageId: user.avatarStorageId ?? null,
     avatarUrl,
     teams,
@@ -160,10 +187,12 @@ export const upsertMe = mutation({
   args: {
     workosUserId: v.string(),
     name: v.string(),
+    email: v.optional(v.string()),
   },
   returns: profileViewValidator,
   handler: async (ctx, args) => {
     const normalizedName = normalizeName(args.name)
+    const normalizedEmail = normalizeOptionalEmail(args.email)
     const now = Date.now()
     const existing = await getUserByWorkosUserId(ctx.db, args.workosUserId)
 
@@ -172,11 +201,25 @@ export const upsertMe = mutation({
     if (existing) {
       userId = existing._id
 
-      if (existing.name !== normalizedName) {
-        await ctx.db.patch(existing._id, {
+      const shouldPatchName = existing.name !== normalizedName
+      const shouldPatchEmail =
+        normalizedEmail !== undefined && normalizedEmail !== (existing.email ?? undefined)
+
+      if (shouldPatchName || shouldPatchEmail) {
+        const patch: {
+          name: string
+          updatedAt: number
+          email?: string
+        } = {
           name: normalizedName,
           updatedAt: now,
-        })
+        }
+
+        if (shouldPatchEmail) {
+          patch.email = normalizedEmail
+        }
+
+        await ctx.db.patch(existing._id, patch)
       }
     } else {
       const iid = await generateUniqueIid(ctx.db)
@@ -184,6 +227,7 @@ export const upsertMe = mutation({
         workosUserId: args.workosUserId,
         iid,
         name: normalizedName,
+        email: normalizedEmail,
         createdAt: now,
         updatedAt: now,
       })

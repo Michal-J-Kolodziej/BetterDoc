@@ -1,6 +1,6 @@
 import { ConvexError, v } from 'convex/values'
 
-import type { Doc } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import {
   mutation,
   query,
@@ -23,6 +23,12 @@ import {
   slugify,
   teamRoleValidator,
 } from './model'
+import {
+  createTeamInviteToken,
+  hashTeamInviteToken,
+  normalizeTeamInviteToken,
+  parseTeamInviteToken,
+} from './inviteTokens'
 import {
   buildInviteReceivedDedupeKey,
   enqueueNotification,
@@ -67,6 +73,215 @@ const inviteViewValidator = v.object({
   respondedAt: v.union(v.number(), v.null()),
   expiresAt: v.number(),
 })
+
+const inviteTokenCreateResultValidator = v.object({
+  method: v.union(v.literal('email'), v.literal('link')),
+  inviteToken: v.string(),
+  joinPath: v.string(),
+  teamId: v.id('teams'),
+  teamName: v.string(),
+  teamSlug: v.string(),
+  role: teamRoleValidator,
+  expiresAt: v.number(),
+  maxUses: v.union(v.number(), v.null()),
+  invitedEmail: v.union(v.string(), v.null()),
+})
+
+const inviteLinkStatusValidator = v.union(
+  v.literal('active'),
+  v.literal('expired'),
+  v.literal('exhausted'),
+  v.literal('revoked'),
+)
+
+const inviteLinkViewValidator = v.object({
+  inviteLinkId: v.id('teamInviteLinks'),
+  teamId: v.id('teams'),
+  createdByUserId: v.id('users'),
+  createdByName: v.string(),
+  createdByIid: v.string(),
+  role: teamRoleValidator,
+  status: inviteLinkStatusValidator,
+  maxUses: v.number(),
+  useCount: v.number(),
+  remainingUses: v.number(),
+  createdAt: v.number(),
+  expiresAt: v.number(),
+  revokedAt: v.union(v.number(), v.null()),
+})
+
+const acceptInviteTokenResultValidator = v.object({
+  method: v.union(v.literal('email'), v.literal('link')),
+  result: v.union(v.literal('accepted'), v.literal('already_accepted')),
+  teamId: v.id('teams'),
+  teamName: v.string(),
+  teamSlug: v.string(),
+  role: teamRoleValidator,
+  expiresAt: v.number(),
+  maxUses: v.union(v.number(), v.null()),
+  remainingUses: v.union(v.number(), v.null()),
+})
+
+type InviteLinkStatus = 'active' | 'expired' | 'exhausted' | 'revoked'
+type InviteLinkAcceptanceReason = 'ok' | 'already_used' | 'revoked' | 'expired' | 'max_uses'
+type EmailInviteAcceptanceReason = 'ok' | 'missing_email' | 'email_mismatch'
+
+function normalizeInviteEmail(email: string): string {
+  const normalized = normalizeText(email).toLowerCase()
+
+  if (!normalized) {
+    throw new ConvexError('Email is required.')
+  }
+
+  if (normalized.length > limits.maxEmailLength) {
+    throw new ConvexError(
+      `Email must be ${String(limits.maxEmailLength)} characters or fewer.`,
+    )
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new ConvexError('Enter a valid email address.')
+  }
+
+  return normalized
+}
+
+function inviteJoinPath(token: string): string {
+  return `/join/${encodeURIComponent(token)}`
+}
+
+async function buildTeamInviteMeta(
+  ctx: CtxLike,
+  teamId: Id<'teams'>,
+) {
+  const team = await ctx.db.get(teamId)
+
+  if (!team) {
+    throw new ConvexError('Team not found.')
+  }
+
+  return {
+    teamId: team._id,
+    teamName: team.name,
+    teamSlug: team.slug,
+  }
+}
+
+export function resolveInviteLinkStatus(
+  inviteLink: Pick<Doc<'teamInviteLinks'>, 'expiresAt' | 'useCount' | 'maxUses' | 'revokedAt'>,
+  now: number,
+): InviteLinkStatus {
+  if (typeof inviteLink.revokedAt === 'number') {
+    return 'revoked'
+  }
+
+  if (inviteLink.expiresAt <= now) {
+    return 'expired'
+  }
+
+  if (inviteLink.useCount >= inviteLink.maxUses) {
+    return 'exhausted'
+  }
+
+  return 'active'
+}
+
+export function evaluateInviteLinkAcceptance(
+  inviteLink: Pick<Doc<'teamInviteLinks'>, 'expiresAt' | 'useCount' | 'maxUses' | 'revokedAt' | 'usedByUserIds'>,
+  actorUserId: Id<'users'>,
+  now: number,
+): InviteLinkAcceptanceReason {
+  const status = resolveInviteLinkStatus(inviteLink, now)
+
+  if (status === 'revoked') {
+    return 'revoked'
+  }
+
+  if (status === 'expired') {
+    return 'expired'
+  }
+
+  if (inviteLink.usedByUserIds.includes(actorUserId)) {
+    return 'already_used'
+  }
+
+  if (status === 'exhausted') {
+    return 'max_uses'
+  }
+
+  return 'ok'
+}
+
+export function evaluateEmailInviteAcceptance(
+  invitedEmail: string,
+  actorEmail: string | undefined,
+): EmailInviteAcceptanceReason {
+  if (!actorEmail) {
+    return 'missing_email'
+  }
+
+  if (normalizeInviteEmail(actorEmail) !== normalizeInviteEmail(invitedEmail)) {
+    return 'email_mismatch'
+  }
+
+  return 'ok'
+}
+
+async function buildInviteTokenCreateResult(
+  ctx: CtxLike,
+  args: {
+    method: 'email' | 'link'
+    token: string
+    teamId: Id<'teams'>
+    role: Doc<'teamMemberships'>['role']
+    expiresAt: number
+    maxUses: number | null
+    invitedEmail: string | null
+  },
+) {
+  const team = await buildTeamInviteMeta(ctx, args.teamId)
+
+  return {
+    method: args.method,
+    inviteToken: args.token,
+    joinPath: inviteJoinPath(args.token),
+    teamId: team.teamId,
+    teamName: team.teamName,
+    teamSlug: team.teamSlug,
+    role: args.role,
+    expiresAt: args.expiresAt,
+    maxUses: args.maxUses,
+    invitedEmail: args.invitedEmail,
+  }
+}
+
+async function buildInviteLinkView(
+  ctx: CtxLike,
+  inviteLink: Doc<'teamInviteLinks'>,
+  now: number,
+) {
+  const inviter = await ctx.db.get(inviteLink.invitedByUserId)
+
+  if (!inviter) {
+    throw new ConvexError('Invite link references a missing user.')
+  }
+
+  return {
+    inviteLinkId: inviteLink._id,
+    teamId: inviteLink.teamId,
+    createdByUserId: inviter._id,
+    createdByName: inviter.name,
+    createdByIid: inviter.iid,
+    role: inviteLink.role,
+    status: resolveInviteLinkStatus(inviteLink, now),
+    maxUses: inviteLink.maxUses,
+    useCount: inviteLink.useCount,
+    remainingUses: Math.max(0, inviteLink.maxUses - inviteLink.useCount),
+    createdAt: inviteLink.createdAt,
+    expiresAt: inviteLink.expiresAt,
+    revokedAt: inviteLink.revokedAt ?? null,
+  }
+}
 
 function normalizeTeamName(value: string): string {
   const normalized = normalizeText(value)
@@ -407,6 +622,401 @@ export const inviteByIID = mutation({
     })
 
     return buildInviteView(ctx, invite)
+  },
+})
+
+export const inviteByEmail = mutation({
+  args: {
+    actorWorkosUserId: v.string(),
+    teamId: v.id('teams'),
+    email: v.string(),
+    role: teamRoleValidator,
+  },
+  returns: inviteTokenCreateResultValidator,
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    const actorMembership = await requireMembership(ctx.db, args.teamId, actor._id)
+
+    if (!isManagerRole(actorMembership.role)) {
+      throw new ConvexError('Only team leaders and admins can invite users.')
+    }
+
+    if (!canAssignRole(actorMembership.role, args.role)) {
+      throw new ConvexError('You cannot assign that role.')
+    }
+
+    const invitedEmail = normalizeInviteEmail(args.email)
+    const usersWithEmail = await ctx.db
+      .query('users')
+      .withIndex('by_email', (query) => query.eq('email', invitedEmail))
+      .collect()
+
+    for (const user of usersWithEmail) {
+      const membership = await getMembership(ctx.db, args.teamId, user._id)
+
+      if (membership) {
+        throw new ConvexError('A user with this email is already a team member.')
+      }
+    }
+
+    const now = Date.now()
+    const token = createTeamInviteToken('email')
+    const tokenHash = await hashTeamInviteToken(token)
+
+    const pendingInvites = await ctx.db
+      .query('teamEmailInvites')
+      .withIndex('by_team_email_status', (query) =>
+        query.eq('teamId', args.teamId).eq('invitedEmail', invitedEmail).eq('status', 'pending'),
+      )
+      .collect()
+
+    for (const pendingInvite of pendingInvites) {
+      if (pendingInvite.expiresAt <= now) {
+        await ctx.db.patch(pendingInvite._id, {
+          status: 'revoked',
+          respondedAt: now,
+        })
+      }
+    }
+
+    const activePending = pendingInvites.find((pendingInvite) => pendingInvite.expiresAt > now)
+
+    if (activePending) {
+      await ctx.db.patch(activePending._id, {
+        invitedByUserId: actor._id,
+        role: args.role,
+        tokenHash,
+        expiresAt: now + limits.inviteDurationMs,
+      })
+    } else {
+      await ctx.db.insert('teamEmailInvites', {
+        teamId: args.teamId,
+        invitedByUserId: actor._id,
+        invitedEmail,
+        tokenHash,
+        role: args.role,
+        status: 'pending',
+        createdAt: now,
+        expiresAt: now + limits.inviteDurationMs,
+      })
+    }
+
+    return buildInviteTokenCreateResult(ctx, {
+      method: 'email',
+      token,
+      teamId: args.teamId,
+      role: args.role,
+      expiresAt: now + limits.inviteDurationMs,
+      maxUses: null,
+      invitedEmail,
+    })
+  },
+})
+
+export const createInviteLink = mutation({
+  args: {
+    actorWorkosUserId: v.string(),
+    teamId: v.id('teams'),
+    role: teamRoleValidator,
+    maxUses: v.optional(v.number()),
+  },
+  returns: inviteTokenCreateResultValidator,
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    const actorMembership = await requireMembership(ctx.db, args.teamId, actor._id)
+
+    if (!isManagerRole(actorMembership.role)) {
+      throw new ConvexError('Only team leaders and admins can create invite links.')
+    }
+
+    if (!canAssignRole(actorMembership.role, args.role)) {
+      throw new ConvexError('You cannot assign that role.')
+    }
+
+    const requestedMaxUses =
+      args.maxUses === undefined ? limits.inviteLinkMaxUses : Math.trunc(args.maxUses)
+    const maxUses = Math.min(Math.max(requestedMaxUses, 1), 250)
+    const now = Date.now()
+    const token = createTeamInviteToken('link')
+    const tokenHash = await hashTeamInviteToken(token)
+
+    await ctx.db.insert('teamInviteLinks', {
+      teamId: args.teamId,
+      invitedByUserId: actor._id,
+      tokenHash,
+      role: args.role,
+      maxUses,
+      useCount: 0,
+      usedByUserIds: [],
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: now + limits.inviteDurationMs,
+    })
+
+    return buildInviteTokenCreateResult(ctx, {
+      method: 'link',
+      token,
+      teamId: args.teamId,
+      role: args.role,
+      expiresAt: now + limits.inviteDurationMs,
+      maxUses,
+      invitedEmail: null,
+    })
+  },
+})
+
+export const listTeamInviteLinks = query({
+  args: {
+    actorWorkosUserId: v.string(),
+    teamId: v.id('teams'),
+    includeInactive: v.optional(v.boolean()),
+  },
+  returns: v.array(inviteLinkViewValidator),
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    const actorMembership = await requireMembership(ctx.db, args.teamId, actor._id)
+
+    if (!isManagerRole(actorMembership.role)) {
+      throw new ConvexError('Only team leaders and admins can view invite links.')
+    }
+
+    const now = Date.now()
+    const links = await ctx.db
+      .query('teamInviteLinks')
+      .withIndex('by_team_created_at', (query) => query.eq('teamId', args.teamId))
+      .collect()
+
+    const views = await Promise.all(
+      links.map((inviteLink) => buildInviteLinkView(ctx, inviteLink, now)),
+    )
+
+    const filtered = args.includeInactive
+      ? views
+      : views.filter((inviteLink) => inviteLink.status === 'active')
+
+    return filtered.sort((left, right) => right.createdAt - left.createdAt)
+  },
+})
+
+export const revokeInviteLink = mutation({
+  args: {
+    actorWorkosUserId: v.string(),
+    inviteLinkId: v.id('teamInviteLinks'),
+  },
+  returns: inviteLinkViewValidator,
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    const inviteLink = await ctx.db.get(args.inviteLinkId)
+
+    if (!inviteLink) {
+      throw new ConvexError('Invite link not found.')
+    }
+
+    const actorMembership = await requireMembership(ctx.db, inviteLink.teamId, actor._id)
+
+    if (!isManagerRole(actorMembership.role)) {
+      throw new ConvexError('Only team leaders and admins can revoke invite links.')
+    }
+
+    if (!inviteLink.revokedAt) {
+      const now = Date.now()
+      await ctx.db.patch(inviteLink._id, {
+        revokedAt: now,
+        updatedAt: now,
+      })
+    }
+
+    const refreshed = await ctx.db.get(inviteLink._id)
+
+    if (!refreshed) {
+      throw new ConvexError('Invite link could not be loaded.')
+    }
+
+    return buildInviteLinkView(ctx, refreshed, Date.now())
+  },
+})
+
+export const acceptInviteToken = mutation({
+  args: {
+    actorWorkosUserId: v.string(),
+    token: v.string(),
+  },
+  returns: acceptInviteTokenResultValidator,
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    const token = normalizeTeamInviteToken(args.token)
+    const parsedToken = parseTeamInviteToken(token)
+
+    if (!token || !parsedToken) {
+      throw new ConvexError('Invite token is invalid.')
+    }
+
+    const tokenHash = await hashTeamInviteToken(token)
+    const now = Date.now()
+
+    if (parsedToken.kind === 'email') {
+      const invite = await ctx.db
+        .query('teamEmailInvites')
+        .withIndex('by_token_hash', (query) => query.eq('tokenHash', tokenHash))
+        .unique()
+
+      if (!invite) {
+        throw new ConvexError('Invite token is invalid.')
+      }
+
+      const team = await buildTeamInviteMeta(ctx, invite.teamId)
+
+      if (invite.status === 'accepted') {
+        if (invite.acceptedByUserId && invite.acceptedByUserId !== actor._id) {
+          throw new ConvexError('Invite is no longer active.')
+        }
+
+        if (!invite.acceptedByUserId) {
+          const acceptance = evaluateEmailInviteAcceptance(invite.invitedEmail, actor.email)
+
+          if (acceptance !== 'ok') {
+            throw new ConvexError('Invite is no longer active.')
+          }
+        }
+
+        return {
+          method: 'email' as const,
+          result: 'already_accepted' as const,
+          teamId: team.teamId,
+          teamName: team.teamName,
+          teamSlug: team.teamSlug,
+          role: invite.role,
+          expiresAt: invite.expiresAt,
+          maxUses: null,
+          remainingUses: null,
+        }
+      }
+
+      if (invite.status !== 'pending') {
+        throw new ConvexError('Invite is no longer active.')
+      }
+
+      if (invite.expiresAt <= now) {
+        await ctx.db.patch(invite._id, {
+          status: 'revoked',
+          respondedAt: now,
+        })
+
+        throw new ConvexError('Invite has expired.')
+      }
+
+      const emailAcceptance = evaluateEmailInviteAcceptance(invite.invitedEmail, actor.email)
+
+      if (emailAcceptance === 'missing_email') {
+        throw new ConvexError('Your account must include an email address to accept this invite.')
+      }
+
+      if (emailAcceptance === 'email_mismatch') {
+        throw new ConvexError('This invite is bound to a different email address.')
+      }
+
+      const existingMembership = await getMembership(ctx.db, invite.teamId, actor._id)
+
+      if (!existingMembership) {
+        await ctx.db.insert('teamMemberships', {
+          teamId: invite.teamId,
+          userId: actor._id,
+          role: invite.role,
+          createdAt: now,
+          updatedAt: now,
+        })
+      }
+
+      await ctx.db.patch(invite._id, {
+        status: 'accepted',
+        respondedAt: now,
+        acceptedByUserId: actor._id,
+      })
+
+      return {
+        method: 'email' as const,
+        result: existingMembership ? ('already_accepted' as const) : ('accepted' as const),
+        teamId: team.teamId,
+        teamName: team.teamName,
+        teamSlug: team.teamSlug,
+        role: invite.role,
+        expiresAt: invite.expiresAt,
+        maxUses: null,
+        remainingUses: null,
+      }
+    }
+
+    const inviteLink = await ctx.db
+      .query('teamInviteLinks')
+      .withIndex('by_token_hash', (query) => query.eq('tokenHash', tokenHash))
+      .unique()
+
+    if (!inviteLink) {
+      throw new ConvexError('Invite token is invalid.')
+    }
+
+    const team = await buildTeamInviteMeta(ctx, inviteLink.teamId)
+    const linkAcceptance = evaluateInviteLinkAcceptance(inviteLink, actor._id, now)
+
+    if (linkAcceptance === 'revoked') {
+      throw new ConvexError('Invite link has been revoked.')
+    }
+
+    if (linkAcceptance === 'expired') {
+      throw new ConvexError('Invite link has expired.')
+    }
+
+    if (linkAcceptance === 'max_uses') {
+      throw new ConvexError('Invite link has reached its maximum number of uses.')
+    }
+
+    const existingMembership = await getMembership(ctx.db, inviteLink.teamId, actor._id)
+
+    if (linkAcceptance === 'already_used' || existingMembership) {
+      return {
+        method: 'link' as const,
+        result: 'already_accepted' as const,
+        teamId: team.teamId,
+        teamName: team.teamName,
+        teamSlug: team.teamSlug,
+        role: inviteLink.role,
+        expiresAt: inviteLink.expiresAt,
+        maxUses: inviteLink.maxUses,
+        remainingUses: Math.max(0, inviteLink.maxUses - inviteLink.useCount),
+      }
+    }
+
+    await ctx.db.insert('teamMemberships', {
+      teamId: inviteLink.teamId,
+      userId: actor._id,
+      role: inviteLink.role,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await ctx.db.patch(inviteLink._id, {
+      useCount: inviteLink.useCount + 1,
+      usedByUserIds: [...inviteLink.usedByUserIds, actor._id],
+      updatedAt: now,
+    })
+
+    const refreshed = await ctx.db.get(inviteLink._id)
+
+    if (!refreshed) {
+      throw new ConvexError('Invite link could not be loaded.')
+    }
+
+    return {
+      method: 'link' as const,
+      result: 'accepted' as const,
+      teamId: team.teamId,
+      teamName: team.teamName,
+      teamSlug: team.teamSlug,
+      role: inviteLink.role,
+      expiresAt: inviteLink.expiresAt,
+      maxUses: inviteLink.maxUses,
+      remainingUses: Math.max(0, refreshed.maxUses - refreshed.useCount),
+    }
   },
 })
 

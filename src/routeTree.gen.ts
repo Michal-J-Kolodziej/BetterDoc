@@ -17,6 +17,7 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as DashboardV5RouteImport } from './routes/dashboard_.v5'
 import { Route as DashboardV4RouteImport } from './routes/dashboard_.v4'
 import { Route as DashboardV3RouteImport } from './routes/dashboard_.v3'
@@ -64,6 +65,11 @@ const PostsPostIdRoute = PostsPostIdRouteImport.update({
   path: '/posts/$postId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardV5Route = DashboardV5RouteImport.update({
   id: '/dashboard_/v5',
   path: '/dashboard/v5',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/v3': typeof DashboardV3Route
   '/dashboard/v4': typeof DashboardV4Route
   '/dashboard/v5': typeof DashboardV5Route
+  '/join/$token': typeof JoinTokenRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/dashboard/v3': typeof DashboardV3Route
   '/dashboard/v4': typeof DashboardV4Route
   '/dashboard/v5': typeof DashboardV5Route
+  '/join/$token': typeof JoinTokenRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/dashboard_/v3': typeof DashboardV3Route
   '/dashboard_/v4': typeof DashboardV4Route
   '/dashboard_/v5': typeof DashboardV5Route
+  '/join/$token': typeof JoinTokenRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/dashboard/v3'
     | '/dashboard/v4'
     | '/dashboard/v5'
+    | '/join/$token'
     | '/posts/$postId'
     | '/api/auth/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/dashboard/v3'
     | '/dashboard/v4'
     | '/dashboard/v5'
+    | '/join/$token'
     | '/posts/$postId'
     | '/api/auth/callback'
   id:
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/dashboard_/v3'
     | '/dashboard_/v4'
     | '/dashboard_/v5'
+    | '/join/$token'
     | '/posts/$postId'
     | '/api/auth/callback'
   fileRoutesById: FileRoutesById
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   DashboardV3Route: typeof DashboardV3Route
   DashboardV4Route: typeof DashboardV4Route
   DashboardV5Route: typeof DashboardV5Route
+  JoinTokenRoute: typeof JoinTokenRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
   ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
 }
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostsPostIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard_/v5': {
       id: '/dashboard_/v5'
       path: '/dashboard/v5'
@@ -328,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardV3Route: DashboardV3Route,
   DashboardV4Route: DashboardV4Route,
   DashboardV5Route: DashboardV5Route,
+  JoinTokenRoute: JoinTokenRoute,
   PostsPostIdRoute: PostsPostIdRoute,
   ApiAuthCallbackRoute: ApiAuthCallbackRoute,
 }

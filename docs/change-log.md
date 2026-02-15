@@ -1,5 +1,33 @@
 # BetterDoc Change Log
 
+## 2026-02-15 (BD-209, BD-210: email/link invite expansion + join token flow)
+- Code paths changed:
+  - `convex/model.ts`
+  - `convex/schema.ts`
+  - `convex/inviteTokens.ts`
+  - `convex/users.ts`
+  - `convex/teams.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/routes/teams.tsx`
+  - `src/routes/join.$token.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/inbox.tsx`
+  - `src/routes/profile.tsx`
+  - `src/routeTree.gen.ts`
+  - `src/convex/invite-tokens.test.ts`
+  - `src/convex/team-invites.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added invite expansion contracts: `teams.inviteByEmail`, `teams.createInviteLink`, `teams.acceptInviteToken`, `teams.revokeInviteLink`, and `teams.listTeamInviteLinks`.
+  - Added new invite persistence tables (`teamEmailInvites`, `teamInviteLinks`) and optional `users.email` capture in `users.upsertMe`.
+  - Added `/join/$token` protected route flow for invite-token acceptance, plus Teams UI support for IID/email/link methods, copyable join URLs, active-link listing, and revoke actions.
+  - Enforced invite defaults (`14` days expiry, `25` link max uses) and link acceptance constraints (revoked/expired/max-use).
+  - Stored invite tokens hash-only (`tokenHash`) and made link replay idempotent for the same user via `usedByUserIds`.
+  - Kept existing IID invite flow and invite-response behavior intact.
+
 ## 2026-02-15 (BD-207, BD-208: mentions pipeline + in-app inbox)
 - Code paths changed:
   - `convex/model.ts`

@@ -14,6 +14,7 @@ import type * as drafts from "../drafts.js";
 import type * as files from "../files.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
+import type * as inviteTokens from "../inviteTokens.js";
 import type * as mentions from "../mentions.js";
 import type * as model from "../model.js";
 import type * as notifications from "../notifications.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   health: typeof health;
   http: typeof http;
+  inviteTokens: typeof inviteTokens;
   mentions: typeof mentions;
   model: typeof model;
   notifications: typeof notifications;

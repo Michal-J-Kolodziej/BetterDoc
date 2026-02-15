@@ -102,6 +102,7 @@ function InboxPage() {
     void upsertMe({
       workosUserId: user.id,
       name: userDisplayName(user),
+      email: user.email ?? undefined,
     })
   }, [auth.loading, me, upsertMe, user])
 

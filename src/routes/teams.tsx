@@ -42,9 +42,22 @@ export const Route = createFileRoute('/teams')({
 })
 
 type TeamRole = 'admin' | 'teamleader' | 'senior' | 'mid' | 'junior'
+type InviteMethod = 'iid' | 'email' | 'link'
 
 function canManage(role: TeamRole | undefined): boolean {
   return role === 'admin' || role === 'teamleader'
+}
+
+function formatDate(value: number): string {
+  return new Date(value).toLocaleString()
+}
+
+function buildAbsoluteJoinUrl(joinPath: string): string {
+  if (typeof window === 'undefined') {
+    return joinPath
+  }
+
+  return `${window.location.origin}${joinPath}`
 }
 
 function TeamsPage() {
@@ -54,6 +67,9 @@ function TeamsPage() {
   const upsertMe = useMutation(api.users.upsertMe)
   const createTeam = useMutation(api.teams.createTeam)
   const inviteByIID = useMutation(api.teams.inviteByIID)
+  const inviteByEmail = useMutation(api.teams.inviteByEmail)
+  const createInviteLink = useMutation(api.teams.createInviteLink)
+  const revokeInviteLink = useMutation(api.teams.revokeInviteLink)
   const updateMemberRole = useMutation(api.teams.updateMemberRole)
   const removeMember = useMutation(api.teams.removeMember)
   const respondInvite = useMutation(api.teams.respondInvite)
@@ -68,6 +84,7 @@ function TeamsPage() {
     void upsertMe({
       workosUserId: user.id,
       name: userDisplayName(user),
+      email: user.email ?? undefined,
     })
   }, [auth.loading, me, upsertMe, user])
 
@@ -112,16 +129,39 @@ function TeamsPage() {
       : 'skip',
   )
 
+  const inviteLinks = useQuery(
+    api.teams.listTeamInviteLinks,
+    user && selectedTeamId && canManage(selectedTeam?.role)
+      ? {
+          actorWorkosUserId: user.id,
+          teamId: selectedTeamId,
+        }
+      : 'skip',
+  )
+
   const [createName, setCreateName] = useState('')
   const [createError, setCreateError] = useState<string | null>(null)
   const [createBusy, setCreateBusy] = useState(false)
 
+  const [inviteMethod, setInviteMethod] = useState<InviteMethod>('iid')
   const [inviteIid, setInviteIid] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<TeamRole>('junior')
   const [inviteBusy, setInviteBusy] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
+  const [generatedInviteUrl, setGeneratedInviteUrl] = useState<string | null>(null)
+  const [generatedInviteLabel, setGeneratedInviteLabel] = useState<string | null>(null)
+  const [revokeBusyInviteId, setRevokeBusyInviteId] = useState<string | null>(null)
 
   const [memberActionError, setMemberActionError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setInviteError(null)
+    setInviteSuccess(null)
+    setGeneratedInviteUrl(null)
+    setGeneratedInviteLabel(null)
+  }, [selectedTeamId])
 
   const handleCreateTeam = async () => {
     if (!user) {
@@ -146,13 +186,20 @@ function TeamsPage() {
     }
   }
 
-  const handleInvite = async () => {
+  const clearInviteFeedback = () => {
+    setInviteError(null)
+    setInviteSuccess(null)
+  }
+
+  const handleInviteByIID = async () => {
     if (!user || !selectedTeamId) {
       return
     }
 
     setInviteBusy(true)
-    setInviteError(null)
+    clearInviteFeedback()
+    setGeneratedInviteUrl(null)
+    setGeneratedInviteLabel(null)
 
     try {
       await inviteByIID({
@@ -164,11 +211,118 @@ function TeamsPage() {
 
       setInviteIid('')
       setInviteRole('junior')
+      setInviteSuccess('IID invite sent.')
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : 'Failed to send invite.')
     } finally {
       setInviteBusy(false)
     }
+  }
+
+  const handleInviteByEmail = async () => {
+    if (!user || !selectedTeamId) {
+      return
+    }
+
+    setInviteBusy(true)
+    clearInviteFeedback()
+    setGeneratedInviteUrl(null)
+    setGeneratedInviteLabel(null)
+
+    try {
+      const result = await inviteByEmail({
+        actorWorkosUserId: user.id,
+        teamId: selectedTeamId,
+        email: inviteEmail,
+        role: inviteRole,
+      })
+
+      const inviteUrl = buildAbsoluteJoinUrl(result.joinPath)
+      setGeneratedInviteUrl(inviteUrl)
+      setGeneratedInviteLabel(`Email invite for ${result.invitedEmail ?? inviteEmail}`)
+      setInviteSuccess('Email invite created. Copy and share the URL.')
+      setInviteEmail('')
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Failed to create email invite.')
+    } finally {
+      setInviteBusy(false)
+    }
+  }
+
+  const handleCreateInviteLink = async () => {
+    if (!user || !selectedTeamId) {
+      return
+    }
+
+    setInviteBusy(true)
+    clearInviteFeedback()
+    setGeneratedInviteUrl(null)
+    setGeneratedInviteLabel(null)
+
+    try {
+      const result = await createInviteLink({
+        actorWorkosUserId: user.id,
+        teamId: selectedTeamId,
+        role: inviteRole,
+      })
+
+      const inviteUrl = buildAbsoluteJoinUrl(result.joinPath)
+      setGeneratedInviteUrl(inviteUrl)
+      setGeneratedInviteLabel(`Link invite (${result.maxUses ?? 25} max uses)`)
+      setInviteSuccess('Invite link created. Copy and share the URL.')
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Failed to create invite link.')
+    } finally {
+      setInviteBusy(false)
+    }
+  }
+
+  const handleCopyGeneratedInviteUrl = async () => {
+    if (!generatedInviteUrl) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedInviteUrl)
+      setInviteSuccess('Invite URL copied to clipboard.')
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Failed to copy invite URL.')
+    }
+  }
+
+  const handleRevokeInviteLink = async (inviteLinkId: Id<'teamInviteLinks'>) => {
+    if (!user) {
+      return
+    }
+
+    setRevokeBusyInviteId(String(inviteLinkId))
+    clearInviteFeedback()
+
+    try {
+      await revokeInviteLink({
+        actorWorkosUserId: user.id,
+        inviteLinkId,
+      })
+      setInviteSuccess('Invite link revoked.')
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Failed to revoke invite link.')
+    } finally {
+      setRevokeBusyInviteId(null)
+    }
+  }
+
+  const handleInviteSubmit = async () => {
+    if (inviteMethod === 'iid') {
+      await handleInviteByIID()
+      return
+    }
+
+    if (inviteMethod === 'email') {
+      await handleInviteByEmail()
+      return
+    }
+
+    await handleCreateInviteLink()
   }
 
   const handleAcceptInvite = async (inviteId: Id<'teamInvites'>) => {
@@ -248,13 +402,17 @@ function TeamsPage() {
   }
 
   const manager = canManage(selectedTeam?.role)
+  const inviteSubmitDisabled =
+    inviteBusy ||
+    (inviteMethod === 'iid' && inviteIid.trim().length === 0) ||
+    (inviteMethod === 'email' && inviteEmail.trim().length === 0)
 
   return (
     <AppSidebarShell
       activeNav='teams'
       sectionLabel='Organization'
       title='Teams'
-      description='Create teams, invite by IID, and manage roles.'
+      description='Create teams, invite by IID/email/link, and manage roles.'
       actorWorkosUserId={user.id}
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
@@ -390,18 +548,32 @@ function TeamsPage() {
             </section>
 
             <section className='space-y-3'>
-              <h2 className='noir-kicker'>Invite by IID</h2>
+              <h2 className='noir-kicker'>Team Invites</h2>
 
               {manager ? (
-                <div className='space-y-3 bg-secondary/35 p-4'>
-                  <div className='grid gap-2'>
-                    <Label htmlFor='invite-iid'>User IID</Label>
-                    <Input
-                      id='invite-iid'
-                      value={inviteIid}
-                      placeholder='BD-XXXXXX'
-                      onChange={(event) => setInviteIid(event.target.value.toUpperCase())}
-                    />
+                <div className='space-y-4 bg-secondary/35 p-4'>
+                  <div className='flex flex-wrap gap-2'>
+                    <Button
+                      size='sm'
+                      variant={inviteMethod === 'iid' ? 'default' : 'secondary'}
+                      onClick={() => setInviteMethod('iid')}
+                    >
+                      IID
+                    </Button>
+                    <Button
+                      size='sm'
+                      variant={inviteMethod === 'email' ? 'default' : 'secondary'}
+                      onClick={() => setInviteMethod('email')}
+                    >
+                      Email
+                    </Button>
+                    <Button
+                      size='sm'
+                      variant={inviteMethod === 'link' ? 'default' : 'secondary'}
+                      onClick={() => setInviteMethod('link')}
+                    >
+                      Link
+                    </Button>
                   </div>
 
                   <div className='grid gap-2'>
@@ -423,15 +595,104 @@ function TeamsPage() {
                     </Select>
                   </div>
 
-                  {inviteError ? <p className='text-sm text-destructive'>{inviteError}</p> : null}
+                  {inviteMethod === 'iid' ? (
+                    <div className='grid gap-2'>
+                      <Label htmlFor='invite-iid'>User IID</Label>
+                      <Input
+                        id='invite-iid'
+                        value={inviteIid}
+                        placeholder='BD-XXXXXX'
+                        onChange={(event) => setInviteIid(event.target.value.toUpperCase())}
+                      />
+                    </div>
+                  ) : null}
 
-                  <Button disabled={inviteBusy} onClick={handleInvite}>
-                    {inviteBusy ? 'Sending...' : 'Send invite'}
+                  {inviteMethod === 'email' ? (
+                    <div className='grid gap-2'>
+                      <Label htmlFor='invite-email'>Email</Label>
+                      <Input
+                        id='invite-email'
+                        type='email'
+                        value={inviteEmail}
+                        placeholder='teammate@company.com'
+                        onChange={(event) => setInviteEmail(event.target.value)}
+                      />
+                    </div>
+                  ) : null}
+
+                  {inviteMethod === 'link' ? (
+                    <p className='text-xs text-muted-foreground'>
+                      Link invites default to 14-day expiry and 25 max uses.
+                    </p>
+                  ) : null}
+
+                  {inviteError ? <p className='text-sm text-destructive'>{inviteError}</p> : null}
+                  {inviteSuccess ? <p className='text-sm text-muted-foreground'>{inviteSuccess}</p> : null}
+
+                  {generatedInviteUrl ? (
+                    <div className='space-y-2 rounded-sm border border-border/65 bg-background/50 p-3'>
+                      {generatedInviteLabel ? (
+                        <p className='text-xs text-muted-foreground'>{generatedInviteLabel}</p>
+                      ) : null}
+                      <code className='block break-all text-xs'>{generatedInviteUrl}</code>
+                      <Button size='sm' variant='secondary' onClick={() => void handleCopyGeneratedInviteUrl()}>
+                        Copy URL
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  <Button disabled={inviteSubmitDisabled} onClick={() => void handleInviteSubmit()}>
+                    {inviteBusy
+                      ? 'Sending...'
+                      : inviteMethod === 'iid'
+                        ? 'Send IID invite'
+                        : inviteMethod === 'email'
+                          ? 'Create email invite'
+                          : 'Create invite link'}
                   </Button>
                 </div>
               ) : (
                 <p className='text-sm text-muted-foreground'>Only admins and teamleaders can invite users.</p>
               )}
+
+              {manager ? (
+                <div className='space-y-2'>
+                  <p className='text-sm font-medium text-foreground'>Active links</p>
+                  {inviteLinks === undefined ? (
+                    <p className='text-xs text-muted-foreground'>Loading active links...</p>
+                  ) : inviteLinks.length === 0 ? (
+                    <p className='text-xs text-muted-foreground'>No active links.</p>
+                  ) : (
+                    <div className='tape-list'>
+                      {inviteLinks.map((inviteLink) => (
+                        <article key={inviteLink.inviteLinkId} className='tape-list-row py-2'>
+                          <div className='flex flex-wrap items-center gap-2'>
+                            <Badge variant='outline'>{inviteLink.role}</Badge>
+                            <Badge variant='secondary'>
+                              {String(inviteLink.useCount)}/{String(inviteLink.maxUses)} uses
+                            </Badge>
+                            <span className='text-xs text-muted-foreground'>
+                              Expires {formatDate(inviteLink.expiresAt)}
+                            </span>
+                          </div>
+                          <div className='mt-2 flex items-center gap-2'>
+                            <Button
+                              size='sm'
+                              variant='destructive'
+                              disabled={revokeBusyInviteId === String(inviteLink.inviteLinkId)}
+                              onClick={() => void handleRevokeInviteLink(inviteLink.inviteLinkId)}
+                            >
+                              {revokeBusyInviteId === String(inviteLink.inviteLinkId)
+                                ? 'Revoking...'
+                                : 'Revoke'}
+                            </Button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </section>
           </div>
         ) : (
