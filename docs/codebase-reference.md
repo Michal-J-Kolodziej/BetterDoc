@@ -32,7 +32,7 @@ Last updated: 2026-02-15
   - Protected post board dashboard.
   - Uses shared protected desktop shell with persistent left sidebar nav.
   - Search bar supports free text and qualifiers (`team:`, `status:`, `author:`, `has:image`, `before:`, `after:`).
-  - Inline status chips + inline team selector in main content controls.
+  - Inline status chips (`all/active/resolved/archived`) + inline team selector in main content controls.
   - Create-post dialog includes team template picker and template save/update/delete controls.
   - Create-post draft autosaves every 1.5 seconds and supports restore/discard per user+team.
   - Create-post dialog includes a non-blocking similar-incidents panel:
@@ -54,11 +54,23 @@ Last updated: 2026-02-15
 - `src/routes/posts.$postId.tsx`
   - Protected post detail view.
   - Uses shared protected desktop shell; sidebar highlights Dashboard nav.
-  - Post edit/archive/unarchive plus compact discussion composer and comment CRUD.
+  - Post edit/resolve/reopen/archive/unarchive plus compact discussion composer and comment CRUD.
+  - Resolve action requires a non-empty resolution summary and sets post status to `resolved`.
+  - Reopen action is available from `resolved` state only and returns the post to `active`.
+  - Resolved and archived posts are read-only for post/comment edits and new comment creation until reopened/unarchived.
+  - Teamleader/admin can promote resolved posts to team-private playbooks.
   - Comment composer draft autosaves every 1.5 seconds and supports restore/discard per user+post.
   - Successful comment creation clears the associated comment draft.
   - Post description and comment composers support `@` mention picking with IID insertion.
   - Detail and discussion surfaces use shared tape-style sections and row separators instead of nested card stacks.
+- `src/routes/playbooks.tsx`
+  - Protected team-private playbook route.
+  - Team selector + list/detail view backed by `playbooks.listTeamPlaybooks` and `playbooks.getPlaybookDetail`.
+  - Playbooks are promoted from resolved posts only and linked back to source post detail.
+- `src/routes/analytics.tsx`
+  - Protected team-private analytics route.
+  - Team selector + range selector (`30` or `90` days).
+  - Displays separate resolved vs archived counts, unresolved open count, median time-to-resolution (resolved-only), recurring topics, and top contributors.
 - `src/routes/inbox.tsx`
   - Protected in-app inbox route with cursor pagination, deep links, and per-item/mark-all read controls.
   - Opening an inbox notification link marks the item read before navigation.
@@ -86,7 +98,7 @@ Last updated: 2026-02-15
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
 - Shared protected route shell:
   - `src/components/layout/app-sidebar-shell.tsx`
-  - Provides fixed desktop two-column shell with persistent left navigation (`Dashboard`, `Inbox`, `Teams`, `Profile`, `Logout`) and account footer block.
+  - Provides fixed desktop two-column shell with persistent left navigation (`Dashboard`, `Playbooks`, `Analytics`, `Inbox`, `Teams`, `Profile`, `Logout`) and account footer block.
   - Displays reactive unread badge counts in sidebar and header inbox entry points using `notifications.getUnreadCount`.
   - Shell styling is intentionally flatter (minimal paneling, separator-first hierarchy) to match dashboard V1.
 - Mention input UI:
@@ -126,10 +138,12 @@ Last updated: 2026-02-15
 - Post search-text builder: `convex/postSearch.ts`
 - Domain function modules:
   - `convex/inviteTokens.ts`
+  - `convex/analytics.ts`
   - `convex/drafts.ts`
   - `convex/templates.ts`
   - `convex/users.ts`
   - `convex/teams.ts`
+  - `convex/playbooks.ts`
   - `convex/posts.ts`
   - `convex/postSimilarity.ts`
   - `convex/comments.ts`
@@ -147,6 +161,7 @@ Last updated: 2026-02-15
 - `teamEmailInvites`
 - `teamInviteLinks`
 - `posts`
+- `playbooks`
 - `postTemplates`
 - `postDrafts`
 - `commentDrafts`
@@ -156,8 +171,10 @@ Last updated: 2026-02-15
 ### Core API Surface
 - `users.getMe`, `users.upsertMe`, `users.updateProfile`
 - `teams.createTeam`, `teams.listMyTeams`, `teams.listTeamMembers`, `teams.searchTeamMembers`, `teams.inviteByIID`, `teams.inviteByEmail`, `teams.createInviteLink`, `teams.listTeamInviteLinks`, `teams.acceptInviteToken`, `teams.revokeInviteLink`, `teams.listMyInvites`, `teams.respondInvite`, `teams.updateMemberRole`, `teams.removeMember`
-- `posts.createPost`, `posts.updatePost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.findSimilar`, `posts.getPostDetail`
+- `posts.createPost`, `posts.updatePost`, `posts.resolvePost`, `posts.reopenPost`, `posts.archivePost`, `posts.unarchivePost`, `posts.listPosts`, `posts.findSimilar`, `posts.getPostDetail`
 - `comments.createComment`, `comments.updateComment`, `comments.deleteComment`
+- `playbooks.promoteFromPost`, `playbooks.listTeamPlaybooks`, `playbooks.getPlaybookDetail`
+- `analytics.getTeamOverview`
 - `templates.listTeamTemplates`, `templates.createTemplate`, `templates.updateTemplate`, `templates.deleteTemplate`
 - `drafts.getPostDraft`, `drafts.upsertPostDraft`, `drafts.deletePostDraft`, `drafts.getCommentDraft`, `drafts.upsertCommentDraft`, `drafts.deleteCommentDraft`
 - `notifications.getUnreadCount`, `notifications.listInbox`, `notifications.markRead`, `notifications.markAllRead`
@@ -187,6 +204,14 @@ Last updated: 2026-02-15
 - Performance baseline:
   - Query reads recent team posts via `posts.by_team_last_activity` and scores up to `max(limit * 30, 200)` candidates.
   - Expected runtime is linear in candidate count (`O(n)` scoring + sort), suitable for typical team datasets in the low-thousands where recent-window matching is sufficient for compose-time suggestions.
+
+### Post Lifecycle / Playbook / Analytics Notes
+- Post status lifecycle now includes `active`, `resolved`, and `archived`.
+- `posts.resolvePost` requires post access permission (creator/teamleader/admin) and a non-empty `resolutionSummary`.
+- `posts.reopenPost` requires the same permission set and only transitions `resolved -> active`.
+- Comment/post mutating flows now enforce `active` status; resolved/archived threads are read-only.
+- `playbooks.promoteFromPost` is restricted to `teamleader/admin`, requires a `resolved` source post, and is idempotent per team+source-post.
+- `analytics.getTeamOverview` is team-scoped and returns range-bounded (`30|90`) overview metrics with separate resolved vs archived totals, unresolved open count, resolved-only median TTR, recurring topics, and top contributors.
 
 ## Removed Legacy Areas
 The following legacy areas are removed from active code paths:

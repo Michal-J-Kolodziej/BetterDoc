@@ -1,4 +1,4 @@
-export type SearchStatus = 'active' | 'archived' | 'all'
+export type SearchStatus = 'active' | 'resolved' | 'archived' | 'all'
 
 export type DashboardSearchQuery = {
   text: string
@@ -52,10 +52,15 @@ export function parseDashboardSearch(input: string): DashboardSearchQuery {
       case 'status': {
         const normalized = rawValue.toLowerCase()
 
-        if (normalized === 'active' || normalized === 'archived' || normalized === 'all') {
+        if (
+          normalized === 'active' ||
+          normalized === 'resolved' ||
+          normalized === 'archived' ||
+          normalized === 'all'
+        ) {
           status = normalized
         } else {
-          errors.push('status must be active, archived, or all.')
+          errors.push('status must be active, resolved, archived, or all.')
         }
         break
       }

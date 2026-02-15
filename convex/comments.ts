@@ -60,7 +60,7 @@ export const createComment = mutation({
     await requireMembership(ctx.db, post.teamId, actor._id)
 
     if (post.status !== 'active') {
-      throw new ConvexError('Archived posts are read-only.')
+      throw new ConvexError('Only active posts accept comments.')
     }
 
     const body = normalizeCommentBody(args.body)
@@ -166,7 +166,7 @@ export const updateComment = mutation({
     await requireMembership(ctx.db, post.teamId, actor._id)
 
     if (post.status !== 'active') {
-      throw new ConvexError('Archived posts are read-only.')
+      throw new ConvexError('Only active posts allow comment edits.')
     }
 
     const body = normalizeCommentBody(args.body)
@@ -248,6 +248,10 @@ export const deleteComment = mutation({
     }
 
     const membership = await requireMembership(ctx.db, post.teamId, actor._id)
+
+    if (post.status !== 'active') {
+      throw new ConvexError('Only active posts allow comment changes.')
+    }
 
     if (!canDeleteComment(actor._id, membership.role, comment.createdByUserId)) {
       throw new ConvexError('You cannot delete this comment.')

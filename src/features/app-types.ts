@@ -1,7 +1,7 @@
 import type { Id } from '../../convex/_generated/dataModel'
 
 export type TeamRole = 'admin' | 'teamleader' | 'senior' | 'mid' | 'junior'
-export type PostStatus = 'active' | 'archived'
+export type PostStatus = 'active' | 'resolved' | 'archived'
 
 export type PostCardViewModel = {
   postId: Id<'posts'>
@@ -56,6 +56,11 @@ export type PostDetailViewModel = {
   createdByIid: string
   imageStorageIds: Id<'_storage'>[]
   imageUrls: string[]
+  resolutionSummary: string | null
+  resolvedAt: number | null
+  resolvedByUserId: Id<'users'> | null
+  resolvedByName: string | null
+  resolvedByIid: string | null
   commentCount: number
   createdAt: number
   updatedAt: number
@@ -63,5 +68,9 @@ export type PostDetailViewModel = {
   canEdit: boolean
   canArchive: boolean
   canUnarchive: boolean
+  canResolve: boolean
+  canReopen: boolean
+  canPromoteToPlaybook: boolean
+  promotedPlaybookId: Id<'playbooks'> | null
   comments: CommentViewModel[]
 }

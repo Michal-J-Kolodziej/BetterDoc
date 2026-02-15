@@ -1,5 +1,38 @@
 # BetterDoc Change Log
 
+## 2026-02-15 (BD-211, BD-212: resolved lifecycle + playbooks + analytics)
+- Code paths changed:
+  - `convex/model.ts`
+  - `convex/schema.ts`
+  - `convex/posts.ts`
+  - `convex/comments.ts`
+  - `convex/drafts.ts`
+  - `convex/playbooks.ts`
+  - `convex/analytics.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/components/layout/app-sidebar-shell.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/routes/playbooks.tsx`
+  - `src/routes/analytics.tsx`
+  - `src/routeTree.gen.ts`
+  - `src/lib/search.ts`
+  - `src/features/app-types.ts`
+  - `src/features/dashboard-variants/page.tsx`
+  - `src/convex/membership-guards.test.ts`
+  - `src/convex/post-lifecycle.test.ts`
+  - `src/convex/analytics-overview.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/change-log.md`
+- Impact:
+  - Expanded post lifecycle to `active/resolved/archived` and added `posts.resolvePost` (requires `resolutionSummary`) plus `posts.reopenPost`.
+  - Enforced read-only behavior for non-active threads across post edits, comment writes/edits/deletes, and comment draft upserts.
+  - Added team-private playbooks with `playbooks.promoteFromPost`, `playbooks.listTeamPlaybooks`, and `playbooks.getPlaybookDetail`, including manager-only promotion from resolved posts.
+  - Added team-private analytics with `analytics.getTeamOverview` for `30|90` day windows, reporting resolved vs archived separately, unresolved open count, resolved-only median time-to-resolution, recurring topics, and top contributors.
+  - Added new protected routes (`/playbooks`, `/analytics`) and post-detail UI actions for resolve/reopen/promote flows.
+
 ## 2026-02-15 (BD-209, BD-210: email/link invite expansion + join token flow)
 - Code paths changed:
   - `convex/model.ts`

@@ -517,6 +517,10 @@ export const upsertCommentDraft = mutation({
   handler: async (ctx, args) => {
     const { actor, post } = await requireActorPostMember(ctx.db, args.actorWorkosUserId, args.postId)
 
+    if (post.status !== 'active') {
+      throw new ConvexError('Only active posts accept comment drafts.')
+    }
+
     return upsertCommentDraftForUser(ctx, {
       userId: actor._id,
       teamId: post.teamId,

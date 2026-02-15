@@ -101,6 +101,9 @@ export default defineSchema({
     updatedByUserId: v.id('users'),
     commentCount: v.number(),
     lastActivityAt: v.number(),
+    resolutionSummary: v.optional(v.string()),
+    resolvedAt: v.optional(v.number()),
+    resolvedByUserId: v.optional(v.id('users')),
     archivedAt: v.optional(v.number()),
     archivedByUserId: v.optional(v.id('users')),
     searchText: v.string(),
@@ -114,6 +117,21 @@ export default defineSchema({
       searchField: 'searchText',
       filterFields: ['teamId', 'status', 'createdByUserId'],
     }),
+
+  playbooks: defineTable({
+    teamId: v.id('teams'),
+    sourcePostId: v.id('posts'),
+    title: v.string(),
+    occurrenceWhere: v.string(),
+    occurrenceWhen: v.string(),
+    issueSummary: v.string(),
+    resolutionSummary: v.string(),
+    promotedByUserId: v.id('users'),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_team_updated_at', ['teamId', 'updatedAt'])
+    .index('by_team_source_post', ['teamId', 'sourcePostId']),
 
   postTemplates: defineTable({
     teamId: v.id('teams'),

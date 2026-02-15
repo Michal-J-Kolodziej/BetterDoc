@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PlaybooksRouteImport } from './routes/playbooks'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
@@ -35,6 +37,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlaybooksRoute = PlaybooksRouteImport.update({
+  id: '/playbooks',
+  path: '/playbooks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
@@ -53,6 +60,11 @@ const InboxRoute = InboxRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -103,10 +115,12 @@ const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/playbooks': typeof PlaybooksRoute
   '/profile': typeof ProfileRoute
   '/teams': typeof TeamsRoute
   '/dashboard/v1': typeof DashboardV1Route
@@ -120,10 +134,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/playbooks': typeof PlaybooksRoute
   '/profile': typeof ProfileRoute
   '/teams': typeof TeamsRoute
   '/dashboard/v1': typeof DashboardV1Route
@@ -138,10 +154,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/playbooks': typeof PlaybooksRoute
   '/profile': typeof ProfileRoute
   '/teams': typeof TeamsRoute
   '/dashboard_/v1': typeof DashboardV1Route
@@ -157,10 +175,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/inbox'
     | '/login'
     | '/logout'
+    | '/playbooks'
     | '/profile'
     | '/teams'
     | '/dashboard/v1'
@@ -174,10 +194,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/inbox'
     | '/login'
     | '/logout'
+    | '/playbooks'
     | '/profile'
     | '/teams'
     | '/dashboard/v1'
@@ -191,10 +213,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/inbox'
     | '/login'
     | '/logout'
+    | '/playbooks'
     | '/profile'
     | '/teams'
     | '/dashboard_/v1'
@@ -209,10 +233,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   DashboardRoute: typeof DashboardRoute
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  PlaybooksRoute: typeof PlaybooksRoute
   ProfileRoute: typeof ProfileRoute
   TeamsRoute: typeof TeamsRoute
   DashboardV1Route: typeof DashboardV1Route
@@ -241,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/playbooks': {
+      id: '/playbooks'
+      path: '/playbooks'
+      fullPath: '/playbooks'
+      preLoaderRoute: typeof PlaybooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/logout': {
       id: '/logout'
       path: '/logout'
@@ -267,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -337,10 +377,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyticsRoute: AnalyticsRoute,
   DashboardRoute: DashboardRoute,
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  PlaybooksRoute: PlaybooksRoute,
   ProfileRoute: ProfileRoute,
   TeamsRoute: TeamsRoute,
   DashboardV1Route: DashboardV1Route,

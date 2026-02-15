@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as comments from "../comments.js";
 import type * as drafts from "../drafts.js";
@@ -18,6 +19,7 @@ import type * as inviteTokens from "../inviteTokens.js";
 import type * as mentions from "../mentions.js";
 import type * as model from "../model.js";
 import type * as notifications from "../notifications.js";
+import type * as playbooks from "../playbooks.js";
 import type * as postSearch from "../postSearch.js";
 import type * as postSimilarity from "../postSimilarity.js";
 import type * as posts from "../posts.js";
@@ -32,6 +34,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analytics: typeof analytics;
   auth: typeof auth;
   comments: typeof comments;
   drafts: typeof drafts;
@@ -42,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   mentions: typeof mentions;
   model: typeof model;
   notifications: typeof notifications;
+  playbooks: typeof playbooks;
   postSearch: typeof postSearch;
   postSimilarity: typeof postSimilarity;
   posts: typeof posts;

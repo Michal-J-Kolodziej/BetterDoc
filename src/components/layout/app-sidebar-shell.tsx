@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
-import { Bell, LayoutDashboard, LogOut, ShieldCheck, Users2 } from 'lucide-react'
+import { Bell, BookCopy, ChartColumn, LayoutDashboard, LogOut, ShieldCheck, Users2 } from 'lucide-react'
 
 import { api } from '../../../convex/_generated/api.js'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
-type ActiveNav = 'dashboard' | 'teams' | 'profile' | 'inbox'
+type ActiveNav = 'dashboard' | 'playbooks' | 'analytics' | 'teams' | 'profile' | 'inbox'
 
 type AppSidebarShellProps = {
   sectionLabel: string
@@ -23,10 +23,12 @@ type AppSidebarShellProps = {
 const navItems: Array<{
   key: ActiveNav
   label: string
-  to: '/dashboard' | '/teams' | '/profile' | '/inbox'
+  to: '/dashboard' | '/playbooks' | '/analytics' | '/teams' | '/profile' | '/inbox'
   icon: typeof LayoutDashboard
 }> = [
   { key: 'dashboard', label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+  { key: 'playbooks', label: 'Playbooks', to: '/playbooks', icon: BookCopy },
+  { key: 'analytics', label: 'Analytics', to: '/analytics', icon: ChartColumn },
   { key: 'inbox', label: 'Inbox', to: '/inbox', icon: Bell },
   { key: 'teams', label: 'Teams', to: '/teams', icon: Users2 },
   { key: 'profile', label: 'Profile', to: '/profile', icon: ShieldCheck },

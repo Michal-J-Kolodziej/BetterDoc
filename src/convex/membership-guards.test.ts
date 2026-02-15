@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { Doc, Id, TableNames } from '../../convex/_generated/dataModel'
 import type { QueryCtx } from '../../convex/_generated/server'
+import { requireActorTeamMemberForAnalytics } from '../../convex/analytics'
 import { requireActorPostMember } from '../../convex/drafts'
+import { requireActorTeamMemberForPlaybooks } from '../../convex/playbooks'
 import { requireActorTeamMemberForPostSimilarity } from '../../convex/posts'
 import { requireActorTeamMember } from '../../convex/templates'
 
@@ -85,6 +87,57 @@ describe('membership guard helpers', () => {
     const db = {} as unknown as QueryCtx['db']
 
     const result = await requireActorTeamMemberForPostSimilarity(db, 'workos-user-1', teamId, {
+      requireUserByWorkosUserId,
+      requireMembership,
+    })
+
+    expect(result._id).toBe(actor._id)
+    expect(requireUserByWorkosUserId).toHaveBeenCalledWith(db, 'workos-user-1')
+    expect(requireMembership).toHaveBeenCalledWith(db, teamId, actor._id)
+  })
+
+  it('enforces team membership before playbook operations', async () => {
+    const teamId = asId<'teams'>('team-1')
+    const actor = {
+      _id: asId<'users'>('user-1'),
+    } as unknown as Doc<'users'>
+    const membership = {
+      _id: asId<'teamMemberships'>('membership-1'),
+      teamId,
+      userId: actor._id,
+    } as unknown as Doc<'teamMemberships'>
+
+    const requireUserByWorkosUserId = vi.fn(async () => actor)
+    const requireMembership = vi.fn(async () => membership)
+    const db = {} as unknown as QueryCtx['db']
+
+    const result = await requireActorTeamMemberForPlaybooks(db, 'workos-user-1', teamId, {
+      requireUserByWorkosUserId,
+      requireMembership,
+    })
+
+    expect(result.actor._id).toBe(actor._id)
+    expect(result.membership._id).toBe(membership._id)
+    expect(requireUserByWorkosUserId).toHaveBeenCalledWith(db, 'workos-user-1')
+    expect(requireMembership).toHaveBeenCalledWith(db, teamId, actor._id)
+  })
+
+  it('enforces team membership before analytics reads', async () => {
+    const teamId = asId<'teams'>('team-1')
+    const actor = {
+      _id: asId<'users'>('user-1'),
+    } as unknown as Doc<'users'>
+    const membership = {
+      _id: asId<'teamMemberships'>('membership-1'),
+      teamId,
+      userId: actor._id,
+    } as unknown as Doc<'teamMemberships'>
+
+    const requireUserByWorkosUserId = vi.fn(async () => actor)
+    const requireMembership = vi.fn(async () => membership)
+    const db = {} as unknown as QueryCtx['db']
+
+    const result = await requireActorTeamMemberForAnalytics(db, 'workos-user-1', teamId, {
       requireUserByWorkosUserId,
       requireMembership,
     })

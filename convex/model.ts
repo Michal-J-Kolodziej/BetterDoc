@@ -6,7 +6,7 @@ export type TeamRole = (typeof teamRoles)[number]
 export const inviteStatuses = ['pending', 'accepted', 'declined', 'revoked'] as const
 export type InviteStatus = (typeof inviteStatuses)[number]
 
-export const postStatuses = ['active', 'archived'] as const
+export const postStatuses = ['active', 'resolved', 'archived'] as const
 export type PostStatus = (typeof postStatuses)[number]
 
 export const notificationTypes = [
@@ -32,7 +32,11 @@ export const inviteStatusValidator = v.union(
   v.literal('revoked'),
 )
 
-export const postStatusValidator = v.union(v.literal('active'), v.literal('archived'))
+export const postStatusValidator = v.union(
+  v.literal('active'),
+  v.literal('resolved'),
+  v.literal('archived'),
+)
 
 export const notificationTypeValidator = v.union(
   v.literal('invite_received'),
@@ -56,6 +60,7 @@ export const limits = {
   maxPostTitleLength: 120,
   maxOccurrenceLength: 140,
   maxPostDescriptionLength: 5000,
+  maxResolutionSummaryLength: 3000,
   maxPostImages: 6,
   maxCommentLength: 2000,
   maxCommentImages: 4,

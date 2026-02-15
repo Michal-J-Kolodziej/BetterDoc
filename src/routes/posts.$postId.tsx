@@ -1,7 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
-import { PencilLine, Trash2 } from 'lucide-react'
+import { BookCopy, CheckCheck, PencilLine, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { uploadImageFiles } from '@/lib/uploads'
 import { userDisplayName } from '@/utils/user-display'
@@ -54,6 +55,7 @@ function buildCommentDraftFingerprint(values: { postId: string; body: string }):
 
 function PostDetailPage() {
   const params = Route.useParams()
+  const navigate = Route.useNavigate()
   const auth = useAuth()
   const user = auth.user
 
@@ -80,6 +82,9 @@ function PostDetailPage() {
   const updatePost = useMutation(api.posts.updatePost)
   const archivePost = useMutation(api.posts.archivePost)
   const unarchivePost = useMutation(api.posts.unarchivePost)
+  const resolvePost = useMutation(api.posts.resolvePost)
+  const reopenPost = useMutation(api.posts.reopenPost)
+  const promoteFromPost = useMutation(api.playbooks.promoteFromPost)
 
   const createComment = useMutation(api.comments.createComment)
   const updateComment = useMutation(api.comments.updateComment)
@@ -96,6 +101,10 @@ function PostDetailPage() {
   const [editWhere, setEditWhere] = useState('')
   const [editWhen, setEditWhen] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [resolutionSummary, setResolutionSummary] = useState('')
+  const [resolvingPost, setResolvingPost] = useState(false)
+  const [resolutionBusy, setResolutionBusy] = useState(false)
+  const [promoteBusy, setPromoteBusy] = useState(false)
   const [editFiles, setEditFiles] = useState<File[]>([])
   const [editError, setEditError] = useState<string | null>(null)
   const [editBusy, setEditBusy] = useState(false)
@@ -116,6 +125,23 @@ function PostDetailPage() {
 
   const debouncedCommentBody = useDebouncedValue(commentBody, 1500)
   const postImages = useMemo(() => postDetail?.imageUrls ?? [], [postDetail?.imageUrls])
+
+  useEffect(() => {
+    if (!postDetail) {
+      return
+    }
+
+    setResolutionSummary(postDetail.resolutionSummary ?? '')
+  }, [postDetail])
+
+  useEffect(() => {
+    if (postDetail?.status === 'active') {
+      return
+    }
+
+    setResolvingPost(false)
+    setEditingCommentId(null)
+  }, [postDetail?.status])
 
   useEffect(() => {
     setCommentDraftHydratedPostId(null)
@@ -142,7 +168,7 @@ function PostDetailPage() {
       return
     }
 
-    if (postDetail?.status === 'archived') {
+    if (postDetail?.status !== 'active') {
       return
     }
 
@@ -276,6 +302,71 @@ function PostDetailPage() {
       })
     } catch (error) {
       setEditError(error instanceof Error ? error.message : 'Failed to unarchive post.')
+    }
+  }
+
+  const handleResolve = async () => {
+    if (!user || !postDetail) {
+      return
+    }
+
+    setResolutionBusy(true)
+    setEditError(null)
+
+    try {
+      await resolvePost({
+        actorWorkosUserId: user.id,
+        postId: postDetail.postId,
+        resolutionSummary,
+      })
+      setResolvingPost(false)
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : 'Failed to resolve post.')
+    } finally {
+      setResolutionBusy(false)
+    }
+  }
+
+  const handleReopen = async () => {
+    if (!user || !postDetail) {
+      return
+    }
+
+    try {
+      await reopenPost({
+        actorWorkosUserId: user.id,
+        postId: postDetail.postId,
+      })
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : 'Failed to reopen post.')
+    }
+  }
+
+  const handlePromoteToPlaybook = async () => {
+    if (!user || !postDetail) {
+      return
+    }
+
+    setPromoteBusy(true)
+    setEditError(null)
+
+    try {
+      const result = await promoteFromPost({
+        actorWorkosUserId: user.id,
+        postId: postDetail.postId,
+      })
+
+      void navigate({
+        to: '/playbooks',
+        search: {
+          team: postDetail.teamSlug,
+          playbook: result.playbook.playbookId,
+        },
+      })
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : 'Failed to promote playbook.')
+    } finally {
+      setPromoteBusy(false)
     }
   }
 
@@ -418,6 +509,8 @@ function PostDetailPage() {
     )
   }
 
+  const commentsLocked = postDetail.status !== 'active'
+
   return (
     <AppSidebarShell
       activeNav='dashboard'
@@ -458,9 +551,93 @@ function PostDetailPage() {
               Unarchive
             </Button>
           ) : null}
+          {postDetail.canResolve ? (
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() => {
+                setResolvingPost((current) => !current)
+                setEditError(null)
+              }}
+            >
+              <CheckCheck className='h-4 w-4' />
+              Resolve
+            </Button>
+          ) : null}
+          {postDetail.canReopen ? (
+            <Button size='sm' variant='secondary' onClick={handleReopen}>
+              <RotateCcw className='h-4 w-4' />
+              Reopen
+            </Button>
+          ) : null}
+          {postDetail.canPromoteToPlaybook ? (
+            <Button size='sm' disabled={promoteBusy} onClick={handlePromoteToPlaybook}>
+              <BookCopy className='h-4 w-4' />
+              {promoteBusy ? 'Promoting...' : 'Promote to playbook'}
+            </Button>
+          ) : null}
+          {postDetail.promotedPlaybookId ? (
+            <Button asChild size='sm' variant='secondary'>
+              <Link
+                to='/playbooks'
+                search={{
+                  team: postDetail.teamSlug,
+                  playbook: postDetail.promotedPlaybookId,
+                }}
+              >
+                Open playbook
+              </Link>
+            </Button>
+          ) : null}
         </div>
 
+        {editError ? <p className='text-sm text-destructive'>{editError}</p> : null}
+
+        {resolvingPost ? (
+          <section className='grid gap-2 rounded-sm border border-border/60 bg-secondary/25 p-3'>
+            <Label htmlFor='resolution-summary'>Resolution summary</Label>
+            <Textarea
+              id='resolution-summary'
+              value={resolutionSummary}
+              maxLength={3000}
+              rows={4}
+              placeholder='Describe what fixed the issue and what changed.'
+              onChange={(event) => setResolutionSummary(event.target.value)}
+            />
+            <div className='flex items-center gap-2'>
+              <Button disabled={resolutionBusy} size='sm' onClick={handleResolve}>
+                {resolutionBusy ? 'Resolving...' : 'Confirm resolve'}
+              </Button>
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() => {
+                  setResolvingPost(false)
+                  setResolutionSummary(postDetail.resolutionSummary ?? '')
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.description}</p>
+
+        {postDetail.resolutionSummary ? (
+          <section className='space-y-2 rounded-sm border border-border/60 bg-secondary/25 p-3'>
+            <p className='text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
+              Resolution summary
+            </p>
+            <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.resolutionSummary}</p>
+            {postDetail.resolvedAt && postDetail.resolvedByName ? (
+              <p className='tape-meta'>
+                Resolved by {postDetail.resolvedByName} ({postDetail.resolvedByIid}) on{' '}
+                {formatDate(postDetail.resolvedAt)}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
 
         {postImages.length > 0 ? (
           <div className='grid grid-cols-2 gap-2'>
@@ -521,8 +698,6 @@ function PostDetailPage() {
               />
             </div>
 
-            {editError ? <p className='text-sm text-destructive'>{editError}</p> : null}
-
             <div className='flex items-center gap-2'>
               <Button disabled={editBusy} onClick={handlePostEditSave}>
                 {editBusy ? 'Saving...' : 'Save'}
@@ -541,6 +716,11 @@ function PostDetailPage() {
           <p className='mt-1 text-sm text-muted-foreground'>
             Team-only comments and screenshots. Drafts autosave every 1.5 seconds.
           </p>
+          {commentsLocked ? (
+            <p className='mt-2 text-sm text-muted-foreground'>
+              Comments are read-only while this post is {postDetail.status}.
+            </p>
+          ) : null}
         </div>
 
         <section className='space-y-3 border-b border-border/45 pb-4'>
@@ -553,7 +733,7 @@ function PostDetailPage() {
               value={commentBody}
               rows={4}
               placeholder='Add a comment'
-              disabled={postDetail.status === 'archived'}
+              disabled={commentsLocked}
               onChange={setCommentBody}
             />
           </div>
@@ -565,7 +745,7 @@ function PostDetailPage() {
               type='file'
               multiple
               accept='image/jpeg,image/png,image/webp'
-              disabled={postDetail.status === 'archived'}
+              disabled={commentsLocked}
               onChange={(event) => setCommentFiles(Array.from(event.target.files ?? []))}
             />
           </div>
@@ -574,14 +754,10 @@ function PostDetailPage() {
           {commentDraftError ? <p className='text-sm text-destructive'>{commentDraftError}</p> : null}
 
           <div className='flex flex-wrap items-center gap-2'>
-            <Button
-              variant='secondary'
-              disabled={postDetail.status === 'archived'}
-              onClick={handleDiscardCommentDraft}
-            >
+            <Button variant='secondary' disabled={commentsLocked} onClick={handleDiscardCommentDraft}>
               Discard draft
             </Button>
-            <Button disabled={commentBusy || postDetail.status === 'archived'} onClick={handleCreateComment}>
+            <Button disabled={commentBusy || commentsLocked} onClick={handleCreateComment}>
               {commentBusy ? 'Posting...' : 'Post comment'}
             </Button>
           </div>

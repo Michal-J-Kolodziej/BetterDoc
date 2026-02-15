@@ -13,7 +13,7 @@ type VariantPath = '/dashboard/v1' | '/dashboard/v2' | '/dashboard/v3' | '/dashb
 
 type DashboardPost = {
   postId: string
-  status: 'active' | 'archived'
+  status: 'active' | 'resolved' | 'archived'
   teamName: string
   updatedAt: number
   title: string
@@ -132,6 +132,10 @@ export function DashboardVariantPage({ variant }: { variant: VariantKey }) {
     () => sortedPosts.filter((post) => post.status === 'archived'),
     [sortedPosts],
   )
+  const resolvedPosts = useMemo(
+    () => sortedPosts.filter((post) => post.status === 'resolved'),
+    [sortedPosts],
+  )
   const teams = useMemo(
     () => Array.from(new Set(sortedPosts.map((post) => post.teamName))),
     [sortedPosts],
@@ -220,6 +224,7 @@ export function DashboardVariantPage({ variant }: { variant: VariantKey }) {
       {variant === 'v1' ? (
         <VariantOne
           activeCount={activePosts.length}
+          resolvedCount={resolvedPosts.length}
           archivedCount={archivedPosts.length}
           posts={sortedPosts}
           teams={teams.length}
@@ -237,18 +242,21 @@ function VariantOne({
   posts,
   teams,
   activeCount,
+  resolvedCount,
   archivedCount,
 }: {
   posts: DashboardPost[]
   teams: number
   activeCount: number
+  resolvedCount: number
   archivedCount: number
 }) {
   return (
     <section className='space-y-5'>
-      <div className='grid grid-cols-[10rem_10rem_10rem_1fr] gap-4 border-b border-border/45 pb-4'>
+      <div className='grid grid-cols-[10rem_10rem_10rem_10rem_1fr] gap-4 border-b border-border/45 pb-4'>
         <Stat label='Visible posts' value={posts.length} />
         <Stat label='Active' value={activeCount} />
+        <Stat label='Resolved' value={resolvedCount} />
         <Stat label='Archived' value={archivedCount} />
         <Stat label='Teams represented' value={teams} />
       </div>

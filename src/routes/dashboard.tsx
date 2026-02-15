@@ -384,7 +384,7 @@ function DashboardPage() {
     setTemplateName(selected.name)
   }, [selectedTemplateId, teamTemplates])
 
-  const applyQuickStatus = (status: 'all' | 'active' | 'archived') => {
+  const applyQuickStatus = (status: 'all' | 'active' | 'resolved' | 'archived') => {
     const next = {
       ...parsedSearch,
       status,
@@ -632,7 +632,7 @@ function DashboardPage() {
             <Input
               value={searchInput}
               className='pl-9'
-              placeholder='Search posts. Try: status:archived team:platform has:image author:BD-XXXXXX'
+              placeholder='Search posts. Try: status:resolved team:platform has:image author:BD-XXXXXX'
               onChange={(event) => onSearchChange(event.target.value)}
             />
           </div>
@@ -881,6 +881,13 @@ function DashboardPage() {
             onClick={() => applyQuickStatus('active')}
           >
             Active
+          </Button>
+          <Button
+            variant={parsedSearch.status === 'resolved' ? 'default' : 'secondary'}
+            size='sm'
+            onClick={() => applyQuickStatus('resolved')}
+          >
+            Resolved
           </Button>
           <Button
             variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'}

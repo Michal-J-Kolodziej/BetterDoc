@@ -9,6 +9,7 @@ import {
 } from './_generated/server'
 import {
   canArchiveOrUnarchive,
+  isManagerRole,
   requireMembership,
   requireUserByWorkosUserId,
 } from './auth'
@@ -74,6 +75,11 @@ const postDetailValidator = v.object({
   createdByIid: v.string(),
   imageStorageIds: v.array(v.id('_storage')),
   imageUrls: v.array(v.string()),
+  resolutionSummary: v.union(v.string(), v.null()),
+  resolvedAt: v.union(v.number(), v.null()),
+  resolvedByUserId: v.union(v.id('users'), v.null()),
+  resolvedByName: v.union(v.string(), v.null()),
+  resolvedByIid: v.union(v.string(), v.null()),
   commentCount: v.number(),
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -81,6 +87,10 @@ const postDetailValidator = v.object({
   canEdit: v.boolean(),
   canArchive: v.boolean(),
   canUnarchive: v.boolean(),
+  canResolve: v.boolean(),
+  canReopen: v.boolean(),
+  canPromoteToPlaybook: v.boolean(),
+  promotedPlaybookId: v.union(v.id('playbooks'), v.null()),
   comments: v.array(
     v.object({
       commentId: v.id('comments'),
@@ -151,6 +161,22 @@ function normalizeImageIds(
   return [...new Set(value)]
 }
 
+function normalizeResolutionSummary(value: string): string {
+  const normalized = normalizeText(value)
+
+  if (!normalized) {
+    throw new ConvexError('Resolution summary is required.')
+  }
+
+  if (normalized.length > limits.maxResolutionSummaryLength) {
+    throw new ConvexError(
+      `Resolution summary must be ${String(limits.maxResolutionSummaryLength)} characters or fewer.`,
+    )
+  }
+
+  return normalized
+}
+
 function descriptionPreview(description: string): string {
   return description.length <= 180 ? description : `${description.slice(0, 177)}...`
 }
@@ -178,20 +204,28 @@ function parseDateBoundary(value: string | undefined, mode: 'start' | 'end'): nu
 }
 
 function listStatuses(
-  status: 'active' | 'archived' | 'all' | undefined,
-): Array<'active' | 'archived'> {
+  status: 'active' | 'resolved' | 'archived' | 'all' | undefined,
+): Array<'active' | 'resolved' | 'archived'> {
   if (!status || status === 'all') {
-    return ['active', 'archived']
+    return ['active', 'resolved', 'archived']
   }
 
   return [status]
+}
+
+export function canResolvePostFromStatus(status: Doc<'posts'>['status']): boolean {
+  return status === 'active'
+}
+
+export function canReopenPostFromStatus(status: Doc<'posts'>['status']): boolean {
+  return status === 'resolved'
 }
 
 async function collectTeamScopedPosts(
   ctx: QueryCtx,
   args: {
     teamId: Id<'teams'>
-    status: 'active' | 'archived' | 'all' | undefined
+    status: 'active' | 'resolved' | 'archived' | 'all' | undefined
     searchText?: string
     limit: number
     createdByUserId?: Id<'users'>
@@ -414,7 +448,7 @@ export const updatePost = mutation({
     }
 
     if (post.status !== 'active') {
-      throw new ConvexError('Archived posts cannot be edited.')
+      throw new ConvexError('Only active posts can be edited.')
     }
 
     const title = normalizeRequired(args.title, 'Title', limits.maxPostTitleLength)
@@ -472,6 +506,114 @@ export const updatePost = mutation({
     }
 
     return { postId: args.postId }
+  },
+})
+
+export const resolvePost = mutation({
+  args: {
+    actorWorkosUserId: v.string(),
+    postId: v.id('posts'),
+    resolutionSummary: v.string(),
+  },
+  returns: v.object({
+    postId: v.id('posts'),
+    status: postStatusValidator,
+  }),
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    const post = await ctx.db.get(args.postId)
+
+    if (!post) {
+      throw new ConvexError('Post not found.')
+    }
+
+    const membership = await requireMembership(ctx.db, post.teamId, actor._id)
+
+    if (!canArchiveOrUnarchive(actor._id, membership.role, post.createdByUserId)) {
+      throw new ConvexError('You are not allowed to resolve this post.')
+    }
+
+    if (post.status === 'resolved') {
+      return {
+        postId: post._id,
+        status: 'resolved' as const,
+      }
+    }
+
+    if (!canResolvePostFromStatus(post.status)) {
+      throw new ConvexError('Only active posts can be resolved.')
+    }
+
+    const resolutionSummary = normalizeResolutionSummary(args.resolutionSummary)
+    const now = Date.now()
+
+    await ctx.db.patch(post._id, {
+      status: 'resolved',
+      resolutionSummary,
+      resolvedAt: now,
+      resolvedByUserId: actor._id,
+      updatedByUserId: actor._id,
+      updatedAt: now,
+      lastActivityAt: now,
+    })
+
+    return {
+      postId: post._id,
+      status: 'resolved' as const,
+    }
+  },
+})
+
+export const reopenPost = mutation({
+  args: {
+    actorWorkosUserId: v.string(),
+    postId: v.id('posts'),
+  },
+  returns: v.object({
+    postId: v.id('posts'),
+    status: postStatusValidator,
+  }),
+  handler: async (ctx, args) => {
+    const actor = await requireUserByWorkosUserId(ctx.db, args.actorWorkosUserId)
+    const post = await ctx.db.get(args.postId)
+
+    if (!post) {
+      throw new ConvexError('Post not found.')
+    }
+
+    const membership = await requireMembership(ctx.db, post.teamId, actor._id)
+
+    if (!canArchiveOrUnarchive(actor._id, membership.role, post.createdByUserId)) {
+      throw new ConvexError('You are not allowed to reopen this post.')
+    }
+
+    if (post.status === 'active') {
+      return {
+        postId: post._id,
+        status: 'active' as const,
+      }
+    }
+
+    if (!canReopenPostFromStatus(post.status)) {
+      throw new ConvexError('Only resolved posts can be reopened.')
+    }
+
+    const now = Date.now()
+
+    await ctx.db.patch(post._id, {
+      status: 'active',
+      resolutionSummary: undefined,
+      resolvedAt: undefined,
+      resolvedByUserId: undefined,
+      updatedByUserId: actor._id,
+      updatedAt: now,
+      lastActivityAt: now,
+    })
+
+    return {
+      postId: post._id,
+      status: 'active' as const,
+    }
   },
 })
 
@@ -553,6 +695,10 @@ export const unarchivePost = mutation({
       }
     }
 
+    if (post.status !== 'archived') {
+      throw new ConvexError('Only archived posts can be unarchived.')
+    }
+
     const now = Date.now()
 
     await ctx.db.patch(post._id, {
@@ -576,7 +722,9 @@ export const listPosts = query({
     actorWorkosUserId: v.string(),
     teamId: v.optional(v.id('teams')),
     searchText: v.optional(v.string()),
-    status: v.optional(v.union(v.literal('active'), v.literal('archived'), v.literal('all'))),
+    status: v.optional(
+      v.union(v.literal('active'), v.literal('resolved'), v.literal('archived'), v.literal('all')),
+    ),
     authorIid: v.optional(v.string()),
     hasImage: v.optional(v.boolean()),
     before: v.optional(v.string()),
@@ -722,14 +870,22 @@ export const getPostDetail = query({
 
     const membership = await requireMembership(ctx.db, post.teamId, actor._id)
 
-    const [team, creator] = await Promise.all([
+    const [team, creator, promotedPlaybook] = await Promise.all([
       ctx.db.get(post.teamId),
       ctx.db.get(post.createdByUserId),
+      ctx.db
+        .query('playbooks')
+        .withIndex('by_team_source_post', (index) =>
+          index.eq('teamId', post.teamId).eq('sourcePostId', post._id),
+        )
+        .unique(),
     ])
 
     if (!team || !creator) {
       throw new ConvexError('Post contains invalid references.')
     }
+
+    const resolvedBy = post.resolvedByUserId ? await ctx.db.get(post.resolvedByUserId) : null
 
     const comments = await ctx.db
       .query('comments')
@@ -769,6 +925,7 @@ export const getPostDetail = query({
             comment.createdByUserId === actor._id,
           canDelete:
             !comment.deletedAt &&
+            post.status === 'active' &&
             (comment.createdByUserId === actor._id ||
               membership.role === 'admin' ||
               membership.role === 'teamleader'),
@@ -781,11 +938,19 @@ export const getPostDetail = query({
     )
 
     const canArchive =
-      post.status === 'active' &&
+      post.status !== 'archived' &&
       canArchiveOrUnarchive(actor._id, membership.role, post.createdByUserId)
     const canUnarchive =
       post.status === 'archived' &&
       canArchiveOrUnarchive(actor._id, membership.role, post.createdByUserId)
+    const canResolve =
+      canResolvePostFromStatus(post.status) &&
+      canArchiveOrUnarchive(actor._id, membership.role, post.createdByUserId)
+    const canReopen =
+      canReopenPostFromStatus(post.status) &&
+      canArchiveOrUnarchive(actor._id, membership.role, post.createdByUserId)
+    const canPromoteToPlaybook =
+      post.status === 'resolved' && isManagerRole(membership.role) && !promotedPlaybook
 
     return {
       postId: post._id,
@@ -802,6 +967,11 @@ export const getPostDetail = query({
       createdByIid: creator.iid,
       imageStorageIds: post.imageStorageIds,
       imageUrls: postImageUrls.filter((url): url is string => Boolean(url)),
+      resolutionSummary: post.resolutionSummary ?? null,
+      resolvedAt: post.resolvedAt ?? null,
+      resolvedByUserId: resolvedBy?._id ?? null,
+      resolvedByName: resolvedBy?.name ?? null,
+      resolvedByIid: resolvedBy?.iid ?? null,
       commentCount: post.commentCount,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
@@ -809,6 +979,10 @@ export const getPostDetail = query({
       canEdit: post.createdByUserId === actor._id && post.status === 'active',
       canArchive,
       canUnarchive,
+      canResolve,
+      canReopen,
+      canPromoteToPlaybook,
+      promotedPlaybookId: promotedPlaybook?._id ?? null,
       comments: commentViews
         .filter((comment): comment is NonNullable<typeof comment> => Boolean(comment))
         .sort((left, right) => left.createdAt - right.createdAt),

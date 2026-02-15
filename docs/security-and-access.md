@@ -6,7 +6,7 @@ Last updated: 2026-02-15
 - Authentication: WorkOS AuthKit SSO.
 - Session middleware: `authkitMiddleware()` in `src/start.ts`.
 - Authorization: team membership + team role checks in Convex function handlers.
-- Visibility boundary: posts/comments are only visible to members of the assigned team.
+- Visibility boundary: posts/comments/playbooks/analytics are only visible to members of the assigned team.
 
 ## WorkOS Configuration
 ### Public client env
@@ -29,7 +29,7 @@ Last updated: 2026-02-15
 2. App redirects to WorkOS sign-in.
 3. WorkOS redirects to `/api/auth/callback`.
 4. AuthKit stores encrypted session cookie.
-5. Protected routes (`/dashboard`, `/posts/$postId`, `/teams`, `/profile`, `/inbox`, `/join/$token`) verify `context.auth()`.
+5. Protected routes (`/dashboard`, `/posts/$postId`, `/playbooks`, `/analytics`, `/teams`, `/profile`, `/inbox`, `/join/$token`) verify `context.auth()`.
 6. `/logout` clears session and signs out through WorkOS.
 
 ## Team Role Model (V2)
@@ -48,6 +48,9 @@ Permission summary:
   - post creator only
 - Post archive/unarchive:
   - post creator OR `teamleader` OR `admin`
+- Post resolve/reopen:
+  - post creator OR `teamleader` OR `admin`
+  - `resolve` only from `active`; `reopen` only from `resolved`
 - Team management:
   - invites/role assignment/member removal by `teamleader` and `admin`
   - `teamleader` cannot assign or manage `admin`
@@ -55,7 +58,13 @@ Permission summary:
 - Comment edit:
   - comment author only
 - Comment delete:
-  - comment author OR `teamleader` OR `admin`
+  - comment author OR `teamleader` OR `admin` (active posts only)
+- Playbook promotion:
+  - `teamleader` OR `admin`
+  - source post must be `resolved`
+- Analytics and playbook visibility:
+  - any member can read team-scoped analytics/playbooks for their own team
+  - server-side membership checks enforce team boundary
 
 ## Enforcement Locations
 - Shared guards:
