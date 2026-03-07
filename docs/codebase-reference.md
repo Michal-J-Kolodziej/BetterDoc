@@ -20,8 +20,9 @@ Last updated: 2026-03-07
 
 ## Route Surface (V2)
 - `src/routes/index.tsx`
-  - Public entry page with a restrained light workspace preview, direct sign-in CTA, and dashboard shortcut.
-  - Explains the capture/discuss/reuse flow with list-based sections instead of marketing-card blocks.
+  - Public entry page with a desktop-first editorial layout, direct sign-in CTA, and dashboard shortcut.
+  - Uses a workspace preview, process list, and incident-record timeline to explain capture/discuss/reuse without generic marketing-card treatments.
+  - Adds subtle front-page-only motion (`orbit` drift, queue scan, timeline pulse) while staying within the app's restrained warm-light visual language.
   - Auth entry links use full document navigation so `/login` and `/dashboard` hit server auth redirects instead of client-side route-only transitions.
 - `src/routes/login.tsx`
   - WorkOS redirect entrypoint.
@@ -93,6 +94,7 @@ Last updated: 2026-03-07
   - Google font stack: `Instrument Sans` + `IBM Plex Mono`.
   - Minimal linear background treatment with no dashboard-style gradients or glow effects.
   - Motion baseline (`180ms` reveal) with strict reduced-motion override.
+  - Public landing page adds desktop-first `front-*` utilities for the editorial split layout and subtle decorative motion; there is no dedicated mobile-specific home layout.
   - Responsive workspace utilities (`workspace-shell`, `workspace-sidebar`, `workspace-header`, `workspace-content`, `workspace-mobile-nav`) that preserve hierarchy on smaller screens.
   - Shared page utilities (`page-card`, `page-list`, `page-list-row`, `page-toolbar`, `page-meta`) for low-chrome section and list composition.
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
