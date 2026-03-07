@@ -1,0 +1,4 @@
+interface:
+  display_name: "Uncodixify UI"
+  short_description: "Remove generic AI UI patterns from designs"
+  default_prompt: "Use $uncodixify-ui to redesign this UI so it avoids generic AI aesthetics and feels product-specific."

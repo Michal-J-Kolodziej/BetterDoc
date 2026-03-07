@@ -3,6 +3,7 @@
 ## Skills
 ### Available skills
 - codebase-doc-sync: Keep BetterDoc docs synchronized with code changes. Use when work modifies application code, schema/API logic, auth/RBAC behavior, deployment configuration, CI pipelines, or environment setup. (file: /Users/michal/Documents/MyApps/BetterDoc/skills/codebase-doc-sync/SKILL.md)
+- uncodixify-ui: Remove generic AI-generated UI aesthetics and replace them with restrained, product-specific interface decisions. Use when designing or refactoring frontend layouts, dashboards, landing pages, components, or visual systems and the goal is to make the result feel human-designed and conventional. (file: /Users/michal/Documents/MyApps/BetterDoc/uncodixify-ui/SKILL.md)
 
 ### How to use skills
 - Trigger rules:
