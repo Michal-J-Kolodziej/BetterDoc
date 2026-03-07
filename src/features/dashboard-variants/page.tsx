@@ -188,7 +188,7 @@ export function DashboardVariantPage({ variant }: { variant: VariantKey }) {
       activeNav='dashboard'
       sectionLabel='Design Review'
       title={`Dashboard ${variant.toUpperCase()} - ${variantConfig.label}`}
-      description='Five desktop-only dashboard options with low chrome, no glow buttons, and lighter framing.'
+      description='Five desktop-only dashboard options with low chrome, no glow buttons, and restrained framing.'
       actorWorkosUserId={user.id}
       userLabel={currentUserLabel}
       userEmail={user.email ?? undefined}
@@ -261,7 +261,7 @@ function VariantOne({
         <Stat label='Teams represented' value={teams} />
       </div>
 
-      <div className='divide-y divide-border/45 bg-black/15'>
+      <div className='divide-y divide-border/45 bg-secondary/22'>
         {posts.length === 0 ? (
           <p className='px-4 py-8 text-sm text-muted-foreground'>No posts available for preview.</p>
         ) : (
@@ -393,7 +393,7 @@ function VariantFour({ groups }: { groups: DayGroup[] }) {
                 {group.posts.slice(0, 4).map((post) => (
                   <Link
                     key={post.postId}
-                    className='block bg-black/15 px-4 py-3 transition-colors hover:bg-black/30'
+                    className='block bg-secondary/24 px-4 py-3 transition-colors hover:bg-secondary/42'
                     params={{ postId: post.postId }}
                     to='/posts/$postId'
                   >

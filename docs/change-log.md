@@ -1,5 +1,17 @@
 # BetterDoc Change Log
 
+## 2026-03-07 (Dark mode refresh: restrained palette)
+- Code paths changed:
+  - `src/styles.css`
+  - `src/features/dashboard-variants/page.tsx`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Replaced the warm light workspace tokens with a restrained dark palette built from muted charcoal surfaces, moss-green primary actions, and quieter amber support accents.
+  - Tightened the shared shell backgrounds and landing-page ambient treatments so the public and authenticated surfaces stay dark without drifting into glossy or blue-leaning SaaS styling.
+  - Updated dashboard review variants to use token-based dark section fills instead of hardcoded black overlays and adjusted preview copy to match the restrained framing language.
+
 ## 2026-03-07 (Front page redesign: editorial desktop landing)
 - Code paths changed:
   - `src/routes/index.tsx`

@@ -52,7 +52,7 @@ Last updated: 2026-03-07
 - `src/routes/dashboard_.v5.tsx`
   - Protected dashboard design review surfaces at `/dashboard/v1` through `/dashboard/v5`.
   - Use a shared variant page module to keep auth/data behavior consistent across all five previews.
-  - Variants are intentionally low-chrome (minimal framing, no glow-button treatment in preview UI).
+  - Variants are intentionally low-chrome with restrained dark framing and no glow-button treatment in preview UI.
 - `src/routes/posts.$postId.tsx`
   - Protected post detail view.
   - Uses shared protected workspace shell; sidebar highlights Dashboard nav.
@@ -90,11 +90,11 @@ Last updated: 2026-03-07
 
 ## UI System (Shadcn + Tailwind)
 - Global styling/tokens: `src/styles.css`
-  - Warm light workspace tokens with restrained green primary accents, softer borders, and tighter radius scale.
+  - Restrained dark workspace tokens with muted charcoal surfaces, moss-green primary accents, softened amber support accents, and the same tighter radius scale.
   - Google font stack: `Instrument Sans` + `IBM Plex Mono`.
-  - Minimal linear background treatment with no dashboard-style gradients or glow effects.
+  - Minimal dark background treatment with subtle tonal separation instead of high-contrast gradients or glow-heavy effects.
   - Motion baseline (`180ms` reveal) with strict reduced-motion override.
-  - Public landing page adds desktop-first `front-*` utilities for the editorial split layout, subtle decorative motion, and pointer-driven ambient background layers; there is no dedicated mobile-specific home layout.
+  - Public landing page adds desktop-first `front-*` utilities for the editorial split layout, subtle decorative motion, and pointer-driven ambient background layers tuned down to match the darker restrained palette; there is no dedicated mobile-specific home layout.
   - Responsive workspace utilities (`workspace-shell`, `workspace-sidebar`, `workspace-header`, `workspace-content`, `workspace-mobile-nav`) that preserve hierarchy on smaller screens.
   - Shared page utilities (`page-card`, `page-list`, `page-list-row`, `page-toolbar`, `page-meta`) for low-chrome section and list composition.
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
@@ -107,7 +107,7 @@ Last updated: 2026-03-07
 - Mention input UI:
   - `src/components/mentions/mention-textarea.tsx`
   - Detects `@` mention triggers at the current textarea caret and queries `teams.searchTeamMembers` for inline IID mention insertion.
-  - Picker styling now matches the lighter popover/form-control treatment used across the app.
+  - Picker styling now matches the restrained dark popover/form-control treatment used across the app.
 - Shadcn component primitives in `src/components/ui`:
   - `avatar.tsx`
   - `badge.tsx`
