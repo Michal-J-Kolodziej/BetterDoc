@@ -10,6 +10,7 @@
 - Impact:
   - Reworked the public front page into a cleaner desktop-first editorial layout with a restrained brand header, sharper hierarchy, and a workspace preview built from actual product concepts.
   - Added subtle landing-page-only motion through drifting orbit outlines, queue scan movement, and timeline pulse cues while preserving the warm light palette and low-chrome surface treatment.
+  - Added a cursor-responsive ambient background layer that shifts glow, ring, and grid fields on fine-pointer devices without changing the page structure or introducing a mobile-specific variant.
   - Kept document-navigation auth entry points intact and intentionally did not add a dedicated mobile-specific landing layout.
 
 ## 2026-03-07 (UI redesign: calmer workspace shell + responsive route refresh)

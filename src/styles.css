@@ -263,6 +263,10 @@ a {
 }
 
 .front-page {
+  --front-mouse-x: 52%;
+  --front-mouse-y: 24%;
+  --front-shift-x: 0px;
+  --front-shift-y: 0px;
   position: relative;
   isolation: isolate;
   display: grid;
@@ -274,6 +278,65 @@ a {
 .front-page > * {
   position: relative;
   z-index: 1;
+}
+
+.front-page-ambient {
+  position: absolute;
+  inset: -4rem -5rem -4rem;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.front-page-ambient-glow,
+.front-page-ambient-grid,
+.front-page-ambient-ring {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.front-page-ambient-glow {
+  background:
+    radial-gradient(circle 24rem at var(--front-mouse-x) var(--front-mouse-y), hsl(var(--primary) / 0.16), transparent 60%),
+    radial-gradient(
+      circle 18rem at calc(var(--front-mouse-x) - 18%) calc(var(--front-mouse-y) + 10%),
+      hsl(var(--accent) / 0.11),
+      transparent 64%
+    ),
+    radial-gradient(circle 28rem at 76% 12%, hsl(var(--card) / 0.65), transparent 66%);
+  transform: translate3d(calc(var(--front-shift-x) * -0.42), calc(var(--front-shift-y) * -0.42), 0);
+}
+
+.front-page-ambient-grid {
+  inset: 1rem -2rem 5rem;
+  background-image:
+    linear-gradient(90deg, hsl(var(--border) / 0.32) 1px, transparent 1px),
+    linear-gradient(180deg, hsl(var(--border) / 0.32) 1px, transparent 1px);
+  background-size: 11rem 11rem;
+  mask-image:
+    radial-gradient(circle 26rem at var(--front-mouse-x) var(--front-mouse-y), black, transparent 78%),
+    linear-gradient(180deg, black 22%, transparent 88%);
+  opacity: 0.32;
+  transform: translate3d(calc(var(--front-shift-x) * -0.18), calc(var(--front-shift-y) * -0.18), 0);
+}
+
+.front-page-ambient-ring {
+  opacity: 0.7;
+  background:
+    radial-gradient(
+      circle 12rem at var(--front-mouse-x) var(--front-mouse-y),
+      transparent 0 66%,
+      hsl(var(--border) / 0.72) 67%,
+      transparent 70%
+    ),
+    radial-gradient(
+      circle 22rem at calc(var(--front-mouse-x) + 10%) calc(var(--front-mouse-y) - 14%),
+      transparent 0 73%,
+      hsl(var(--border) / 0.48) 74%,
+      transparent 77%
+    );
+  transform: translate3d(calc(var(--front-shift-x) * -0.12), calc(var(--front-shift-y) * -0.12), 0);
 }
 
 .front-page-orbit {

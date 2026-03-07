@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, BookCopy, MessageSquareText, Search, ShieldCheck, TimerReset } from 'lucide-react'
 
@@ -53,9 +54,116 @@ const recordTrail = [
   { time: '07:38', label: 'Fix recorded', note: 'Resolution summary is promoted into a reusable playbook.' },
 ]
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
 function HomePage() {
+  const pageRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const page = pageRef.current
+
+    if (!page || typeof window === 'undefined') {
+      return
+    }
+
+    const finePointerMedia = window.matchMedia('(pointer: fine)')
+    const reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const restingX = 52
+    const restingY = 24
+    let targetX = restingX
+    let targetY = restingY
+    let currentX = restingX
+    let currentY = restingY
+    let frame = 0
+
+    const applyPosition = () => {
+      page.style.setProperty('--front-mouse-x', `${currentX.toFixed(2)}%`)
+      page.style.setProperty('--front-mouse-y', `${currentY.toFixed(2)}%`)
+      page.style.setProperty('--front-shift-x', `${(((currentX - 50) / 50) * 24).toFixed(2)}px`)
+      page.style.setProperty('--front-shift-y', `${(((currentY - 50) / 50) * 18).toFixed(2)}px`)
+    }
+
+    const schedule = () => {
+      if (frame !== 0 || reducedMotionMedia.matches || !finePointerMedia.matches) {
+        return
+      }
+
+      frame = window.requestAnimationFrame(step)
+    }
+
+    const step = () => {
+      currentX += (targetX - currentX) * 0.085
+      currentY += (targetY - currentY) * 0.085
+      applyPosition()
+
+      if (Math.abs(targetX - currentX) < 0.08 && Math.abs(targetY - currentY) < 0.08) {
+        currentX = targetX
+        currentY = targetY
+        applyPosition()
+        frame = 0
+        return
+      }
+
+      frame = window.requestAnimationFrame(step)
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (reducedMotionMedia.matches || !finePointerMedia.matches) {
+        return
+      }
+
+      const bounds = page.getBoundingClientRect()
+      targetX = clamp(((event.clientX - bounds.left) / bounds.width) * 100, 0, 100)
+      targetY = clamp(((event.clientY - bounds.top) / bounds.height) * 100, 0, 100)
+      schedule()
+    }
+
+    const resetPointer = () => {
+      targetX = restingX
+      targetY = restingY
+      schedule()
+    }
+
+    const handleMediaChange = () => {
+      if (reducedMotionMedia.matches || !finePointerMedia.matches) {
+        window.cancelAnimationFrame(frame)
+        frame = 0
+        targetX = restingX
+        targetY = restingY
+        currentX = restingX
+        currentY = restingY
+        applyPosition()
+        return
+      }
+
+      schedule()
+    }
+
+    applyPosition()
+    page.addEventListener('pointermove', handlePointerMove)
+    page.addEventListener('pointerleave', resetPointer)
+    finePointerMedia.addEventListener('change', handleMediaChange)
+    reducedMotionMedia.addEventListener('change', handleMediaChange)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      page.removeEventListener('pointermove', handlePointerMove)
+      page.removeEventListener('pointerleave', resetPointer)
+      finePointerMedia.removeEventListener('change', handleMediaChange)
+      reducedMotionMedia.removeEventListener('change', handleMediaChange)
+    }
+  }, [])
+
   return (
-    <main className='app-shell front-page'>
+    <main className='app-shell front-page' ref={pageRef}>
+      <div className='front-page-ambient' aria-hidden='true'>
+        <div className='front-page-ambient-glow' />
+        <div className='front-page-ambient-grid' />
+        <div className='front-page-ambient-ring' />
+      </div>
+
       <div className='front-page-orbit front-page-orbit-a' aria-hidden='true' />
       <div className='front-page-orbit front-page-orbit-b' aria-hidden='true' />
 
