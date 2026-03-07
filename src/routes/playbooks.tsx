@@ -167,12 +167,12 @@ function PlaybooksPage() {
       userEmail={user.email ?? undefined}
     >
       {!hasTeams ? (
-        <section className='noir-reveal tape-surface px-5 py-4'>
+        <section className='page-card noir-reveal space-y-2'>
           <p className='text-base font-semibold text-foreground'>Create your first team</p>
-          <p className='mt-1 text-sm text-muted-foreground'>
+          <p className='text-sm text-muted-foreground'>
             Team-private playbooks appear after you join or create a team.
           </p>
-          <Button asChild className='mt-4'>
+          <Button asChild className='mt-2'>
             <Link to='/teams'>Open Team Management</Link>
           </Button>
         </section>
@@ -180,7 +180,7 @@ function PlaybooksPage() {
 
       {hasTeams ? (
         <>
-          <section className='tape-surface noir-reveal space-y-4 p-4'>
+          <section className='page-card noir-reveal'>
             <div className='max-w-sm'>
               <Select
                 value={selectedTeam?.slug ?? ''}
@@ -214,13 +214,13 @@ function PlaybooksPage() {
             </div>
           </section>
 
-          <section className='grid gap-4 md:grid-cols-[1fr_1.3fr]'>
-            <section className='tape-list noir-reveal'>
+          <section className='page-grid gap-4 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)]'>
+            <section className='page-list noir-reveal'>
               {(playbooks ?? []).map((playbook) => (
                 <button
                   key={playbook.playbookId}
                   type='button'
-                  className='tape-list-row grid w-full gap-2 px-4 py-4 text-left transition-colors hover:bg-secondary/20'
+                  className='page-list-row w-full text-left transition-colors hover:bg-secondary/35'
                   onClick={() => {
                     void navigate({
                       search: {
@@ -233,7 +233,7 @@ function PlaybooksPage() {
                 >
                   <div className='flex items-center gap-2'>
                     <Badge variant='outline'>{playbook.occurrenceWhere}</Badge>
-                    <span className='ml-auto text-xs text-muted-foreground'>
+                    <span className='ml-auto page-meta'>
                       Updated {formatDate(playbook.updatedAt)}
                     </span>
                   </div>
@@ -243,16 +243,16 @@ function PlaybooksPage() {
               ))}
 
               {playbooks && playbooks.length === 0 ? (
-                <section className='px-4 py-6'>
+                <section className='page-empty'>
                   <p className='text-sm text-muted-foreground'>No playbooks in this team yet.</p>
-                  <p className='mt-1 text-sm text-muted-foreground'>
+                  <p className='text-sm text-muted-foreground'>
                     Resolve a post, then promote it from post detail.
                   </p>
                 </section>
               ) : null}
             </section>
 
-            <section className='tape-surface noir-reveal space-y-4 p-5'>
+            <section className='page-card noir-reveal space-y-4'>
               {!playbookDetail ? (
                 <p className='text-sm text-muted-foreground'>Select a playbook to inspect details.</p>
               ) : (
@@ -270,20 +270,16 @@ function PlaybooksPage() {
                   </div>
 
                   <section className='space-y-2'>
-                    <p className='text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-                      Issue summary
-                    </p>
+                    <p className='page-meta'>Issue summary</p>
                     <p className='whitespace-pre-wrap text-sm leading-6'>{playbookDetail.issueSummary}</p>
                   </section>
 
                   <section className='space-y-2'>
-                    <p className='text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-                      Resolution summary
-                    </p>
+                    <p className='page-meta'>Resolution summary</p>
                     <p className='whitespace-pre-wrap text-sm leading-6'>{playbookDetail.resolutionSummary}</p>
                   </section>
 
-                  <p className='tape-meta'>
+                  <p className='page-meta'>
                     Promoted by {playbookDetail.promotedByName} ({playbookDetail.promotedByIid}) on{' '}
                     {formatDate(playbookDetail.createdAt)}
                   </p>

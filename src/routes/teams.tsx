@@ -417,8 +417,8 @@ function TeamsPage() {
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
-      <section className='grid grid-cols-2 gap-5'>
-        <section className='tape-surface noir-reveal space-y-3 p-5'>
+      <section className='page-grid gap-5 lg:grid-cols-2'>
+        <section className='page-card noir-reveal space-y-3'>
           <div>
             <p className='text-lg font-semibold text-foreground'>Create Team</p>
             <p className='mt-1 text-sm text-muted-foreground'>You become admin of teams you create.</p>
@@ -439,7 +439,7 @@ function TeamsPage() {
           </Button>
         </section>
 
-        <section className='tape-surface noir-reveal space-y-3 p-5'>
+        <section className='page-card noir-reveal space-y-3'>
           <div>
             <p className='text-lg font-semibold text-foreground'>My Invites</p>
             <p className='mt-1 text-sm text-muted-foreground'>Pending and recent team invites.</p>
@@ -448,9 +448,9 @@ function TeamsPage() {
           {(invites ?? []).length === 0 ? (
             <p className='text-sm text-muted-foreground'>No invites.</p>
           ) : (
-            <div className='tape-list'>
+            <div className='page-list'>
               {(invites ?? []).map((invite) => (
-                <article key={invite.inviteId} className='tape-list-row py-3'>
+                <article key={invite.inviteId} className='page-list-row'>
                   <div className='flex flex-wrap items-center gap-2'>
                     <p className='text-sm font-medium'>{invite.teamName}</p>
                     <Badge variant='outline'>{invite.status}</Badge>
@@ -476,7 +476,7 @@ function TeamsPage() {
         </section>
       </section>
 
-      <section className='tape-surface noir-reveal space-y-4 p-5'>
+      <section className='page-card noir-reveal space-y-4'>
         <div>
           <p className='text-lg font-semibold text-foreground'>My Teams</p>
           <p className='mt-1 text-sm text-muted-foreground'>Select a team to manage members and invites.</p>
@@ -497,14 +497,19 @@ function TeamsPage() {
         <Separator />
 
         {selectedTeam ? (
-          <div className='grid grid-cols-[1.3fr_1fr] gap-5'>
+          <div className='page-grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)]'>
             <section className='space-y-3'>
-              <h2 className='noir-kicker'>Members in {selectedTeam.name}</h2>
+              <div className='space-y-1'>
+                <h2 className='text-base font-semibold text-foreground'>Members in {selectedTeam.name}</h2>
+                <p className='text-sm text-muted-foreground'>
+                  Review role assignments and remove access when needed.
+                </p>
+              </div>
               {memberActionError ? <p className='text-sm text-destructive'>{memberActionError}</p> : null}
 
-              <div className='tape-list'>
+              <div className='page-list'>
                 {(members ?? []).map((member) => (
-                  <article key={member.userId} className='tape-list-row py-3'>
+                  <article key={member.userId} className='page-list-row'>
                     <div className='flex flex-wrap items-center gap-2'>
                       <span className='text-sm font-medium'>
                         {member.name} ({member.iid})
@@ -548,10 +553,15 @@ function TeamsPage() {
             </section>
 
             <section className='space-y-3'>
-              <h2 className='noir-kicker'>Team Invites</h2>
+              <div className='space-y-1'>
+                <h2 className='text-base font-semibold text-foreground'>Team invites</h2>
+                <p className='text-sm text-muted-foreground'>
+                  Send direct invites or create a reusable join link.
+                </p>
+              </div>
 
               {manager ? (
-                <div className='space-y-4 bg-secondary/35 p-4'>
+                <div className='space-y-4 rounded-md border border-border bg-secondary/35 p-4'>
                   <div className='flex flex-wrap gap-2'>
                     <Button
                       size='sm'
@@ -630,9 +640,9 @@ function TeamsPage() {
                   {inviteSuccess ? <p className='text-sm text-muted-foreground'>{inviteSuccess}</p> : null}
 
                   {generatedInviteUrl ? (
-                    <div className='space-y-2 rounded-sm border border-border/65 bg-background/50 p-3'>
+                    <div className='space-y-2 rounded-md border border-border bg-card p-3'>
                       {generatedInviteLabel ? (
-                        <p className='text-xs text-muted-foreground'>{generatedInviteLabel}</p>
+                        <p className='text-sm text-muted-foreground'>{generatedInviteLabel}</p>
                       ) : null}
                       <code className='block break-all text-xs'>{generatedInviteUrl}</code>
                       <Button size='sm' variant='secondary' onClick={() => void handleCopyGeneratedInviteUrl()}>
@@ -663,9 +673,9 @@ function TeamsPage() {
                   ) : inviteLinks.length === 0 ? (
                     <p className='text-xs text-muted-foreground'>No active links.</p>
                   ) : (
-                    <div className='tape-list'>
+                    <div className='page-list'>
                       {inviteLinks.map((inviteLink) => (
-                        <article key={inviteLink.inviteLinkId} className='tape-list-row py-2'>
+                        <article key={inviteLink.inviteLinkId} className='page-list-row py-2'>
                           <div className='flex flex-wrap items-center gap-2'>
                             <Badge variant='outline'>{inviteLink.role}</Badge>
                             <Badge variant='secondary'>

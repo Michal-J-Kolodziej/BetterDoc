@@ -9,11 +9,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-border/40 bg-primary/92 text-primary-foreground hover:bg-primary',
-        destructive: 'border-destructive/35 bg-destructive/90 text-destructive-foreground hover:bg-destructive',
-        outline: 'border-border/75 bg-transparent text-foreground hover:bg-secondary/50',
-        secondary: 'border-border/65 bg-secondary/68 text-secondary-foreground hover:bg-secondary/88',
-        ghost: 'text-muted-foreground hover:bg-secondary/52 hover:text-foreground',
+        default: 'border-primary bg-primary text-primary-foreground hover:bg-primary/92',
+        destructive: 'border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/92',
+        outline: 'border-border bg-card text-foreground hover:bg-secondary/55',
+        secondary: 'border-border bg-secondary/78 text-secondary-foreground hover:bg-secondary',
+        ghost: 'text-muted-foreground hover:bg-secondary/55 hover:text-foreground',
         link: 'border-none p-0 text-primary underline-offset-4 hover:underline',
       },
       size: {

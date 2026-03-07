@@ -625,9 +625,9 @@ function DashboardPage() {
       userLabel={currentUserLabel}
       userEmail={user.email ?? undefined}
     >
-      <section className='noir-reveal space-y-4 border-b border-border/50 pb-5'>
-        <div className='flex items-center gap-3'>
-          <div className='relative flex-1'>
+      <section className='page-card noir-reveal space-y-4'>
+        <div className='page-toolbar'>
+          <div className='relative w-full max-w-3xl'>
             <Search className='pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
             <Input
               value={searchInput}
@@ -656,7 +656,7 @@ function DashboardPage() {
               <DialogHeader>
                 <DialogTitle>Create Post</DialogTitle>
                 <DialogDescription>
-                  Add a concise issue post to a team board. Drafts autosave every 1.5 seconds.
+                  Add a concise issue record to a team board. Drafts autosave every 1.5 seconds.
                 </DialogDescription>
               </DialogHeader>
 
@@ -784,11 +784,9 @@ function DashboardPage() {
                 </div>
 
                 {shouldShowSimilarPanel ? (
-                  <section className='grid gap-2 rounded-sm border border-border/60 bg-muted/20 px-3 py-3'>
+                  <section className='grid gap-2 rounded-md border border-border bg-secondary/35 px-3 py-3'>
                     <div className='flex flex-wrap items-center gap-2'>
-                      <p className='text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-                        Similar incidents
-                      </p>
+                      <p className='text-sm font-medium text-foreground'>Similar incidents</p>
                       <p className='text-xs text-muted-foreground'>
                         Input length {String(similarInputPreview.length)}
                       </p>
@@ -806,9 +804,9 @@ function DashboardPage() {
                         No close matches found in this team yet.
                       </p>
                     ) : (
-                      <div className='tape-list'>
+                      <div className='page-list'>
                         {similarPosts.map((similar) => (
-                          <article key={similar.postId} className='tape-list-row grid gap-1 py-2'>
+                          <article key={similar.postId} className='page-list-row py-2'>
                             <div className='flex flex-wrap items-center gap-2'>
                               <Link
                                 className='text-sm font-semibold text-foreground transition-colors hover:text-primary'
@@ -867,37 +865,39 @@ function DashboardPage() {
           </Dialog>
         </div>
 
-        <div className='flex flex-wrap items-center gap-2'>
-          <Button
-            variant={parsedSearch.status === 'all' ? 'default' : 'secondary'}
-            size='sm'
-            onClick={() => applyQuickStatus('all')}
-          >
-            All
-          </Button>
-          <Button
-            variant={parsedSearch.status === 'active' ? 'default' : 'secondary'}
-            size='sm'
-            onClick={() => applyQuickStatus('active')}
-          >
-            Active
-          </Button>
-          <Button
-            variant={parsedSearch.status === 'resolved' ? 'default' : 'secondary'}
-            size='sm'
-            onClick={() => applyQuickStatus('resolved')}
-          >
-            Resolved
-          </Button>
-          <Button
-            variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'}
-            size='sm'
-            onClick={() => applyQuickStatus('archived')}
-          >
-            Archived
-          </Button>
+        <div className='page-toolbar'>
+          <div className='page-toolbar-group'>
+            <Button
+              variant={parsedSearch.status === 'all' ? 'default' : 'secondary'}
+              size='sm'
+              onClick={() => applyQuickStatus('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={parsedSearch.status === 'active' ? 'default' : 'secondary'}
+              size='sm'
+              onClick={() => applyQuickStatus('active')}
+            >
+              Active
+            </Button>
+            <Button
+              variant={parsedSearch.status === 'resolved' ? 'default' : 'secondary'}
+              size='sm'
+              onClick={() => applyQuickStatus('resolved')}
+            >
+              Resolved
+            </Button>
+            <Button
+              variant={parsedSearch.status === 'archived' ? 'default' : 'secondary'}
+              size='sm'
+              onClick={() => applyQuickStatus('archived')}
+            >
+              Archived
+            </Button>
+          </div>
 
-          <div className='ml-auto flex min-w-[220px] items-center gap-2'>
+          <div className='page-toolbar-group w-full max-w-xs'>
             <Shield className='h-4 w-4 text-muted-foreground' />
             <Select
               value={selectedTeamFromSearch?.slug ?? '__all__'}
@@ -919,31 +919,34 @@ function DashboardPage() {
         </div>
 
         {parsedSearch.errors.length > 0 ? (
-          <div className='rounded-sm bg-destructive/12 px-3 py-2 text-sm text-destructive'>
+          <div className='rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive'>
             {parsedSearch.errors.join(' ')}
           </div>
         ) : null}
       </section>
 
       {!hasTeams ? (
-        <section className='noir-reveal tape-surface px-5 py-4'>
+        <section className='page-card noir-reveal space-y-2'>
           <p className='text-base font-semibold text-foreground'>Create your first team</p>
-          <p className='mt-1 text-sm text-muted-foreground'>
+          <p className='text-sm text-muted-foreground'>
             You need a team before you can create or discuss posts.
           </p>
-          <Button asChild className='mt-4'>
+          <Button asChild className='mt-2'>
             <Link to='/teams'>Open Team Management</Link>
           </Button>
         </section>
       ) : null}
 
-      <section className='tape-list noir-reveal'>
+      <section className='page-list noir-reveal'>
         {(posts ?? []).map((post) => (
-          <article key={post.postId} className='tape-list-row grid gap-3 px-4 py-4'>
+          <article
+            key={post.postId}
+            className='page-list-row transition-colors hover:bg-secondary/35'
+          >
             <div className='flex flex-wrap items-center gap-2'>
               <Badge variant={post.status === 'active' ? 'default' : 'secondary'}>{post.status}</Badge>
               <Badge variant='outline'>{post.teamName}</Badge>
-              <span className='ml-auto tape-meta'>Updated {formatDate(post.updatedAt)}</span>
+              <span className='ml-auto page-meta'>Updated {formatDate(post.updatedAt)}</span>
             </div>
 
             <div className='space-y-1'>
@@ -957,7 +960,7 @@ function DashboardPage() {
               <p className='text-sm leading-6 text-muted-foreground'>{post.descriptionPreview}</p>
             </div>
 
-            <p className='tape-meta'>
+            <p className='page-meta'>
               {post.occurrenceWhere} | {post.occurrenceWhen} | {post.createdByName} ({post.createdByIid}) |{' '}
               {post.commentCount} comments | {post.imageCount} images
             </p>
@@ -965,9 +968,9 @@ function DashboardPage() {
         ))}
 
         {posts && posts.length === 0 ? (
-          <section className='px-4 py-6'>
+          <section className='page-empty'>
             <p className='text-base font-semibold text-foreground'>No posts found</p>
-            <p className='mt-1 text-sm text-muted-foreground'>
+            <p className='text-sm text-muted-foreground'>
               Try broadening your search or create the first post for this team.
             </p>
           </section>

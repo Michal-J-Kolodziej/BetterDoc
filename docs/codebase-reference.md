@@ -1,6 +1,6 @@
 # BetterDoc Codebase Reference
 
-Last updated: 2026-02-15
+Last updated: 2026-03-07
 
 ## Runtime Stack
 - Framework: TanStack Start (`@tanstack/react-start`)
@@ -20,8 +20,9 @@ Last updated: 2026-02-15
 
 ## Route Surface (V2)
 - `src/routes/index.tsx`
-  - Public dark landing surface using the same V1 tape-feed visual language as protected routes.
-  - Primary sign-in CTA and dashboard shortcut with minimal, low-chrome framing.
+  - Public entry page with a restrained light workspace preview, direct sign-in CTA, and dashboard shortcut.
+  - Explains the capture/discuss/reuse flow with list-based sections instead of marketing-card blocks.
+  - Auth entry links use full document navigation so `/login` and `/dashboard` hit server auth redirects instead of client-side route-only transitions.
 - `src/routes/login.tsx`
   - WorkOS redirect entrypoint.
 - `src/routes/api/auth/callback.tsx`
@@ -30,9 +31,9 @@ Last updated: 2026-02-15
   - WorkOS sign-out + session clear.
 - `src/routes/dashboard.tsx`
   - Protected post board dashboard.
-  - Uses shared protected desktop shell with persistent left sidebar nav.
+  - Uses shared protected workspace shell with left navigation on desktop and horizontal nav on narrower viewports.
   - Search bar supports free text and qualifiers (`team:`, `status:`, `author:`, `has:image`, `before:`, `after:`).
-  - Inline status chips (`all/active/resolved/archived`) + inline team selector in main content controls.
+  - Toolbar keeps status filters (`all/active/resolved/archived`) and team scoping next to search instead of splitting them into separate header treatments.
   - Create-post dialog includes team template picker and template save/update/delete controls.
   - Create-post draft autosaves every 1.5 seconds and supports restore/discard per user+team.
   - Create-post dialog includes a non-blocking similar-incidents panel:
@@ -42,7 +43,7 @@ Last updated: 2026-02-15
     - Provides deep links to `/posts/$postId`.
   - Successful post creation clears the associated create-post draft.
   - Description composer supports `@` mention picking via `teams.searchTeamMembers` and inserts IID mentions (`@BD-XXXXXXXX`).
-  - Main feed now renders as divider-based tape rows (instead of stacked cards) for higher scan density.
+  - Main feed renders as queue-style list rows with calmer metadata and lighter status treatment.
 - `src/routes/dashboard_.v1.tsx`
 - `src/routes/dashboard_.v2.tsx`
 - `src/routes/dashboard_.v3.tsx`
@@ -53,7 +54,7 @@ Last updated: 2026-02-15
   - Variants are intentionally low-chrome (minimal framing, no glow-button treatment in preview UI).
 - `src/routes/posts.$postId.tsx`
   - Protected post detail view.
-  - Uses shared protected desktop shell; sidebar highlights Dashboard nav.
+  - Uses shared protected workspace shell; sidebar highlights Dashboard nav.
   - Post edit/resolve/reopen/archive/unarchive plus compact discussion composer and comment CRUD.
   - Resolve action requires a non-empty resolution summary and sets post status to `resolved`.
   - Reopen action is available from `resolved` state only and returns the post to `active`.
@@ -62,48 +63,49 @@ Last updated: 2026-02-15
   - Comment composer draft autosaves every 1.5 seconds and supports restore/discard per user+post.
   - Successful comment creation clears the associated comment draft.
   - Post description and comment composers support `@` mention picking with IID insertion.
-  - Detail and discussion surfaces use shared tape-style sections and row separators instead of nested card stacks.
+  - Detail actions, resolution summary, and discussion are grouped into plain card/list sections with the same layout language as the dashboard.
 - `src/routes/playbooks.tsx`
   - Protected team-private playbook route.
-  - Team selector + list/detail view backed by `playbooks.listTeamPlaybooks` and `playbooks.getPlaybookDetail`.
+  - Team selector + responsive list/detail view backed by `playbooks.listTeamPlaybooks` and `playbooks.getPlaybookDetail`.
   - Playbooks are promoted from resolved posts only and linked back to source post detail.
 - `src/routes/analytics.tsx`
   - Protected team-private analytics route.
   - Team selector + range selector (`30` or `90` days).
-  - Displays separate resolved vs archived counts, unresolved open count, median time-to-resolution (resolved-only), recurring topics, and top contributors.
+  - Displays separate resolved vs archived counts, unresolved open count, median time-to-resolution (resolved-only), recurring topics, and top contributors in compact summary/list sections.
 - `src/routes/inbox.tsx`
   - Protected in-app inbox route with cursor pagination, deep links, and per-item/mark-all read controls.
   - Opening an inbox notification link marks the item read before navigation.
 - `src/routes/teams.tsx`
-  - Uses shared protected desktop shell with persistent left nav.
-  - Team management with split create/invite + member management surfaces.
-  - Invite and member areas are rendered as divider lists to reduce border-heavy visual noise.
+  - Uses shared protected workspace shell with responsive nav behavior.
+  - Team management is split into practical sections for team creation, incoming invites, members, and outbound invite flows.
+  - Invite and member areas are rendered as list rows with lightweight control panels instead of dense framed cards.
   - IID/email/link invite creation, copyable join URLs, active-link revoke list, role assignment, member removal, invite responses.
 - `src/routes/join.$token.tsx`
   - Protected token acceptance flow for `/join/$token` invite URLs.
-  - Calls `teams.acceptInviteToken` and renders accepted/already-accepted outcomes.
+  - Calls `teams.acceptInviteToken` and renders accepted/already-accepted outcomes in a standalone card layout.
 - `src/routes/profile.tsx`
-  - Uses shared protected desktop shell with persistent left nav.
-  - Profile editor with identity panel, avatar upload, and IID copy.
-  - Uses one compact tape surface with divider-based metadata/form grouping.
+  - Uses shared protected workspace shell with responsive nav behavior.
+  - Profile editor separates account identity from editable fields while keeping avatar upload and IID copy in one page.
 
 ## UI System (Shadcn + Tailwind)
 - Global styling/tokens: `src/styles.css`
-  - Noir Grid dark-only theme tokens (charcoal base, cyan/lime accents, compact spacing).
-  - Google font stack: `Space Grotesk` + `IBM Plex Mono`.
-  - Layered background treatment (muted radial highlights + subtle grid overlay).
+  - Warm light workspace tokens with restrained green primary accents, softer borders, and tighter radius scale.
+  - Google font stack: `Instrument Sans` + `IBM Plex Mono`.
+  - Minimal linear background treatment with no dashboard-style gradients or glow effects.
   - Motion baseline (`180ms` reveal) with strict reduced-motion override.
-  - Desktop-only layout utilities (`app-desktop-shell`, `app-sidebar`, `app-main`, `app-content-stack`) with fixed columns and horizontal overflow on narrow viewports.
-  - Shared tape-style utilities (`tape-surface`, `tape-list`, `tape-list-row`, `tape-meta`) for low-chrome section and list composition.
+  - Responsive workspace utilities (`workspace-shell`, `workspace-sidebar`, `workspace-header`, `workspace-content`, `workspace-mobile-nav`) that preserve hierarchy on smaller screens.
+  - Shared page utilities (`page-card`, `page-list`, `page-list-row`, `page-toolbar`, `page-meta`) for low-chrome section and list composition.
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
 - Shared protected route shell:
   - `src/components/layout/app-sidebar-shell.tsx`
-  - Provides fixed desktop two-column shell with persistent left navigation (`Dashboard`, `Playbooks`, `Analytics`, `Inbox`, `Teams`, `Profile`, `Logout`) and account footer block.
-  - Displays reactive unread badge counts in sidebar and header inbox entry points using `notifications.getUnreadCount`.
-  - Shell styling is intentionally flatter (minimal paneling, separator-first hierarchy) to match dashboard V1.
+  - Provides a fixed two-column workspace on desktop and an inline horizontal nav on narrower screens.
+  - Keeps navigation limited to `Dashboard`, `Playbooks`, `Analytics`, `Inbox`, `Teams`, `Profile`, and `Logout`, with reactive unread counts in nav/header inbox entry points.
+  - Uses a plain product-workspace hierarchy rather than hero headers, floating rails, or decorative panels.
+  - Logout is a regular document request (`href='/logout'`) so WorkOS sign-out always executes through the server handler.
 - Mention input UI:
   - `src/components/mentions/mention-textarea.tsx`
   - Detects `@` mention triggers at the current textarea caret and queries `teams.searchTeamMembers` for inline IID mention insertion.
+  - Picker styling now matches the lighter popover/form-control treatment used across the app.
 - Shadcn component primitives in `src/components/ui`:
   - `avatar.tsx`
   - `badge.tsx`

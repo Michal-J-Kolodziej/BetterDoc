@@ -521,7 +521,7 @@ function PostDetailPage() {
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
-      <section className='tape-surface noir-reveal space-y-4 p-5'>
+      <section className='page-card noir-reveal space-y-4'>
         <div className='flex flex-wrap items-center gap-2'>
           <Badge variant='outline'>{postDetail.teamName}</Badge>
           <Badge variant={postDetail.status === 'active' ? 'default' : 'secondary'}>{postDetail.status}</Badge>
@@ -594,7 +594,7 @@ function PostDetailPage() {
         {editError ? <p className='text-sm text-destructive'>{editError}</p> : null}
 
         {resolvingPost ? (
-          <section className='grid gap-2 rounded-sm border border-border/60 bg-secondary/25 p-3'>
+          <section className='grid gap-2 rounded-md border border-border bg-secondary/35 p-3'>
             <Label htmlFor='resolution-summary'>Resolution summary</Label>
             <Textarea
               id='resolution-summary'
@@ -625,13 +625,11 @@ function PostDetailPage() {
         <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.description}</p>
 
         {postDetail.resolutionSummary ? (
-          <section className='space-y-2 rounded-sm border border-border/60 bg-secondary/25 p-3'>
-            <p className='text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-              Resolution summary
-            </p>
+          <section className='space-y-2 rounded-md border border-border bg-secondary/35 p-3'>
+            <p className='page-meta'>Resolution summary</p>
             <p className='whitespace-pre-wrap text-sm leading-6'>{postDetail.resolutionSummary}</p>
             {postDetail.resolvedAt && postDetail.resolvedByName ? (
-              <p className='tape-meta'>
+              <p className='page-meta'>
                 Resolved by {postDetail.resolvedByName} ({postDetail.resolvedByIid}) on{' '}
                 {formatDate(postDetail.resolvedAt)}
               </p>
@@ -652,13 +650,13 @@ function PostDetailPage() {
           </div>
         ) : null}
 
-        <p className='tape-meta'>
+        <p className='page-meta'>
           Author: {postDetail.createdByName} ({postDetail.createdByIid}) | Created:{' '}
           {formatDate(postDetail.createdAt)} | Updated: {formatDate(postDetail.updatedAt)}
         </p>
 
         {editingPost ? (
-          <div className='space-y-3 bg-secondary/35 p-4'>
+          <div className='space-y-3 rounded-md border border-border bg-secondary/35 p-4'>
             <div className='grid gap-2'>
               <Label htmlFor='edit-title'>Title</Label>
               <Input id='edit-title' value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
@@ -710,7 +708,7 @@ function PostDetailPage() {
         ) : null}
       </section>
 
-      <section className='tape-surface noir-reveal space-y-4 p-5'>
+      <section className='page-card noir-reveal space-y-4'>
         <div>
           <h2 className='text-xl font-semibold text-foreground'>Discussion ({postDetail.commentCount})</h2>
           <p className='mt-1 text-sm text-muted-foreground'>
@@ -763,21 +761,21 @@ function PostDetailPage() {
           </div>
         </section>
 
-        <section className='tape-list'>
+        <section className='page-list'>
           {postDetail.comments.map((comment) => (
             <article
               key={comment.commentId}
               id={`comment-${comment.commentId}`}
-              className='tape-list-row space-y-3 py-4'
+              className='page-list-row'
             >
               <div className='flex items-center gap-2'>
                 <Avatar className='h-7 w-7'>
                   <AvatarImage src={undefined} alt={comment.createdByName} />
-                  <AvatarFallback>{comment.createdByName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarFallback>{comment.createdByName.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <span className='text-sm font-medium text-foreground'>{comment.createdByName}</span>
                 <span className='text-xs text-muted-foreground'>({comment.createdByIid})</span>
-                <span className='ml-auto text-xs text-muted-foreground'>{formatDate(comment.createdAt)}</span>
+                <span className='ml-auto page-meta'>{formatDate(comment.createdAt)}</span>
               </div>
 
               {editingCommentId === comment.commentId ? (

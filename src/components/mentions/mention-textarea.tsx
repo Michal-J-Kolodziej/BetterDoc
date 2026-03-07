@@ -136,7 +136,7 @@ export function MentionTextarea({
       />
 
       {showPicker ? (
-        <div className='absolute z-30 mt-1 w-full rounded-md border border-border/65 bg-popover shadow-lg'>
+        <div className='absolute z-30 mt-1 w-full rounded-md border border-border bg-popover shadow-lg shadow-foreground/8'>
           {mentionCandidates === undefined ? (
             <p className='px-3 py-2 text-xs text-muted-foreground'>Searching team members...</p>
           ) : mentionCandidates.length === 0 ? (
@@ -147,7 +147,7 @@ export function MentionTextarea({
                 <li key={member.userId}>
                   <button
                     type='button'
-                    className='flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary/75'
+                    className='flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-secondary/70'
                     onMouseDown={(event) => {
                       event.preventDefault()
                       insertMention(member.iid)

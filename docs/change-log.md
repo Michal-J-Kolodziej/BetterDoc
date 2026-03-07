@@ -1,5 +1,38 @@
 # BetterDoc Change Log
 
+## 2026-03-07 (UI redesign: calmer workspace shell + responsive route refresh)
+- Code paths changed:
+  - `src/styles.css`
+  - `src/components/layout/app-sidebar-shell.tsx`
+  - `src/components/mentions/mention-textarea.tsx`
+  - `src/components/ui/button.tsx`
+  - `src/components/ui/badge.tsx`
+  - `src/components/ui/card.tsx`
+  - `src/components/ui/dialog.tsx`
+  - `src/components/ui/input.tsx`
+  - `src/components/ui/label.tsx`
+  - `src/components/ui/select.tsx`
+  - `src/components/ui/textarea.tsx`
+  - `src/routes/__root.tsx`
+  - `src/routes/index.tsx`
+  - `src/routes/dashboard.tsx`
+  - `src/routes/posts.$postId.tsx`
+  - `src/routes/playbooks.tsx`
+  - `src/routes/analytics.tsx`
+  - `src/routes/inbox.tsx`
+  - `src/routes/teams.tsx`
+  - `src/routes/profile.tsx`
+  - `src/routes/join.$token.tsx`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Replaced the dark tape-feed shell with a lighter, calmer workspace system built around a standard sidebar, compact header, and mobile-safe inline nav.
+  - Swapped the global visual system to warm light tokens with `Instrument Sans` + `IBM Plex Mono`, simpler borders, lower radius values, and quieter form/dialog/badge styling.
+  - Reworked home, dashboard, playbooks, analytics, inbox, teams, profile, join, and post-detail routes so they use consistent list/card/toolbars instead of repeated decorative framing patterns.
+  - Changed home auth entrypoints and shell logout to full document navigation so WorkOS server redirects/sign-out execute reliably outside authenticated client state.
+  - Kept all route behavior, Convex queries/mutations, auth checks, and invite/post workflows intact while changing layout hierarchy and interaction presentation.
+
 ## 2026-02-15 (BD-211, BD-212: resolved lifecycle + playbooks + analytics)
 - Code paths changed:
   - `convex/model.ts`

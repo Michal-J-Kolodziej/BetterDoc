@@ -138,26 +138,40 @@ function ProfilePage() {
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
-      <section className='tape-surface noir-reveal grid grid-cols-[auto_1fr] gap-8 p-6'>
-        <div className='space-y-3'>
+      <section className='page-grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]'>
+        <section className='page-card noir-reveal space-y-4'>
           <Avatar className='h-20 w-20'>
             <AvatarImage src={me.avatarUrl ?? undefined} alt={me.name} />
             <AvatarFallback>{me.name.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
-          <p className='text-sm font-medium text-foreground'>{me.name}</p>
-          <p className='text-xs text-muted-foreground'>WorkOS user: {user.id}</p>
-        </div>
 
-        <div className='space-y-5'>
-          <div className='border-b border-border/45 pb-4'>
-            <p className='noir-kicker mb-2'>Your IID</p>
+          <div className='space-y-1'>
+            <p className='text-sm font-medium text-foreground'>{me.name}</p>
+            <p className='text-sm text-muted-foreground'>{user.email ?? 'No email available'}</p>
+          </div>
+
+          <div className='page-divider' />
+
+          <div className='space-y-2'>
+            <p className='page-meta'>Your IID</p>
             <div className='flex flex-wrap items-center gap-2'>
-              <code className='rounded-sm bg-secondary/62 px-2 py-1 text-sm'>{me.iid}</code>
+              <code className='rounded-md bg-secondary px-2.5 py-1 text-sm'>{me.iid}</code>
               <Button variant='secondary' size='sm' onClick={copyIID}>
                 <Copy className='h-4 w-4' />
                 Copy
               </Button>
             </div>
+          </div>
+
+          <p className='page-meta break-all'>WorkOS user: {user.id}</p>
+        </section>
+
+        <section className='page-card noir-reveal space-y-5'>
+          <div className='space-y-1'>
+            <h2 className='text-lg font-semibold text-foreground'>Personal details</h2>
+            <p className='text-sm text-muted-foreground'>
+              Update how your name and avatar appear across posts, comments, and notifications.
+            </p>
           </div>
 
           <div className='grid gap-3'>
@@ -178,11 +192,11 @@ function ProfilePage() {
 
             {statusMessage ? <p className='text-sm text-muted-foreground'>{statusMessage}</p> : null}
 
-            <Button disabled={busy} onClick={saveProfile}>
+            <Button className='w-fit' disabled={busy} onClick={saveProfile}>
               {busy ? 'Saving...' : 'Save profile'}
             </Button>
           </div>
-        </div>
+        </section>
       </section>
     </AppSidebarShell>
   )

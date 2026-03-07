@@ -221,9 +221,11 @@ function InboxPage() {
       userLabel={userDisplayName(user)}
       userEmail={user.email ?? undefined}
     >
-      <section className='tape-surface noir-reveal space-y-4 p-5'>
-        <div className='flex flex-wrap items-center gap-2'>
-          <Badge variant='outline'>Unread: {String(unreadCount ?? 0)}</Badge>
+      <section className='page-card noir-reveal space-y-4'>
+        <div className='page-toolbar'>
+          <div className='page-toolbar-group'>
+            <Badge variant='outline'>Unread: {String(unreadCount ?? 0)}</Badge>
+          </div>
           <Button
             variant='secondary'
             size='sm'
@@ -237,15 +239,15 @@ function InboxPage() {
         {items.length === 0 ? (
           <p className='text-sm text-muted-foreground'>No notifications yet.</p>
         ) : (
-          <div className='tape-list'>
+          <div className='page-list'>
             {items.map((item) => (
-              <article key={item.notificationId} className='tape-list-row grid gap-2 py-3'>
+              <article key={item.notificationId} className='page-list-row'>
                 <div className='flex flex-wrap items-center gap-2'>
                   <p className='text-sm font-semibold text-foreground'>{item.title}</p>
                   <Badge variant={item.readAt === null ? 'default' : 'secondary'}>
                     {item.readAt === null ? 'Unread' : 'Read'}
                   </Badge>
-                  <span className='ml-auto text-xs text-muted-foreground'>{formatDate(item.createdAt)}</span>
+                  <span className='ml-auto page-meta'>{formatDate(item.createdAt)}</span>
                 </div>
 
                 <p className='text-sm text-muted-foreground'>{item.body}</p>

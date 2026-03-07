@@ -131,77 +131,83 @@ function AnalyticsPage() {
       userEmail={user.email ?? undefined}
     >
       {!hasTeams ? (
-        <section className='noir-reveal tape-surface px-5 py-4'>
+        <section className='page-card noir-reveal space-y-2'>
           <p className='text-base font-semibold text-foreground'>Create your first team</p>
-          <p className='mt-1 text-sm text-muted-foreground'>
+          <p className='text-sm text-muted-foreground'>
             Team analytics appears after you join or create a team.
           </p>
-          <Button asChild className='mt-4'>
+          <Button asChild className='mt-2'>
             <Link to='/teams'>Open Team Management</Link>
           </Button>
         </section>
       ) : (
         <>
-          <section className='tape-surface noir-reveal grid gap-4 p-4 md:grid-cols-[1fr_180px]'>
-            <Select
-              value={selectedTeam?.slug ?? ''}
-              onValueChange={(value) => {
-                const team = teams.find((entry) => entry.slug === value)
+          <section className='page-card noir-reveal'>
+            <div className='page-toolbar'>
+              <div className='page-toolbar-group w-full max-w-sm'>
+                <Select
+                  value={selectedTeam?.slug ?? ''}
+                  onValueChange={(value) => {
+                    const team = teams.find((entry) => entry.slug === value)
 
-                if (!team) {
-                  return
-                }
+                    if (!team) {
+                      return
+                    }
 
-                void navigate({
-                  search: {
-                    team: team.slug,
-                    range: search.range,
-                  },
-                  replace: true,
-                })
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder='Select a team' />
-              </SelectTrigger>
-              <SelectContent>
-                {teams.map((team) => (
-                  <SelectItem key={team.teamId} value={team.slug}>
-                    {team.name} ({team.role})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    void navigate({
+                      search: {
+                        team: team.slug,
+                        range: search.range,
+                      },
+                      replace: true,
+                    })
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select a team' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.teamId} value={team.slug}>
+                        {team.name} ({team.role})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Select
-              value={String(rangeDays)}
-              onValueChange={(value) => {
-                void navigate({
-                  search: {
-                    team: selectedTeam?.slug,
-                    range: value === '90' ? '90' : '30',
-                  },
-                  replace: true,
-                })
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder='Range' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='30'>Last 30 days</SelectItem>
-                <SelectItem value='90'>Last 90 days</SelectItem>
-              </SelectContent>
-            </Select>
+              <div className='page-toolbar-group'>
+                <Select
+                  value={String(rangeDays)}
+                  onValueChange={(value) => {
+                    void navigate({
+                      search: {
+                        team: selectedTeam?.slug,
+                        range: value === '90' ? '90' : '30',
+                      },
+                      replace: true,
+                    })
+                  }}
+                >
+                  <SelectTrigger className='w-40'>
+                    <SelectValue placeholder='Range' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='30'>Last 30 days</SelectItem>
+                    <SelectItem value='90'>Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </section>
 
           {!overview ? (
-            <section className='tape-surface noir-reveal px-5 py-4'>
+            <section className='page-card noir-reveal'>
               <p className='text-sm text-muted-foreground'>Loading team overview...</p>
             </section>
           ) : (
             <>
-              <section className='grid gap-4 md:grid-cols-5'>
+              <section className='page-grid gap-4 md:grid-cols-5'>
                 <MetricCard label='Posts in range' value={overview.totals.postsInWindow} />
                 <MetricCard label='Resolved' value={overview.totals.resolved} />
                 <MetricCard label='Archived' value={overview.totals.archived} />
@@ -212,15 +218,20 @@ function AnalyticsPage() {
                 />
               </section>
 
-              <section className='tape-surface noir-reveal space-y-3 p-5'>
-                <div className='flex flex-wrap items-center gap-2'>
-                  <h2 className='text-lg font-semibold text-foreground'>Recurring topics</h2>
-                  <Badge variant='outline'>Window starts {formatDate(overview.windowStartAt)}</Badge>
+              <section className='page-card noir-reveal space-y-3'>
+                <div className='page-toolbar'>
+                  <div className='space-y-1'>
+                    <h2 className='text-lg font-semibold text-foreground'>Recurring topics</h2>
+                    <p className='text-sm text-muted-foreground'>
+                      Topics repeated most often since {formatDate(overview.windowStartAt)}.
+                    </p>
+                  </div>
+                  <Badge variant='outline'>{rangeDays} day range</Badge>
                 </div>
                 {overview.recurringTopics.length === 0 ? (
                   <p className='text-sm text-muted-foreground'>No recurring topics detected for this range.</p>
                 ) : (
-                  <div className='flex flex-wrap gap-2'>
+                  <div className='page-pill-row'>
                     {overview.recurringTopics.map((topic) => (
                       <Badge key={topic.label} variant='secondary'>
                         {topic.label} ({topic.count})
@@ -230,14 +241,19 @@ function AnalyticsPage() {
                 )}
               </section>
 
-              <section className='tape-surface noir-reveal space-y-3 p-5'>
-                <h2 className='text-lg font-semibold text-foreground'>Top contributors</h2>
+              <section className='page-card noir-reveal space-y-3'>
+                <div className='space-y-1'>
+                  <h2 className='text-lg font-semibold text-foreground'>Top contributors</h2>
+                  <p className='text-sm text-muted-foreground'>
+                    Users with the most post and comment activity in the selected window.
+                  </p>
+                </div>
                 {overview.topContributors.length === 0 ? (
                   <p className='text-sm text-muted-foreground'>No contributor activity in this range.</p>
                 ) : (
-                  <div className='tape-list'>
+                  <div className='page-list'>
                     {overview.topContributors.map((contributor) => (
-                      <article key={contributor.userId} className='tape-list-row grid gap-1 py-3'>
+                      <article key={contributor.userId} className='page-list-row'>
                         <p className='text-sm font-semibold text-foreground'>
                           {contributor.name} ({contributor.iid})
                         </p>
@@ -260,9 +276,9 @@ function AnalyticsPage() {
 
 function MetricCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <article className='tape-surface noir-reveal space-y-1 px-4 py-3'>
-      <p className='text-xs uppercase tracking-[0.12em] text-muted-foreground'>{label}</p>
-      <p className='text-2xl font-semibold text-foreground'>{String(value)}</p>
+    <article className='page-card page-card-compact noir-reveal page-stat'>
+      <p className='page-stat-label'>{label}</p>
+      <p className='page-stat-value text-foreground'>{String(value)}</p>
     </article>
   )
 }

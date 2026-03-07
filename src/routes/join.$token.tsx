@@ -100,21 +100,21 @@ function JoinTeamPage() {
   }
 
   return (
-    <main className='app-shell p-4'>
-      <section className='tape-surface noir-reveal mx-auto max-w-xl space-y-4 p-6'>
-        <div>
-          <p className='noir-kicker'>Team Invite</p>
-          <h1 className='mt-1 text-xl font-semibold text-foreground'>Join Team</h1>
-          <p className='mt-1 text-sm text-muted-foreground'>
-            Accept this invite to join a team in BetterDoc.
+    <main className='app-shell'>
+      <section className='page-card noir-reveal mx-auto mt-8 max-w-xl space-y-5'>
+        <div className='space-y-2'>
+          <p className='page-meta'>Team invite</p>
+          <h1 className='text-2xl font-semibold text-foreground'>Join team</h1>
+          <p className='text-sm leading-6 text-muted-foreground'>
+            Accept this invite to access the shared BetterDoc workspace for that team.
           </p>
         </div>
 
         {error ? <p className='text-sm text-destructive'>{error}</p> : null}
 
         {result ? (
-          <div className='space-y-3'>
-            <p className='text-sm text-foreground'>
+          <div className='space-y-4'>
+            <p className='text-sm leading-6 text-foreground'>
               {result.result === 'already_accepted' ? 'Already joined' : 'Joined'}{' '}
               <span className='font-semibold'>{result.teamName}</span> via {result.method} invite.
             </p>
@@ -133,7 +133,7 @@ function JoinTeamPage() {
           </Button>
         )}
 
-        <p className='text-xs text-muted-foreground'>
+        <p className='text-sm leading-6 text-muted-foreground'>
           Email invites require a matching signed-in email. Link invites enforce expiry and max uses.
         </p>
       </section>

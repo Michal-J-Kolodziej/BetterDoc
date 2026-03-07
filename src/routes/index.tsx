@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 
 import { Button } from '@/components/ui/button'
 
@@ -10,39 +10,65 @@ export const Route = createFileRoute('/')({
 function HomePage() {
   return (
     <main className='app-shell'>
-      <section className='noir-reveal border-b border-border/55 pb-10 pt-8'>
-        <p className='noir-kicker'>Incident Tape</p>
-        <h1 className='mt-3 text-5xl font-semibold text-foreground'>BetterDoc</h1>
-        <p className='mt-4 max-w-2xl text-base leading-6 text-muted-foreground'>
-          Minimal incident knowledge flow for teams. Capture a problem once, discuss with context,
-          and keep a searchable history that stays readable under pressure.
-        </p>
+      <section className='page-grid gap-6 py-8'>
+        <div className='page-grid gap-4 md:grid-cols-[minmax(0,1.3fr)_18rem]'>
+          <section className='page-card noir-reveal space-y-5'>
+            <div className='space-y-3'>
+              <p className='page-meta'>Incident knowledge workspace</p>
+              <h1 className='text-4xl font-semibold tracking-[-0.04em] text-foreground md:text-5xl'>
+                BetterDoc keeps operational context readable.
+              </h1>
+              <p className='max-w-2xl text-base leading-7 text-muted-foreground'>
+                Capture one incident clearly, discuss it in context, and preserve the fix as a
+                team reference instead of letting it disappear into chat or tickets.
+              </p>
+            </div>
 
-        <div className='mt-7 flex flex-wrap items-center gap-3'>
-          <Button asChild size='lg'>
-            <Link to='/login'>Sign in with WorkOS</Link>
-          </Button>
-          <Button asChild variant='outline' size='lg'>
-            <Link search={{ q: undefined, team: undefined }} to='/dashboard'>
-              Open dashboard
-            </Link>
-          </Button>
+            <div className='page-toolbar'>
+              <div className='page-toolbar-group'>
+                <Button asChild size='lg'>
+                  <a href='/login'>Sign in with WorkOS</a>
+                </Button>
+                <Button asChild variant='outline' size='lg'>
+                  <a href='/dashboard'>Open dashboard</a>
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          <aside className='page-card page-card-compact noir-reveal space-y-3'>
+            <p className='text-sm font-medium text-foreground'>What it replaces</p>
+            <ul className='grid gap-2 text-sm leading-6 text-muted-foreground'>
+              <li>Scattered Slack threads</li>
+              <li>Ticket comments with no reusable resolution</li>
+              <li>Incident notes that are impossible to search later</li>
+            </ul>
+          </aside>
         </div>
 
-        <div className='mt-8 grid grid-cols-3 gap-8 text-xs text-muted-foreground'>
-          <div className='tape-list-row pb-3'>
-            <p className='noir-kicker mb-2'>Capture</p>
-            <p>Post issue context with images in under a minute.</p>
-          </div>
-          <div className='tape-list-row pb-3'>
-            <p className='noir-kicker mb-2'>Discuss</p>
-            <p>Threaded team comments with clear ownership and timing.</p>
-          </div>
-          <div className='tape-list-row pb-3'>
-            <p className='noir-kicker mb-2'>Search</p>
-            <p>Use qualifiers to find similar incidents quickly.</p>
-          </div>
-        </div>
+        <section className='page-list noir-reveal'>
+          <article className='page-list-row md:grid-cols-[12rem_1fr] md:items-start'>
+            <p className='text-sm font-medium text-foreground'>Capture</p>
+            <p className='text-sm leading-6 text-muted-foreground'>
+              Write the issue once with where it happens, when it happens, screenshots, and the
+              right people tagged immediately.
+            </p>
+          </article>
+          <article className='page-list-row md:grid-cols-[12rem_1fr] md:items-start'>
+            <p className='text-sm font-medium text-foreground'>Discuss</p>
+            <p className='text-sm leading-6 text-muted-foreground'>
+              Keep comments and follow-up evidence on the post instead of splitting the timeline
+              across tools.
+            </p>
+          </article>
+          <article className='page-list-row md:grid-cols-[12rem_1fr] md:items-start'>
+            <p className='text-sm font-medium text-foreground'>Reuse</p>
+            <p className='text-sm leading-6 text-muted-foreground'>
+              Promote resolved incidents into playbooks so recurring failures have a documented
+              path back to the fix.
+            </p>
+          </article>
+        </section>
       </section>
     </main>
   )
