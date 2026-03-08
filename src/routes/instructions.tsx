@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@workos/authkit-tanstack-react-start/client'
 import { useMutation, useQuery } from 'convex/react'
-import { FileCode2, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { Copy, Download, FileCode2, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { AppSidebarShell } from '@/components/layout/app-sidebar-shell'
@@ -103,6 +103,20 @@ function createBlankInstructionState(): EditableInstructionState {
       targetName: 'app-shell',
     }),
   }
+}
+
+function toSlugPart(value: string, fallback: string): string {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || fallback
+  )
+}
+
+function buildInstructionMarkdownFileName(state: Pick<EditableInstructionState, 'title' | 'targetKind' | 'targetName'>): string {
+  return `${toSlugPart(state.title, 'instruction')}-${state.targetKind}-${toSlugPart(state.targetName, 'target')}.md`
 }
 
 function InstructionsPage() {
@@ -207,6 +221,16 @@ function InstructionsPage() {
     setFlashMessage(null)
   }, [hydratedInstructionId, selectedInstruction])
 
+  const markdownFileName = useMemo(
+    () =>
+      buildInstructionMarkdownFileName({
+        title: editorState.title,
+        targetKind: editorState.targetKind,
+        targetName: editorState.targetName,
+      }),
+    [editorState.targetKind, editorState.targetName, editorState.title],
+  )
+
   const markdownPreview = useMemo(() => {
     if (!editorState.title.trim() || !editorState.repoUrl.trim() || !editorState.targetName.trim()) {
       return 'Complete the metadata fields to preview the generated Markdown file.'
@@ -220,21 +244,13 @@ function InstructionsPage() {
         repoUrl: editorState.repoUrl.trim(),
         targetKind: editorState.targetKind,
         targetName: editorState.targetName.trim(),
-        markdownFileName: `${editorState.title
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '') || 'instruction'}-${editorState.targetKind}-${editorState.targetName
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '') || 'target'}.md`,
+        markdownFileName,
         status: editorState.status,
         authorshipMode: editorState.authorshipMode,
       },
       document: editorState.document,
     })
-  }, [editorState])
+  }, [editorState, markdownFileName])
 
   const totalNodeCount =
     editorState.document.structureNodes.length +
@@ -574,12 +590,32 @@ function InstructionsPage() {
       case 'preview':
         return (
           <section className='instructions-panel-section'>
+            <div className='page-toolbar'>
+              <div className='grid gap-1'>
+                <h2 className='text-base font-semibold text-foreground'>Preview exports</h2>
+                <p className='text-sm text-muted-foreground'>
+                  Copy the generated Markdown directly or download the canonical file.
+                </p>
+              </div>
+
+              <div className='page-toolbar-group'>
+                <Button type='button' variant='outline' onClick={() => void handleCopyMarkdown()}>
+                  <Copy className='h-4 w-4' />
+                  Copy Markdown
+                </Button>
+                <Button type='button' variant='outline' onClick={handleDownloadMarkdown}>
+                  <Download className='h-4 w-4' />
+                  Download file
+                </Button>
+              </div>
+            </div>
+
             <InstructionMapPreview document={editorState.document} compact />
             <div className='page-divider' />
             <div className='grid gap-1'>
               <h2 className='text-base font-semibold text-foreground'>Generated Markdown</h2>
               <p className='text-sm text-muted-foreground'>
-                Canonical file shape used for agent and editor round-trips.
+                Canonical file shape used for agent and editor round-trips. File name: {markdownFileName}
               </p>
             </div>
             <pre className='instruction-markdown-preview instruction-markdown-preview-main'>
@@ -711,6 +747,36 @@ function InstructionsPage() {
       setSaveError(error instanceof Error ? error.message : 'Failed to delete instruction.')
     } finally {
       setDeleteBusy(false)
+    }
+  }
+
+  async function handleCopyMarkdown() {
+    try {
+      await navigator.clipboard.writeText(markdownPreview)
+      setSaveError(null)
+      setFlashMessage('Markdown copied to clipboard.')
+    } catch (error) {
+      setFlashMessage(null)
+      setSaveError(error instanceof Error ? error.message : 'Failed to copy Markdown.')
+    }
+  }
+
+  function handleDownloadMarkdown() {
+    try {
+      const blob = new Blob([markdownPreview], { type: 'text/markdown;charset=utf-8' })
+      const url = window.URL.createObjectURL(blob)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = markdownFileName
+      window.document.body.append(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      setSaveError(null)
+      setFlashMessage(`Downloaded ${markdownFileName}.`)
+    } catch (error) {
+      setFlashMessage(null)
+      setSaveError(error instanceof Error ? error.message : 'Failed to download Markdown.')
     }
   }
 

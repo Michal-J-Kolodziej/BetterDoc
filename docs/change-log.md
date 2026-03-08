@@ -12,6 +12,7 @@
   - Reworked `/instructions` into a calmer workbench layout with a left document rail and an internal section sidebar so the editor shows one major area at a time.
   - Reduced border density by removing the nested card stack inside the editor and switching section nodes to simpler divided rows.
   - Moved topology and Markdown output into a dedicated Preview section instead of keeping both visible beside every editing step.
+  - Added Preview export actions so users can copy the canonical Markdown to clipboard or download the generated `.md` file directly from the editor.
 
 ## 2026-03-07 (Instruction workspace: Angular v21 structured Markdown)
 - Code paths changed:

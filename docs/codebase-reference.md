@@ -77,6 +77,7 @@ Last updated: 2026-03-07
   - Protected user-private instruction workspace for agent-ready Angular guidance documents.
   - Does not require team membership; any signed-in user can create instruction documents scoped to their own account.
   - Uses a split workbench layout: a left rail for creation and document selection, then an internal section sidebar that shows one editor panel at a time instead of rendering the entire instruction on one long page.
+  - The `Preview` panel exposes direct export actions for the canonical generated artifact: copy the Markdown to clipboard or download the current `.md` file using the same generated filename stored in frontmatter.
   - Seeds new documents from the Angular v21 reference profile, then lets users edit structured sections for code structure, patterns, naming, data handling, library usage, guardrails, and review checks.
   - Saves a generated `.md` representation plus the structured document model so future visual editing and agent round-trips use the same schema.
 - `src/routes/inbox.tsx`
