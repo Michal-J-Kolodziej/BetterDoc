@@ -1,5 +1,42 @@
 # BetterDoc Change Log
 
+## 2026-03-08 (Instructions page readability refresh)
+- Code paths changed:
+  - `src/routes/instructions.tsx`
+  - `src/features/instructions/editor.tsx`
+  - `src/styles.css`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Reworked `/instructions` into a calmer workbench layout with a left document rail and an internal section sidebar so the editor shows one major area at a time.
+  - Reduced border density by removing the nested card stack inside the editor and switching section nodes to simpler divided rows.
+  - Moved topology and Markdown output into a dedicated Preview section instead of keeping both visible beside every editing step.
+
+## 2026-03-07 (Instruction workspace: Angular v21 structured Markdown)
+- Code paths changed:
+  - `convex/model.ts`
+  - `convex/schema.ts`
+  - `convex/instructions.ts`
+  - `convex/_generated/api.d.ts`
+  - `src/components/layout/app-sidebar-shell.tsx`
+  - `src/features/instructions/document.ts`
+  - `src/features/instructions/editor.tsx`
+  - `src/routes/instructions.tsx`
+  - `src/routeTree.gen.ts`
+  - `src/styles.css`
+  - `src/features/instructions/document.test.ts`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/security-and-access.md`
+  - `docs/change-log.md`
+- Impact:
+  - Added a new protected `/instructions` workspace where any signed-in user can create instruction documents without belonging to a team.
+  - Added user-owned `instructionDocuments` persistence in Convex plus `instructions.listMyInstructions`, `getInstructionDetail`, `createInstruction`, `updateInstruction`, `replaceInstructionMarkdown`, and `deleteInstruction`.
+  - Introduced a canonical `betterdoc-instruction/v1` Markdown schema with fixed sections and relationship-aware nodes so agent output and the visual editor share the same file structure.
+  - Seeded new instruction documents from an Angular v21 baseline covering structure, patterns, naming, data handling, library usage, guardrails, and review checks.
+  - Added a restrained list/detail editor with a topology preview and Markdown preview instead of a single freeform text field.
+
 ## 2026-03-07 (Dark mode refresh: restrained palette)
 - Code paths changed:
   - `src/styles.css`

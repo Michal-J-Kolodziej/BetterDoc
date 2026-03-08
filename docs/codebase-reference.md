@@ -73,6 +73,12 @@ Last updated: 2026-03-07
   - Protected team-private analytics route.
   - Team selector + range selector (`30` or `90` days).
   - Displays separate resolved vs archived counts, unresolved open count, median time-to-resolution (resolved-only), recurring topics, and top contributors in compact summary/list sections.
+- `src/routes/instructions.tsx`
+  - Protected user-private instruction workspace for agent-ready Angular guidance documents.
+  - Does not require team membership; any signed-in user can create instruction documents scoped to their own account.
+  - Uses a split workbench layout: a left rail for creation and document selection, then an internal section sidebar that shows one editor panel at a time instead of rendering the entire instruction on one long page.
+  - Seeds new documents from the Angular v21 reference profile, then lets users edit structured sections for code structure, patterns, naming, data handling, library usage, guardrails, and review checks.
+  - Saves a generated `.md` representation plus the structured document model so future visual editing and agent round-trips use the same schema.
 - `src/routes/inbox.tsx`
   - Protected in-app inbox route with cursor pagination, deep links, and per-item/mark-all read controls.
   - Opening an inbox notification link marks the item read before navigation.
@@ -97,11 +103,12 @@ Last updated: 2026-03-07
   - Public landing page adds desktop-first `front-*` utilities for the editorial split layout, subtle decorative motion, and pointer-driven ambient background layers tuned down to match the darker restrained palette; there is no dedicated mobile-specific home layout.
   - Responsive workspace utilities (`workspace-shell`, `workspace-sidebar`, `workspace-header`, `workspace-content`, `workspace-mobile-nav`) that preserve hierarchy on smaller screens.
   - Shared page utilities (`page-card`, `page-list`, `page-list-row`, `page-toolbar`, `page-meta`) for low-chrome section and list composition.
+  - Instruction-specific utilities (`instruction-map-*`, `instruction-node-*`, `instruction-markdown-preview`) render the visual section graph/editor without falling back to a single Markdown textarea.
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
 - Shared protected route shell:
   - `src/components/layout/app-sidebar-shell.tsx`
   - Provides a fixed two-column workspace on desktop and an inline horizontal nav on narrower screens.
-  - Keeps navigation limited to `Dashboard`, `Playbooks`, `Analytics`, `Inbox`, `Teams`, `Profile`, and `Logout`, with reactive unread counts in nav/header inbox entry points.
+  - Keeps navigation limited to `Dashboard`, `Playbooks`, `Analytics`, `Instructions`, `Inbox`, `Teams`, `Profile`, and `Logout`, with reactive unread counts in nav/header inbox entry points.
   - Uses a plain product-workspace hierarchy rather than hero headers, floating rails, or decorative panels.
   - Logout is a regular document request (`href='/logout'`) so WorkOS sign-out always executes through the server handler.
 - Mention input UI:
@@ -128,6 +135,9 @@ Last updated: 2026-03-07
 ## Frontend Feature Helpers
 - Shared feature types: `src/features/app-types.ts`
 - Dashboard redesign review variants (shared module): `src/features/dashboard-variants/page.tsx`
+- Instruction document schema + Angular baseline + Markdown serializer/parser: `src/features/instructions/document.ts`
+- Instruction visual editor + topology preview: `src/features/instructions/editor.tsx`
+  - Section editors render inside a single active panel with reduced border density, while the topology preview supports a compact mode used from the dedicated Preview section.
 - Dashboard search parser/stringifier: `src/lib/search.ts`
 - Debounce hook: `src/lib/use-debounced-value.ts`
 - Similar incidents composer helpers: `src/lib/similar-incidents.ts`
@@ -148,6 +158,7 @@ Last updated: 2026-03-07
   - `convex/users.ts`
   - `convex/teams.ts`
   - `convex/playbooks.ts`
+  - `convex/instructions.ts`
   - `convex/posts.ts`
   - `convex/postSimilarity.ts`
   - `convex/comments.ts`
@@ -171,6 +182,7 @@ Last updated: 2026-03-07
 - `commentDrafts`
 - `comments`
 - `notifications`
+- `instructionDocuments`
 
 ### Core API Surface
 - `users.getMe`, `users.upsertMe`, `users.updateProfile`
@@ -179,6 +191,7 @@ Last updated: 2026-03-07
 - `comments.createComment`, `comments.updateComment`, `comments.deleteComment`
 - `playbooks.promoteFromPost`, `playbooks.listTeamPlaybooks`, `playbooks.getPlaybookDetail`
 - `analytics.getTeamOverview`
+- `instructions.listMyInstructions`, `instructions.getInstructionDetail`, `instructions.createInstruction`, `instructions.updateInstruction`, `instructions.replaceInstructionMarkdown`, `instructions.deleteInstruction`
 - `templates.listTeamTemplates`, `templates.createTemplate`, `templates.updateTemplate`, `templates.deleteTemplate`
 - `drafts.getPostDraft`, `drafts.upsertPostDraft`, `drafts.deletePostDraft`, `drafts.getCommentDraft`, `drafts.upsertCommentDraft`, `drafts.deleteCommentDraft`
 - `notifications.getUnreadCount`, `notifications.listInbox`, `notifications.markRead`, `notifications.markAllRead`
@@ -216,6 +229,12 @@ Last updated: 2026-03-07
 - Comment/post mutating flows now enforce `active` status; resolved/archived threads are read-only.
 - `playbooks.promoteFromPost` is restricted to `teamleader/admin`, requires a `resolved` source post, and is idempotent per team+source-post.
 - `analytics.getTeamOverview` is team-scoped and returns range-bounded (`30|90`) overview metrics with separate resolved vs archived totals, unresolved open count, resolved-only median TTR, recurring topics, and top contributors.
+
+### Instruction Document Notes
+- `instructionDocuments` are user-owned and intentionally separate from team-scoped visibility rules.
+- Canonical Markdown files use `schema: betterdoc-instruction/v1` frontmatter plus fixed top-level sections (`Overview`, `Code Structure`, `Code Patterns`, `Naming Patterns`, `Data Handling`, `Library Usage`, `Guardrails`, `Review Checklist`).
+- Section nodes include `id`, `title`, `summary`, `paths`, `rules`, `examples`, and `relationships`, which allows BetterDoc to render the document as a structured map instead of a raw textarea.
+- `instructions.createInstruction` seeds new documents from the Angular v21 reference baseline; `instructions.updateInstruction` regenerates Markdown from structured data; `instructions.replaceInstructionMarkdown` validates that externally generated Markdown still matches the canonical schema before accepting it.
 
 ## Removed Legacy Areas
 The following legacy areas are removed from active code paths:

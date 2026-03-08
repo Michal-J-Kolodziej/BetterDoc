@@ -1,12 +1,13 @@
 # BetterDoc Security And Access
 
-Last updated: 2026-02-15
+Last updated: 2026-03-07
 
 ## Current Security Model
 - Authentication: WorkOS AuthKit SSO.
 - Session middleware: `authkitMiddleware()` in `src/start.ts`.
 - Authorization: team membership + team role checks in Convex function handlers.
 - Visibility boundary: posts/comments/playbooks/analytics are only visible to members of the assigned team.
+- Visibility boundary: instruction documents are private to their owning signed-in user and are not team-scoped.
 
 ## WorkOS Configuration
 ### Public client env
@@ -29,7 +30,7 @@ Last updated: 2026-02-15
 2. App redirects to WorkOS sign-in.
 3. WorkOS redirects to `/api/auth/callback`.
 4. AuthKit stores encrypted session cookie.
-5. Protected routes (`/dashboard`, `/posts/$postId`, `/playbooks`, `/analytics`, `/teams`, `/profile`, `/inbox`, `/join/$token`) verify `context.auth()`.
+5. Protected routes (`/dashboard`, `/posts/$postId`, `/playbooks`, `/analytics`, `/instructions`, `/teams`, `/profile`, `/inbox`, `/join/$token`) verify `context.auth()`.
 6. `/logout` clears session and signs out through WorkOS.
 
 ## Team Role Model (V2)
@@ -65,6 +66,9 @@ Permission summary:
 - Analytics and playbook visibility:
   - any member can read team-scoped analytics/playbooks for their own team
   - server-side membership checks enforce team boundary
+- Instruction document visibility:
+  - any signed-in user can create instruction documents without joining a team
+  - `convex/instructions.ts` enforces per-user ownership on read, update, markdown replacement, and delete operations
 
 ## Enforcement Locations
 - Shared guards:
@@ -73,6 +77,7 @@ Permission summary:
   - `convex/teams.ts`
   - `convex/posts.ts`
   - `convex/comments.ts`
+  - `convex/instructions.ts`
 - Frontend hides actions opportunistically, but server-side Convex checks are authoritative.
 
 ## Team Invite Security

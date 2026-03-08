@@ -17,6 +17,18 @@ export const notificationTypes = [
 ] as const
 export type NotificationType = (typeof notificationTypes)[number]
 
+export const instructionReferenceLibraries = ['angular'] as const
+export type InstructionReferenceLibrary = (typeof instructionReferenceLibraries)[number]
+
+export const instructionTargetKinds = ['project', 'library'] as const
+export type InstructionTargetKind = (typeof instructionTargetKinds)[number]
+
+export const instructionStatuses = ['draft', 'ready'] as const
+export type InstructionStatus = (typeof instructionStatuses)[number]
+
+export const instructionAuthorshipModes = ['manual', 'agent'] as const
+export type InstructionAuthorshipMode = (typeof instructionAuthorshipModes)[number]
+
 export const teamRoleValidator = v.union(
   v.literal('admin'),
   v.literal('teamleader'),
@@ -45,6 +57,20 @@ export const notificationTypeValidator = v.union(
   v.literal('mention_in_comment'),
 )
 
+export const instructionReferenceLibraryValidator = v.literal('angular')
+
+export const instructionTargetKindValidator = v.union(
+  v.literal('project'),
+  v.literal('library'),
+)
+
+export const instructionStatusValidator = v.union(v.literal('draft'), v.literal('ready'))
+
+export const instructionAuthorshipModeValidator = v.union(
+  v.literal('manual'),
+  v.literal('agent'),
+)
+
 export const fileContentTypeValidator = v.union(
   v.literal('image/jpeg'),
   v.literal('image/png'),
@@ -69,6 +95,17 @@ export const limits = {
   inviteDurationMs: 14 * 24 * 60 * 60 * 1000,
   inviteLinkMaxUses: 25,
   draftRetentionMs: 30 * 24 * 60 * 60 * 1000,
+  maxInstructionTitleLength: 120,
+  maxInstructionRepoUrlLength: 500,
+  maxInstructionTargetNameLength: 120,
+  maxInstructionOverviewLength: 1200,
+  maxInstructionNodeTitleLength: 140,
+  maxInstructionNodeSummaryLength: 1600,
+  maxInstructionNodeItems: 16,
+  maxInstructionListItemsPerNode: 12,
+  maxInstructionListItemLength: 240,
+  maxInstructionChecklistItems: 12,
+  maxInstructionMarkdownLength: 60000,
 } as const
 
 export function slugify(value: string): string {

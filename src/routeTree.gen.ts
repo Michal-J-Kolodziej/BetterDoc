@@ -14,6 +14,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PlaybooksRouteImport } from './routes/playbooks'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InstructionsRouteImport } from './routes/instructions'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
@@ -50,6 +51,11 @@ const LogoutRoute = LogoutRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructionsRoute = InstructionsRouteImport.update({
+  id: '/instructions',
+  path: '/instructions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxRoute = InboxRouteImport.update({
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inbox': typeof InboxRoute
+  '/instructions': typeof InstructionsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/playbooks': typeof PlaybooksRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inbox': typeof InboxRoute
+  '/instructions': typeof InstructionsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/playbooks': typeof PlaybooksRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inbox': typeof InboxRoute
+  '/instructions': typeof InstructionsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/playbooks': typeof PlaybooksRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/dashboard'
     | '/inbox'
+    | '/instructions'
     | '/login'
     | '/logout'
     | '/playbooks'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/dashboard'
     | '/inbox'
+    | '/instructions'
     | '/login'
     | '/logout'
     | '/playbooks'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/dashboard'
     | '/inbox'
+    | '/instructions'
     | '/login'
     | '/logout'
     | '/playbooks'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   DashboardRoute: typeof DashboardRoute
   InboxRoute: typeof InboxRoute
+  InstructionsRoute: typeof InstructionsRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   PlaybooksRoute: typeof PlaybooksRoute
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructions': {
+      id: '/instructions'
+      path: '/instructions'
+      fullPath: '/instructions'
+      preLoaderRoute: typeof InstructionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox': {
@@ -380,6 +400,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   DashboardRoute: DashboardRoute,
   InboxRoute: InboxRoute,
+  InstructionsRoute: InstructionsRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   PlaybooksRoute: PlaybooksRoute,

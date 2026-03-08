@@ -3,6 +3,10 @@ import { v } from 'convex/values'
 
 import {
   inviteStatusValidator,
+  instructionAuthorshipModeValidator,
+  instructionReferenceLibraryValidator,
+  instructionStatusValidator,
+  instructionTargetKindValidator,
   notificationTypeValidator,
   postStatusValidator,
   teamRoleValidator,
@@ -211,4 +215,97 @@ export default defineSchema({
     .index('by_recipient_created_at', ['recipientUserId', 'createdAt'])
     .index('by_recipient_read_created_at', ['recipientUserId', 'readAt', 'createdAt'])
     .index('by_team_created_at', ['teamId', 'createdAt']),
+
+  instructionDocuments: defineTable({
+    userId: v.id('users'),
+    title: v.string(),
+    repoUrl: v.string(),
+    targetKind: instructionTargetKindValidator,
+    targetName: v.string(),
+    referenceLibrary: instructionReferenceLibraryValidator,
+    referenceVersion: v.string(),
+    status: instructionStatusValidator,
+    authorshipMode: instructionAuthorshipModeValidator,
+    markdownFileName: v.string(),
+    markdownContent: v.string(),
+    document: v.object({
+      overview: v.object({
+        goal: v.string(),
+        repoContext: v.string(),
+        targetContext: v.string(),
+        sourceSummary: v.string(),
+      }),
+      structureNodes: v.array(
+        v.object({
+          id: v.string(),
+          title: v.string(),
+          summary: v.string(),
+          paths: v.array(v.string()),
+          rules: v.array(v.string()),
+          examples: v.array(v.string()),
+          relationships: v.array(v.string()),
+        }),
+      ),
+      patternNodes: v.array(
+        v.object({
+          id: v.string(),
+          title: v.string(),
+          summary: v.string(),
+          paths: v.array(v.string()),
+          rules: v.array(v.string()),
+          examples: v.array(v.string()),
+          relationships: v.array(v.string()),
+        }),
+      ),
+      namingNodes: v.array(
+        v.object({
+          id: v.string(),
+          title: v.string(),
+          summary: v.string(),
+          paths: v.array(v.string()),
+          rules: v.array(v.string()),
+          examples: v.array(v.string()),
+          relationships: v.array(v.string()),
+        }),
+      ),
+      dataHandlingNodes: v.array(
+        v.object({
+          id: v.string(),
+          title: v.string(),
+          summary: v.string(),
+          paths: v.array(v.string()),
+          rules: v.array(v.string()),
+          examples: v.array(v.string()),
+          relationships: v.array(v.string()),
+        }),
+      ),
+      libraryNodes: v.array(
+        v.object({
+          id: v.string(),
+          title: v.string(),
+          summary: v.string(),
+          paths: v.array(v.string()),
+          rules: v.array(v.string()),
+          examples: v.array(v.string()),
+          relationships: v.array(v.string()),
+        }),
+      ),
+      guardrailNodes: v.array(
+        v.object({
+          id: v.string(),
+          title: v.string(),
+          summary: v.string(),
+          paths: v.array(v.string()),
+          rules: v.array(v.string()),
+          examples: v.array(v.string()),
+          relationships: v.array(v.string()),
+        }),
+      ),
+      reviewChecklist: v.array(v.string()),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user_updated_at', ['userId', 'updatedAt'])
+    .index('by_user_file_name', ['userId', 'markdownFileName']),
 })
