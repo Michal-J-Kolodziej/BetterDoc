@@ -1,5 +1,15 @@
 # BetterDoc Change Log
 
+## 2026-03-08 (Sticky workspace sidebar)
+- Code paths changed:
+  - `src/styles.css`
+- Documentation updated:
+  - `docs/codebase-reference.md`
+  - `docs/change-log.md`
+- Impact:
+  - Made the shared desktop workspace sidebar sticky with its own scroll container so account actions like `Logout` remain reachable on long routes such as `/instructions`.
+  - Kept the stacked mobile layout unchanged by disabling the sticky behavior under the existing narrow-screen breakpoint.
+
 ## 2026-03-08 (Instructions page readability refresh)
 - Code paths changed:
   - `src/routes/instructions.tsx`

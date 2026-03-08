@@ -1,6 +1,6 @@
 # BetterDoc Codebase Reference
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 
 ## Runtime Stack
 - Framework: TanStack Start (`@tanstack/react-start`)
@@ -108,7 +108,7 @@ Last updated: 2026-03-07
 - Shared utility: `src/lib/utils.ts` (`cn` helper)
 - Shared protected route shell:
   - `src/components/layout/app-sidebar-shell.tsx`
-  - Provides a fixed two-column workspace on desktop and an inline horizontal nav on narrower screens.
+  - Provides a fixed two-column workspace on desktop with a sticky left rail that keeps navigation/account actions visible while long pages scroll, plus an inline horizontal nav on narrower screens.
   - Keeps navigation limited to `Dashboard`, `Playbooks`, `Analytics`, `Instructions`, `Inbox`, `Teams`, `Profile`, and `Logout`, with reactive unread counts in nav/header inbox entry points.
   - Uses a plain product-workspace hierarchy rather than hero headers, floating rails, or decorative panels.
   - Logout is a regular document request (`href='/logout'`) so WorkOS sign-out always executes through the server handler.
